@@ -1,6 +1,7 @@
 "use client";
 
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
+import { clampPercentage } from "@/lib/allocation/validation";
 import type { AllocationEntry } from "@/types/allocation";
 
 interface AllocationFormProps {
@@ -33,7 +34,7 @@ export function AllocationForm({ entries, onChange }: AllocationFormProps) {
                 step={1}
                 value={entry?.percentage ?? 0}
                 onChange={(e) =>
-                  onChange(category.id, Number(e.target.value) || 0)
+                  onChange(category.id, clampPercentage(Number(e.target.value)))
                 }
                 className="w-20 rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-sm dark:border-zinc-700 dark:bg-zinc-900"
               />
