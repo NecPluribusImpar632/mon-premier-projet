@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getClients } from "@/lib/actions/clients";
+import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 
 export default async function ClientsPage() {
   const clients = await getClients();
@@ -21,6 +22,7 @@ export default async function ClientsPage() {
           className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           Nouveau client
+          <LinkPendingSpinner />
         </Link>
       </div>
 
