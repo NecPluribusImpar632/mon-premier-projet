@@ -13,16 +13,31 @@ datasource db {
 }
 
 model Client {
-  id                   String   @id @default(cuid())
+  id                   String     @id @default(cuid())
   name                 String
   age                  Int
-  actionsPct           Float    @default(0)
-  obligationsPct       Float    @default(0)
-  immobilierPct        Float    @default(0)
-  liquiditesPct        Float    @default(0)
-  privateEquityPct     Float    @default(0)
-  matieresPremieresPct Float    @default(0)
-  autresPct            Float    @default(0)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  actionsPct           Float      @default(0)
+  obligationsPct       Float      @default(0)
+  immobilierPct        Float      @default(0)
+  liquiditesPct        Float      @default(0)
+  privateEquityPct     Float      @default(0)
+  matieresPremieresPct Float      @default(0)
+  autresPct            Float      @default(0)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  properties           Property[]
+}
+
+model Property {
+  id                  String   @id @default(cuid())
+  name                String
+  currentValue        Float
+  monthlyRent         Float?
+  remainingLoanAmount Float    @default(0)
+  loanRate            Float    @default(0)
+  rateType            String   @default("fixed")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  clientId            String
+  client              Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }

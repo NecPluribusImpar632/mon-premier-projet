@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import { entriesFromClient } from "@/lib/allocation/mapping";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
+import { PropertyList } from "@/components/property/PropertyList";
+import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 
 interface ClientDetailPageProps {
   params: Promise<{ id: string }>;
@@ -31,6 +34,22 @@ export default async function ClientDetailPage({
         clientId={client.id}
         initialEntries={entriesFromClient(client)}
       />
+
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Biens immobiliers
+          </h2>
+          <Link
+            href={`/clients/${client.id}/properties/new`}
+            className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+          >
+            Ajouter un bien
+            <LinkPendingSpinner />
+          </Link>
+        </div>
+        <PropertyList properties={client.properties} />
+      </div>
     </div>
   );
 }
