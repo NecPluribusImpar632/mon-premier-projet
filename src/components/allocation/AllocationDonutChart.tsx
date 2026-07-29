@@ -10,7 +10,29 @@ interface AllocationDonutChartProps {
 const SIZE = 200;
 const RADIUS = 80;
 const CENTER = SIZE / 2;
+const STROKE_WIDTH = 24;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const MIN_PERCENTAGE_FOR_LABEL = 8;
+
+const PALETTE_STYLE = `
+.allocation-donut {
+${ASSET_CATEGORIES.map((c) => `  --segment-${c.id}: ${c.color};\n  --on-segment-${c.id}: ${c.onColor};`).join("\n")}
+}
+@media (prefers-color-scheme: dark) {
+  .allocation-donut {
+${ASSET_CATEGORIES.map((c) => `    --segment-${c.id}: ${c.colorDark};\n    --on-segment-${c.id}: ${c.onColorDark};`).join("\n")}
+  }
+}
+`;
+
+function polarToCartesian(arcLength: number) {
+  const angleDeg = (arcLength / CIRCUMFERENCE) * 360 - 90;
+  const angleRad = (angleDeg * Math.PI) / 180;
+  return {
+    x: CENTER + RADIUS * Math.cos(angleRad),
+    y: CENTER + RADIUS * Math.sin(angleRad),
+  };
+}
 
 export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
   const total = entries.reduce((sum, e) => sum + e.percentage, 0);
@@ -20,49 +42,104 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
     .map((entry) => {
       const category = ASSET_CATEGORIES.find((c) => c.id === entry.categoryId);
       const fraction = total > 0 ? entry.percentage / total : 0;
-      return { color: category?.color ?? "#94a3b8", dash: fraction * CIRCUMFERENCE };
+      return {
+        categoryId: entry.categoryId,
+        label: category?.label ?? entry.categoryId,
+        percentage: entry.percentage,
+        dash: fraction * CIRCUMFERENCE,
+      };
     });
 
-  const segments = dashLengths.map((segment, index) => ({
-    color: segment.color,
-    dashArray: `${segment.dash} ${CIRCUMFERENCE - segment.dash}`,
-    dashOffset: -dashLengths.slice(0, index).reduce((sum, s) => sum + s.dash, 0),
-  }));
+  const segments = dashLengths.map((segment, index) => {
+    const cumulative = dashLengths
+      .slice(0, index)
+      .reduce((sum, s) => sum + s.dash, 0);
+    return {
+      ...segment,
+      dashArray: `${segment.dash} ${CIRCUMFERENCE - segment.dash}`,
+      dashOffset: -cumulative,
+      labelPosition: polarToCartesian(cumulative + segment.dash / 2),
+    };
+  });
 
   return (
-    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-      <circle
-        cx={CENTER}
-        cy={CENTER}
-        r={RADIUS}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={24}
-        className="text-zinc-200 dark:text-zinc-800"
-      />
-      {segments.map((segment, index) => (
+    <div className="allocation-donut flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-8">
+      <style>{PALETTE_STYLE}</style>
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="shrink-0">
         <circle
-          key={index}
           cx={CENTER}
           cy={CENTER}
           r={RADIUS}
           fill="none"
-          stroke={segment.color}
-          strokeWidth={24}
-          strokeDasharray={segment.dashArray}
-          strokeDashoffset={segment.dashOffset}
-          transform={`rotate(-90 ${CENTER} ${CENTER})`}
+          stroke="currentColor"
+          strokeWidth={STROKE_WIDTH}
+          className="text-zinc-200 dark:text-zinc-800"
         />
-      ))}
-      <text
-        x={CENTER}
-        y={CENTER}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        className="fill-zinc-900 text-lg font-semibold dark:fill-zinc-50"
-      >
-        {total}%
-      </text>
-    </svg>
+        {segments.map((segment) => (
+          <circle
+            key={segment.categoryId}
+            cx={CENTER}
+            cy={CENTER}
+            r={RADIUS}
+            fill="none"
+            stroke={`var(--segment-${segment.categoryId})`}
+            strokeWidth={STROKE_WIDTH}
+            strokeLinecap="round"
+            strokeDasharray={segment.dashArray}
+            strokeDashoffset={segment.dashOffset}
+            transform={`rotate(-90 ${CENTER} ${CENTER})`}
+          />
+        ))}
+        {segments
+          .filter((segment) => segment.percentage >= MIN_PERCENTAGE_FOR_LABEL)
+          .map((segment) => (
+            <text
+              key={segment.categoryId}
+              x={segment.labelPosition.x}
+              y={segment.labelPosition.y}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={12}
+              fontWeight={600}
+              style={{ fill: `var(--on-segment-${segment.categoryId})` }}
+            >
+              {Math.round(segment.percentage)}%
+            </text>
+          ))}
+        <text
+          x={CENTER}
+          y={CENTER}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className="fill-zinc-900 text-lg font-semibold dark:fill-zinc-50"
+        >
+          {total}%
+        </text>
+      </svg>
+
+      <ul className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[180px]">
+        {ASSET_CATEGORIES.map((category) => {
+          const entry = entries.find((e) => e.categoryId === category.id);
+          const percentage = entry?.percentage ?? 0;
+          return (
+            <li
+              key={category.id}
+              className="flex items-center justify-between gap-3 text-sm"
+            >
+              <span className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: `var(--segment-${category.id})` }}
+                />
+                {category.label}
+              </span>
+              <span className="tabular-nums text-zinc-500 dark:text-zinc-400">
+                {percentage}%
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
