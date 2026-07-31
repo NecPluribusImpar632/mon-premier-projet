@@ -1,5 +1,6 @@
 import type { Client } from "@/generated/prisma/client";
 import type { AllocationEntry } from "@/types/allocation";
+import type { ActionsProfileBreakdown } from "./stockProfiles";
 import { ASSET_CATEGORIES } from "./categories";
 
 type AllocationFieldName =
@@ -26,6 +27,16 @@ export function entriesFromClient(client: Client): AllocationEntry[] {
     categoryId: category.id,
     percentage: client[CATEGORY_FIELD_MAP[category.id]],
   }));
+}
+
+export function actionsBreakdownFromClient(
+  client: Client
+): ActionsProfileBreakdown {
+  return {
+    indiciel: client.actionsIndicielPct,
+    defensif: client.actionsDefensifPct,
+    croissance: client.actionsCroissancePct,
+  };
 }
 
 export function allocationFieldsFromEntries(

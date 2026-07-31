@@ -5,17 +5,23 @@ import { AllocationForm } from "@/components/allocation/AllocationForm";
 import { AllocationAmountForm } from "@/components/allocation/AllocationAmountForm";
 import { AllocationDonutChart } from "@/components/allocation/AllocationDonutChart";
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
-import { updateClientAllocation } from "@/lib/actions/clients";
+import {
+  updateClientAllocation,
+  updateActionsProfile,
+} from "@/lib/actions/clients";
 import {
   getTotalPercentage,
   isAllocationComplete,
   percentagesFromAmounts,
 } from "@/lib/allocation/validation";
+import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
 import type { AllocationEntry } from "@/types/allocation";
+import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 
 interface ClientAllocationEditorProps {
   clientId: string;
   initialEntries: AllocationEntry[];
+  initialActionsBreakdown: ActionsProfileBreakdown;
 }
 
 type SaveStatus = "saved" | "saving" | "incomplete" | "error";
@@ -23,9 +29,24 @@ type InputMode = "percentage" | "amount";
 
 const CATEGORY_IDS = ASSET_CATEGORIES.map((c) => c.id);
 
+const STATUS_MESSAGE: Record<SaveStatus, string> = {
+  saved: "Enregistré",
+  saving: "Enregistrement...",
+  incomplete: "Non enregistré — le total doit être égal à 100 %",
+  error: "Erreur lors de l'enregistrement",
+};
+
+const STATUS_COLOR: Record<SaveStatus, string> = {
+  saved: "text-slate",
+  saving: "text-slate",
+  incomplete: "text-bronze",
+  error: "text-bronze",
+};
+
 export function ClientAllocationEditor({
   clientId,
   initialEntries,
+  initialActionsBreakdown,
 }: ClientAllocationEditorProps) {
   const [entries, setEntries] = useState<AllocationEntry[]>(initialEntries);
   const [amounts, setAmounts] = useState<Record<string, number>>({});
@@ -33,6 +54,14 @@ export function ClientAllocationEditor({
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<SaveStatus>(
     isAllocationComplete(initialEntries) ? "saved" : "incomplete"
+  );
+
+  const [actionsBreakdown, setActionsBreakdown] = useState<ActionsProfileBreakdown>(
+    initialActionsBreakdown
+  );
+  const [isActionsPending, startActionsTransition] = useTransition();
+  const [actionsStatus, setActionsStatus] = useState<SaveStatus>(
+    isActionsBreakdownComplete(initialActionsBreakdown) ? "saved" : "incomplete"
   );
 
   const total = getTotalPercentage(entries);
@@ -83,19 +112,36 @@ export function ClientAllocationEditor({
     );
   }
 
-  const statusMessage: Record<SaveStatus, string> = {
-    saved: "Enregistré",
-    saving: "Enregistrement...",
-    incomplete: "Non enregistré — le total doit être égal à 100 %",
-    error: "Erreur lors de l'enregistrement",
-  };
+  function handleActionsBreakdownChange(
+    profile: keyof ActionsProfileBreakdown,
+    rawPercentage: number
+  ) {
+    const othersTotal = (
+      Object.keys(actionsBreakdown) as (keyof ActionsProfileBreakdown)[]
+    )
+      .filter((key) => key !== profile)
+      .reduce((sum, key) => sum + actionsBreakdown[key], 0);
+    const maxAllowed = Math.max(0, 100 - othersTotal);
+    const percentage = Math.min(rawPercentage, maxAllowed);
 
-  const statusColor: Record<SaveStatus, string> = {
-    saved: "text-slate",
-    saving: "text-slate",
-    incomplete: "text-bronze",
-    error: "text-bronze",
-  };
+    const next: ActionsProfileBreakdown = { ...actionsBreakdown, [profile]: percentage };
+    setActionsBreakdown(next);
+
+    if (!isActionsBreakdownComplete(next)) {
+      setActionsStatus("incomplete");
+      return;
+    }
+
+    setActionsStatus("saving");
+    startActionsTransition(async () => {
+      try {
+        await updateActionsProfile(clientId, next);
+        setActionsStatus("saved");
+      } catch {
+        setActionsStatus("error");
+      }
+    });
+  }
 
   const percentagesByCategory = Object.fromEntries(
     entries.map((entry) => [entry.categoryId, entry.percentage])
@@ -131,7 +177,18 @@ export function ClientAllocationEditor({
 
         <div className="mt-6">
           {mode === "percentage" ? (
-            <AllocationForm entries={entries} onChange={handlePercentageChange} />
+            <AllocationForm
+              entries={entries}
+              onChange={handlePercentageChange}
+              actionsBreakdown={actionsBreakdown}
+              onActionsBreakdownChange={handleActionsBreakdownChange}
+              actionsStatusMessage={
+                STATUS_MESSAGE[isActionsPending ? "saving" : actionsStatus]
+              }
+              actionsStatusColorClass={
+                STATUS_COLOR[isActionsPending ? "saving" : actionsStatus]
+              }
+            />
           ) : (
             <AllocationAmountForm
               amounts={amounts}
@@ -157,9 +214,9 @@ export function ClientAllocationEditor({
             )}
           </div>
           <p
-            className={`mt-1.5 h-4 text-xs ${statusColor[isPending ? "saving" : status]}`}
+            className={`mt-1.5 h-4 text-xs ${STATUS_COLOR[isPending ? "saving" : status]}`}
           >
-            {statusMessage[isPending ? "saving" : status]}
+            {STATUS_MESSAGE[isPending ? "saving" : status]}
           </p>
         </div>
       </div>

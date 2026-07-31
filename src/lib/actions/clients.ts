@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { allocationFieldsFromEntries } from "@/lib/allocation/mapping";
 import { isAllocationComplete } from "@/lib/allocation/validation";
+import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
 import type { AllocationEntry } from "@/types/allocation";
+import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 
 export async function getClients() {
   return prisma.client.findMany({ orderBy: { name: "asc" } });
@@ -47,6 +49,27 @@ export async function updateClientAllocation(
   await prisma.client.update({
     where: { id: clientId },
     data: allocationFieldsFromEntries(entries),
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
+export async function updateActionsProfile(
+  clientId: string,
+  breakdown: ActionsProfileBreakdown
+) {
+  if (!isActionsBreakdownComplete(breakdown)) {
+    throw new Error(
+      "La répartition des profils actions doit être composée de pourcentages entre 0 et 100 dont la somme fait 100."
+    );
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      actionsIndicielPct: breakdown.indiciel,
+      actionsDefensifPct: breakdown.defensif,
+      actionsCroissancePct: breakdown.croissance,
+    },
   });
   revalidatePath(`/clients/${clientId}`);
 }

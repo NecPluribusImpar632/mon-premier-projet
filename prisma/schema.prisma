@@ -23,6 +23,9 @@ model Client {
   privateEquityPct     Float      @default(0)
   matieresPremieresPct Float      @default(0)
   autresPct            Float      @default(0)
+  actionsIndicielPct   Float      @default(100)
+  actionsDefensifPct   Float      @default(0)
+  actionsCroissancePct Float      @default(0)
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
   properties           Property[]

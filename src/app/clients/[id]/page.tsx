@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, PieChart, User } from "lucide-react";
+import { Building2, FlaskConical, PieChart, User } from "lucide-react";
 import { getClient } from "@/lib/actions/clients";
-import { entriesFromClient } from "@/lib/allocation/mapping";
+import { actionsBreakdownFromClient, entriesFromClient } from "@/lib/allocation/mapping";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
 import { PropertyList } from "@/components/property/PropertyList";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
@@ -26,16 +26,26 @@ export default async function ClientDetailPage({
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-14 sm:py-20">
       <div className="mx-auto w-full max-w-3xl">
-        <header className="flex items-center gap-5 pb-10">
-          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-slate">
-            <User className="h-6 w-6" />
-          </span>
-          <div>
-            <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">
-              {client.name}
-            </h1>
-            <p className="mt-1 text-sm text-slate">{client.age} ans</p>
+        <header className="flex items-center justify-between gap-5 pb-10">
+          <div className="flex items-center gap-5">
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-slate">
+              <User className="h-6 w-6" />
+            </span>
+            <div>
+              <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">
+                {client.name}
+              </h1>
+              <p className="mt-1 text-sm text-slate">{client.age} ans</p>
+            </div>
           </div>
+          <Link
+            href={`/clients/${client.id}/scenarios`}
+            className={PRIMARY_BUTTON_CLASS}
+          >
+            <FlaskConical className="h-4 w-4" />
+            Simuler des scénarios
+            <LinkPendingSpinner />
+          </Link>
         </header>
       </div>
 
@@ -51,6 +61,7 @@ export default async function ClientDetailPage({
           <ClientAllocationEditor
             clientId={client.id}
             initialEntries={entriesFromClient(client)}
+            initialActionsBreakdown={actionsBreakdownFromClient(client)}
           />
         </section>
 
