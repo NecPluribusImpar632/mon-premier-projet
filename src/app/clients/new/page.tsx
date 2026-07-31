@@ -13,7 +13,7 @@ export default function NewClientPage() {
             name="name"
             type="text"
             required
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition-shadow focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-zinc-50/10"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
@@ -24,7 +24,7 @@ export default function NewClientPage() {
             min={0}
             max={120}
             required
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition-shadow focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-zinc-50/10"
           />
         </label>
         <button

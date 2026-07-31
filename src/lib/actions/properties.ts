@@ -6,8 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { isRateType } from "@/lib/property/rateType";
 
 function parseRequiredNonNegativeNumber(value: unknown): number {
-  const parsed = Number(value ?? "");
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  const sanitized = String(value ?? "").replace(/[^\d.]/g, "");
+  const parsed = Number(sanitized);
+  if (sanitized === "" || !Number.isFinite(parsed) || parsed < 0) {
     throw new Error("Merci de saisir un nombre positif.");
   }
   return parsed;

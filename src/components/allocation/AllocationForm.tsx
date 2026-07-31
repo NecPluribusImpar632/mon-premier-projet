@@ -36,7 +36,7 @@ export function AllocationForm({ entries, onChange }: AllocationFormProps) {
                 onChange={(e) =>
                   onChange(category.id, clampPercentage(Number(e.target.value)))
                 }
-                className="w-20 rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                className="w-20 rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-sm tabular-nums transition-shadow focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-zinc-50/10"
               />
               <span className="text-sm text-zinc-500">%</span>
             </span>
