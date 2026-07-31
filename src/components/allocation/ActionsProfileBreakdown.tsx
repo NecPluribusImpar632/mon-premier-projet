@@ -8,6 +8,7 @@ import {
   type ActionsProfileBreakdown as Breakdown,
 } from "@/lib/allocation/stockProfiles";
 import { clampPercentage } from "@/lib/allocation/validation";
+import { roundPercent } from "@/lib/format/percent";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 
 interface ActionsProfileBreakdownProps {
@@ -77,7 +78,7 @@ export function ActionsProfileBreakdown({
         </label>
       ))}
       <p className={`text-xs font-mono tabular-nums ${total === 100 ? "text-emerald-strong" : "text-bronze"}`}>
-        Total {total}%{total !== 100 && " (doit faire 100 %)"}
+        Total {roundPercent(total)}%{total !== 100 && " (doit faire 100 %)"}
       </p>
       <p className={`text-xs ${statusColorClass}`}>{statusMessage}</p>
     </div>

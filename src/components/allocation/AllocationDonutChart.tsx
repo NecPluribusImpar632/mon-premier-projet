@@ -1,6 +1,7 @@
 "use client";
 
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
+import { roundPercent } from "@/lib/format/percent";
 import type { AllocationEntry } from "@/types/allocation";
 
 interface AllocationDonutChartProps {
@@ -88,6 +89,7 @@ function buildCalloutPath(
 
 export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
   const total = entries.reduce((sum, e) => sum + e.percentage, 0);
+  const displayTotal = roundPercent(total);
 
   const dashLengths = entries
     .filter((entry) => entry.percentage > 0)
@@ -153,7 +155,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-auto w-full"
         role="img"
-        aria-label={`Allocation d'actifs, total ${total}%`}
+        aria-label={`Allocation d'actifs, total ${displayTotal}%`}
       >
         <circle
           cx={CENTER_X}
@@ -213,7 +215,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
                   fontWeight={600}
                   className="fill-ink"
                 >
-                  {Math.round(item.percentage)}%
+                  {roundPercent(item.percentage)}%
                 </tspan>
               </text>
             </g>
@@ -232,7 +234,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
             fontWeight={500}
             style={{ fill: `var(--on-segment-${segment.categoryId})` }}
           >
-            {Math.round(segment.percentage)}%
+            {roundPercent(segment.percentage)}%
           </text>
         ))}
 
@@ -244,7 +246,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
           fontFamily="var(--font-serif)"
           className="fill-ink text-8xl font-medium"
         >
-          {total}%
+          {displayTotal}%
         </text>
       </svg>
     </div>

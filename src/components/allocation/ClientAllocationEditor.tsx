@@ -20,6 +20,7 @@ import {
   overallEntriesFromFinancial,
 } from "@/lib/allocation/mapping";
 import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
+import { roundPercent } from "@/lib/format/percent";
 import type { AllocationEntry } from "@/types/allocation";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 
@@ -239,7 +240,7 @@ export function ClientAllocationEditor({
                   : "bg-bronze-tint text-bronze"
               }`}
             >
-              Total {total}%
+              Total {roundPercent(total)}%
             </span>
             {mode === "percentage" && total < 100 && (
               <span className="text-xs text-slate">

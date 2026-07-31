@@ -1,3 +1,5 @@
+import { roundPercent } from "@/lib/format/percent";
+
 interface ShockSliderProps {
   label: string;
   value: number;
@@ -23,7 +25,7 @@ export function ShockSlider({
         <span>{label}</span>
         <span className="font-mono tabular-nums">
           {value > 0 ? "+" : ""}
-          {value}
+          {roundPercent(value, 1)}
           {suffix}
         </span>
       </span>

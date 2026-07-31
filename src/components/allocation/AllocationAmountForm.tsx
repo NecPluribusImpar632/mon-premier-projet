@@ -4,6 +4,7 @@ import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { formatCurrency } from "@/lib/format/currency";
+import { roundPercent } from "@/lib/format/percent";
 
 interface AllocationAmountFormProps {
   amounts: Record<string, number>;
@@ -36,7 +37,7 @@ export function AllocationAmountForm({
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-slate">
-                    {Math.round(immobilierPct)}%
+                    {roundPercent(immobilierPct)}%
                   </span>
                   <span className="w-28 rounded-md border border-dashed border-line bg-paper px-2 py-1 text-right font-mono text-sm tabular-nums text-slate">
                     {formatCurrency(totalPropertyValue)}
@@ -62,7 +63,7 @@ export function AllocationAmountForm({
             </span>
             <span className="flex items-center gap-2">
               <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-slate">
-                {percentages[category.id] ?? 0}%
+                {roundPercent(percentages[category.id] ?? 0)}%
               </span>
               <span className="flex items-center gap-1.5">
                 <FormattedNumberInput

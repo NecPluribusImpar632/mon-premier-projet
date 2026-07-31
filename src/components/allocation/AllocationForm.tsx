@@ -6,6 +6,7 @@ import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { ActionsProfileBreakdown } from "@/components/allocation/ActionsProfileBreakdown";
 import { formatCurrency } from "@/lib/format/currency";
+import { roundPercent } from "@/lib/format/percent";
 import type { AllocationEntry } from "@/types/allocation";
 import type { ActionsProfileBreakdown as Breakdown } from "@/lib/allocation/stockProfiles";
 
@@ -65,7 +66,7 @@ export function AllocationForm({
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-20 rounded-md border border-dashed border-line bg-paper px-2 py-1 text-right font-mono text-sm tabular-nums text-slate">
-                      {Math.round(immobilierPct)}
+                      {roundPercent(immobilierPct)}
                     </span>
                     <span className="w-3 text-sm text-slate">%</span>
                   </span>

@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import { Building2, Coins, Key, Landmark, Percent } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
+import { roundPercent } from "@/lib/format/percent";
 
 interface PropertyListProps {
   properties: Property[];
@@ -57,7 +58,7 @@ export function PropertyList({ properties }: PropertyListProps) {
             <PropertyLine
               icon={Percent}
               label="Taux du crédit"
-              value={`${property.loanRate}%`}
+              value={`${roundPercent(property.loanRate, 1)}%`}
               hint={
                 RATE_TYPE_LABELS[property.rateType as RateType] ??
                 property.rateType

@@ -9,6 +9,7 @@ import {
   STOCK_PROFILE_LABELS,
   type ActionsProfileBreakdown,
 } from "@/lib/allocation/stockProfiles";
+import { roundPercent } from "@/lib/format/percent";
 
 interface StockShockCardProps {
   actionsPct: number;
@@ -54,7 +55,7 @@ export function StockShockCard({
               <li key={profile} className="flex items-center justify-between">
                 <span>{STOCK_PROFILE_LABELS[profile]}</span>
                 <span className="font-mono tabular-nums">
-                  {actionsBreakdown[profile]}%
+                  {roundPercent(actionsBreakdown[profile])}%
                 </span>
               </li>
             ))}
