@@ -7,19 +7,19 @@ interface AllocationDonutChartProps {
   entries: AllocationEntry[];
 }
 
-const WIDTH = 720;
-const HEIGHT = 460;
+const WIDTH = 1060;
+const HEIGHT = 760;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
-const RADIUS = 100;
-const STROKE_WIDTH = 32;
+const RADIUS = 190;
+const STROKE_WIDTH = 50;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const MIN_PERCENTAGE_FOR_INSIDE_LABEL = 8;
 
 const RING_OUTER = RADIUS + STROKE_WIDTH / 2;
-const LEADER_START_RADIUS = RING_OUTER + 6;
-const LABEL_OFFSET_X = RING_OUTER + 34;
-const MIN_LABEL_GAP = 22;
+const LEADER_START_RADIUS = RING_OUTER + 8;
+const LABEL_OFFSET_X = RING_OUTER + 46;
+const MIN_LABEL_GAP = 26;
 
 const PALETTE_STYLE = `
 .allocation-donut {
@@ -27,11 +27,20 @@ ${ASSET_CATEGORIES.map((c) => `  --segment-${c.id}: ${c.color};\n  --on-segment-
 }
 `;
 
+/**
+ * Math.cos/sin can differ in their last bit between Node (SSR) and the
+ * browser (CSR), which surfaces as a hydration mismatch once serialized to
+ * a decimal string. Rounding collapses that epsilon-level drift.
+ */
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 function pointAtAngle(angleDeg: number, radius: number) {
   const rad = (angleDeg * Math.PI) / 180;
   return {
-    x: CENTER_X + radius * Math.cos(rad),
-    y: CENTER_Y + radius * Math.sin(rad),
+    x: round2(CENTER_X + radius * Math.cos(rad)),
+    y: round2(CENTER_Y + radius * Math.sin(rad)),
   };
 }
 
@@ -71,10 +80,10 @@ function buildCalloutPath(
 ) {
   const dirX = Math.cos(angleRad);
   const dirY = Math.sin(angleRad);
-  const c1 = { x: start.x + dirX * 34, y: start.y + dirY * 34 };
-  const pullback = side === "right" ? -34 : 34;
-  const c2 = { x: end.x + pullback, y: end.y };
-  return `M ${start.x} ${start.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${end.x} ${end.y}`;
+  const c1 = { x: round2(start.x + dirX * 60), y: round2(start.y + dirY * 60) };
+  const pullback = side === "right" ? -60 : 60;
+  const c2 = { x: round2(end.x + pullback), y: round2(end.y) };
+  return `M ${round2(start.x)} ${round2(start.y)} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${round2(end.x)} ${round2(end.y)}`;
 }
 
 export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
@@ -138,7 +147,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
   ];
 
   return (
-    <div className="allocation-donut mx-auto max-w-[720px]">
+    <div className="allocation-donut mx-auto max-w-[1060px]">
       <style>{PALETTE_STYLE}</style>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -182,25 +191,25 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
                 d={buildCalloutPath(item.start, item.angleRad, end, item.side)}
                 fill="none"
                 stroke="var(--color-slate)"
-                strokeWidth={1}
+                strokeWidth={1.5}
               />
-              <circle cx={end.x} cy={end.y} r={2.5} fill={`var(--segment-${item.categoryId})`} />
+              <circle cx={end.x} cy={end.y} r={3.5} fill={`var(--segment-${item.categoryId})`} />
               <text
-                x={end.x + (item.side === "right" ? 8 : -8)}
+                x={end.x + (item.side === "right" ? 10 : -10)}
                 y={end.y}
                 textAnchor={item.side === "right" ? "start" : "end"}
                 dominantBaseline="middle"
               >
                 <tspan
                   fontFamily="var(--font-sans)"
-                  fontSize={14}
+                  fontSize={19}
                   className="fill-slate"
                 >
                   {item.label}{" "}
                 </tspan>
                 <tspan
                   fontFamily="var(--font-mono)"
-                  fontSize={14}
+                  fontSize={19}
                   fontWeight={600}
                   className="fill-ink"
                 >
@@ -219,7 +228,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
             textAnchor="middle"
             dominantBaseline="middle"
             fontFamily="var(--font-mono)"
-            fontSize={17}
+            fontSize={30}
             fontWeight={500}
             style={{ fill: `var(--on-segment-${segment.categoryId})` }}
           >
@@ -233,7 +242,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
           textAnchor="middle"
           dominantBaseline="middle"
           fontFamily="var(--font-serif)"
-          className="fill-ink text-5xl font-medium"
+          className="fill-ink text-8xl font-medium"
         >
           {total}%
         </text>
