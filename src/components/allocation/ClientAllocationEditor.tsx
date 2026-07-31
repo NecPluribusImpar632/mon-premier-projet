@@ -126,44 +126,40 @@ export function ClientAllocationEditor({
         </button>
       </div>
 
-      <div className="flex flex-col gap-10 sm:flex-row sm:items-start">
-        <div className="flex-1">
-          {mode === "percentage" ? (
-            <AllocationForm entries={entries} onChange={handlePercentageChange} />
-          ) : (
-            <AllocationAmountForm
-              amounts={amounts}
-              percentages={percentagesByCategory}
-              onChange={handleAmountChange}
-            />
-          )}
+      <div>
+        {mode === "percentage" ? (
+          <AllocationForm entries={entries} onChange={handlePercentageChange} />
+        ) : (
+          <AllocationAmountForm
+            amounts={amounts}
+            percentages={percentagesByCategory}
+            onChange={handleAmountChange}
+          />
+        )}
 
-          <div className="mt-5 flex items-center gap-2.5 border-t border-line pt-4">
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-mono text-sm tabular-nums ${
-                total === 100
-                  ? "bg-emerald-tint text-emerald-strong"
-                  : "bg-bronze-tint text-bronze"
-              }`}
-            >
-              Total {total}%
-            </span>
-            {mode === "percentage" && total < 100 && (
-              <span className="text-xs text-slate">
-                doit être égal à 100 %
-              </span>
-            )}
-          </div>
-          <p
-            className={`mt-1.5 h-4 text-xs ${statusColor[isPending ? "saving" : status]}`}
+        <div className="mt-5 flex items-center gap-2.5 border-t border-line pt-4">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-mono text-sm tabular-nums ${
+              total === 100
+                ? "bg-emerald-tint text-emerald-strong"
+                : "bg-bronze-tint text-bronze"
+            }`}
           >
-            {statusMessage[isPending ? "saving" : status]}
-          </p>
+            Total {total}%
+          </span>
+          {mode === "percentage" && total < 100 && (
+            <span className="text-xs text-slate">doit être égal à 100 %</span>
+          )}
         </div>
+        <p
+          className={`mt-1.5 h-4 text-xs ${statusColor[isPending ? "saving" : status]}`}
+        >
+          {statusMessage[isPending ? "saving" : status]}
+        </p>
+      </div>
 
-        <div className="flex justify-center sm:justify-start">
-          <AllocationDonutChart entries={entries} />
-        </div>
+      <div className="border-t border-line pt-8">
+        <AllocationDonutChart entries={entries} />
       </div>
     </div>
   );

@@ -7,20 +7,19 @@ interface AllocationDonutChartProps {
   entries: AllocationEntry[];
 }
 
-const WIDTH = 340;
-const HEIGHT = 280;
+const WIDTH = 720;
+const HEIGHT = 460;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
-const RADIUS = 66;
-const STROKE_WIDTH = 20;
+const RADIUS = 100;
+const STROKE_WIDTH = 32;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const MIN_PERCENTAGE_FOR_INSIDE_LABEL = 8;
 
 const RING_OUTER = RADIUS + STROKE_WIDTH / 2;
-const LEADER_START_RADIUS = RING_OUTER + 4;
-const LEADER_KNEE_RADIUS = RING_OUTER + 16;
-const LABEL_OFFSET_X = RING_OUTER + 38;
-const MIN_LABEL_GAP = 15;
+const LEADER_START_RADIUS = RING_OUTER + 6;
+const LABEL_OFFSET_X = RING_OUTER + 34;
+const MIN_LABEL_GAP = 22;
 
 const PALETTE_STYLE = `
 .allocation-donut {
@@ -42,23 +41,40 @@ function angleForArcLength(arcLength: number) {
 
 interface ExternalLabel {
   categoryId: string;
+  label: string;
   percentage: number;
+  color: string;
   start: { x: number; y: number };
-  kneeX: number;
-  kneeY: number;
+  angleRad: number;
+  labelY: number;
   side: "left" | "right";
 }
 
 /** Pushes vertically-stacked external labels apart so they never overlap. */
 function resolveLabelCollisions(labels: ExternalLabel[]): ExternalLabel[] {
-  const sorted = [...labels].sort((a, b) => a.kneeY - b.kneeY);
+  const sorted = [...labels].sort((a, b) => a.labelY - b.labelY);
   for (let i = 1; i < sorted.length; i++) {
-    const minY = sorted[i - 1].kneeY + MIN_LABEL_GAP;
-    if (sorted[i].kneeY < minY) {
-      sorted[i] = { ...sorted[i], kneeY: minY };
+    const minY = sorted[i - 1].labelY + MIN_LABEL_GAP;
+    if (sorted[i].labelY < minY) {
+      sorted[i] = { ...sorted[i], labelY: minY };
     }
   }
   return sorted;
+}
+
+/** A soft outward sweep that flattens to horizontal near the label — the classic callout curve. */
+function buildCalloutPath(
+  start: { x: number; y: number },
+  angleRad: number,
+  end: { x: number; y: number },
+  side: "left" | "right"
+) {
+  const dirX = Math.cos(angleRad);
+  const dirY = Math.sin(angleRad);
+  const c1 = { x: start.x + dirX * 34, y: start.y + dirY * 34 };
+  const pullback = side === "right" ? -34 : 34;
+  const c2 = { x: end.x + pullback, y: end.y };
+  return `M ${start.x} ${start.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${end.x} ${end.y}`;
 }
 
 export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
@@ -72,6 +88,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
       return {
         categoryId: entry.categoryId,
         label: category?.label ?? entry.categoryId,
+        color: category?.color ?? "#94a3b8",
         percentage: entry.percentage,
         dash: fraction * CIRCUMFERENCE,
       };
@@ -100,16 +117,17 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
   const outsideRaw: ExternalLabel[] = segments
     .filter((segment) => segment.percentage < MIN_PERCENTAGE_FOR_INSIDE_LABEL)
     .map((segment) => {
+      const angleRad = (segment.angleDeg * Math.PI) / 180;
       const start = pointAtAngle(segment.angleDeg, LEADER_START_RADIUS);
-      const knee = pointAtAngle(segment.angleDeg, LEADER_KNEE_RADIUS);
-      const side: "left" | "right" =
-        Math.cos((segment.angleDeg * Math.PI) / 180) >= 0 ? "right" : "left";
+      const side: "left" | "right" = Math.cos(angleRad) >= 0 ? "right" : "left";
       return {
         categoryId: segment.categoryId,
+        label: segment.label,
         percentage: segment.percentage,
+        color: segment.color,
         start,
-        kneeX: knee.x,
-        kneeY: knee.y,
+        angleRad,
+        labelY: start.y,
         side,
       };
     });
@@ -120,13 +138,13 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
   ];
 
   return (
-    <div className="allocation-donut flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:gap-4">
+    <div className="allocation-donut mx-auto max-w-[720px]">
       <style>{PALETTE_STYLE}</style>
       <svg
-        width={WIDTH}
-        height={HEIGHT}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="shrink-0"
+        className="h-auto w-full"
+        role="img"
+        aria-label={`Allocation d'actifs, total ${total}%`}
       >
         <circle
           cx={CENTER_X}
@@ -157,24 +175,37 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
             item.side === "right"
               ? CENTER_X + LABEL_OFFSET_X
               : CENTER_X - LABEL_OFFSET_X;
+          const end = { x: labelX, y: item.labelY };
           return (
             <g key={item.categoryId}>
-              <polyline
-                points={`${item.start.x},${item.start.y} ${item.kneeX},${item.kneeY} ${labelX},${item.kneeY}`}
+              <path
+                d={buildCalloutPath(item.start, item.angleRad, end, item.side)}
                 fill="none"
                 stroke="var(--color-slate)"
                 strokeWidth={1}
               />
+              <circle cx={end.x} cy={end.y} r={2.5} fill={`var(--segment-${item.categoryId})`} />
               <text
-                x={labelX + (item.side === "right" ? 4 : -4)}
-                y={item.kneeY}
+                x={end.x + (item.side === "right" ? 8 : -8)}
+                y={end.y}
                 textAnchor={item.side === "right" ? "start" : "end"}
                 dominantBaseline="middle"
-                fontFamily="var(--font-mono)"
-                fontSize={11}
-                className="fill-ink"
               >
-                {Math.round(item.percentage)}%
+                <tspan
+                  fontFamily="var(--font-sans)"
+                  fontSize={14}
+                  className="fill-slate"
+                >
+                  {item.label}{" "}
+                </tspan>
+                <tspan
+                  fontFamily="var(--font-mono)"
+                  fontSize={14}
+                  fontWeight={600}
+                  className="fill-ink"
+                >
+                  {Math.round(item.percentage)}%
+                </tspan>
               </text>
             </g>
           );
@@ -188,7 +219,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
             textAnchor="middle"
             dominantBaseline="middle"
             fontFamily="var(--font-mono)"
-            fontSize={12}
+            fontSize={17}
             fontWeight={500}
             style={{ fill: `var(--on-segment-${segment.categoryId})` }}
           >
@@ -202,35 +233,11 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
           textAnchor="middle"
           dominantBaseline="middle"
           fontFamily="var(--font-serif)"
-          className="fill-ink text-2xl font-medium"
+          className="fill-ink text-5xl font-medium"
         >
           {total}%
         </text>
       </svg>
-
-      <ul className="flex w-full flex-col gap-2.5 sm:w-auto sm:min-w-[190px]">
-        {ASSET_CATEGORIES.map((category) => {
-          const entry = entries.find((e) => e.categoryId === category.id);
-          const percentage = entry?.percentage ?? 0;
-          return (
-            <li
-              key={category.id}
-              className="flex items-center justify-between gap-3 border-b border-line pb-2.5 text-sm last:border-b-0 last:pb-0"
-            >
-              <span className="flex items-center gap-2 text-ink">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: `var(--segment-${category.id})` }}
-                />
-                {category.label}
-              </span>
-              <span className="font-mono tabular-nums text-slate">
-                {percentage}%
-              </span>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }
