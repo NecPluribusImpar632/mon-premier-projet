@@ -102,63 +102,69 @@ export function ClientAllocationEditor({
   );
 
   return (
-    <div className="flex flex-col gap-7">
-      <div className="inline-flex w-fit gap-1 rounded-full border border-line bg-paper p-1">
-        <button
-          type="button"
-          onClick={() => setMode("percentage")}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-            mode === "percentage"
-              ? "bg-surface text-ink"
-              : "text-slate hover:text-ink"
-          }`}
-        >
-          Pourcentage
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("amount")}
-          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-            mode === "amount" ? "bg-surface text-ink" : "text-slate hover:text-ink"
-          }`}
-        >
-          Montant (€)
-        </button>
-      </div>
-
-      <div>
-        {mode === "percentage" ? (
-          <AllocationForm entries={entries} onChange={handlePercentageChange} />
-        ) : (
-          <AllocationAmountForm
-            amounts={amounts}
-            percentages={percentagesByCategory}
-            onChange={handleAmountChange}
-          />
-        )}
-
-        <div className="mt-5 flex items-center gap-2.5 border-t border-line pt-4">
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-mono text-sm tabular-nums ${
-              total === 100
-                ? "bg-emerald-tint text-emerald-strong"
-                : "bg-bronze-tint text-bronze"
+    <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
+      <div className="mx-auto w-full max-w-3xl lg:mx-0 lg:w-[380px] lg:shrink-0">
+        <div className="inline-flex w-fit gap-1 rounded-full border border-line bg-paper p-1">
+          <button
+            type="button"
+            onClick={() => setMode("percentage")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+              mode === "percentage"
+                ? "bg-surface text-ink"
+                : "text-slate hover:text-ink"
             }`}
           >
-            Total {total}%
-          </span>
-          {mode === "percentage" && total < 100 && (
-            <span className="text-xs text-slate">doit être égal à 100 %</span>
-          )}
+            Pourcentage
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("amount")}
+            className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+              mode === "amount"
+                ? "bg-surface text-ink"
+                : "text-slate hover:text-ink"
+            }`}
+          >
+            Montant (€)
+          </button>
         </div>
-        <p
-          className={`mt-1.5 h-4 text-xs ${statusColor[isPending ? "saving" : status]}`}
-        >
-          {statusMessage[isPending ? "saving" : status]}
-        </p>
+
+        <div className="mt-6">
+          {mode === "percentage" ? (
+            <AllocationForm entries={entries} onChange={handlePercentageChange} />
+          ) : (
+            <AllocationAmountForm
+              amounts={amounts}
+              percentages={percentagesByCategory}
+              onChange={handleAmountChange}
+            />
+          )}
+
+          <div className="mt-5 flex items-center gap-2.5 border-t border-line pt-4">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-mono text-sm tabular-nums ${
+                total === 100
+                  ? "bg-emerald-tint text-emerald-strong"
+                  : "bg-bronze-tint text-bronze"
+              }`}
+            >
+              Total {total}%
+            </span>
+            {mode === "percentage" && total < 100 && (
+              <span className="text-xs text-slate">
+                doit être égal à 100 %
+              </span>
+            )}
+          </div>
+          <p
+            className={`mt-1.5 h-4 text-xs ${statusColor[isPending ? "saving" : status]}`}
+          >
+            {statusMessage[isPending ? "saving" : status]}
+          </p>
+        </div>
       </div>
 
-      <div className="border-t border-line pt-8">
+      <div className="min-w-0 flex-1">
         <AllocationDonutChart entries={entries} />
       </div>
     </div>

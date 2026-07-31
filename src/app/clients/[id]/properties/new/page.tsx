@@ -21,7 +21,7 @@ export default async function NewPropertyPage({ params }: NewPropertyPageProps) 
   const createPropertyForClient = createProperty.bind(null, client.id);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-14 sm:py-20">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col gap-8 px-6 py-14 sm:py-20">
       <div>
         <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">
           Nouveau bien immobilier

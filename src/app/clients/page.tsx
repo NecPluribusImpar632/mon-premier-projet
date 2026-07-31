@@ -7,7 +7,7 @@ export default async function ClientsPage() {
   const clients = await getClients();
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-10 px-6 py-14 sm:py-20">
+    <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col gap-10 px-6 py-14 sm:py-20">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">
