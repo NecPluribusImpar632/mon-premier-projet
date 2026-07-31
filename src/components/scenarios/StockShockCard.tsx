@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { TrendingDown } from "lucide-react";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
@@ -14,14 +13,16 @@ import {
 interface StockShockCardProps {
   actionsPct: number;
   actionsBreakdown: ActionsProfileBreakdown;
+  marketShockPct: number;
+  onMarketShockPctChange: (value: number) => void;
 }
 
 export function StockShockCard({
   actionsPct,
   actionsBreakdown,
+  marketShockPct,
+  onMarketShockPctChange,
 }: StockShockCardProps) {
-  const [marketShockPct, setMarketShockPct] = useState(-20);
-
   const result = computeStockShockImpact(
     actionsBreakdown,
     actionsPct,
@@ -39,7 +40,7 @@ export function StockShockCard({
         value={marketShockPct}
         min={-50}
         max={10}
-        onChange={setMarketShockPct}
+        onChange={onMarketShockPctChange}
       />
 
       {actionsPct === 0 ? (

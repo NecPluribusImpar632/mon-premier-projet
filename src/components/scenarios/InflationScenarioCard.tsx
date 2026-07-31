@@ -11,12 +11,15 @@ import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 
 interface InflationScenarioCardProps {
   properties: Property[];
+  inflationPct: number;
+  onInflationPctChange: (value: number) => void;
 }
 
 export function InflationScenarioCard({
   properties,
+  inflationPct,
+  onInflationPctChange,
 }: InflationScenarioCardProps) {
-  const [inflationPct, setInflationPct] = useState(3);
   const [years, setYears] = useState(5);
 
   if (properties.length === 0) {
@@ -47,7 +50,7 @@ export function InflationScenarioCard({
         min={0}
         max={8}
         step={0.5}
-        onChange={setInflationPct}
+        onChange={onInflationPctChange}
       />
 
       <label className="flex items-center justify-between gap-4 text-sm text-ink">
