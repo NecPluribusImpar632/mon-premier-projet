@@ -91,10 +91,10 @@ export function ClientAllocationEditor({
   };
 
   const statusColor: Record<SaveStatus, string> = {
-    saved: "text-zinc-400",
-    saving: "text-zinc-400",
-    incomplete: "text-amber-600 dark:text-amber-400",
-    error: "text-red-600 dark:text-red-400",
+    saved: "text-slate",
+    saving: "text-slate",
+    incomplete: "text-bronze",
+    error: "text-bronze",
   };
 
   const percentagesByCategory = Object.fromEntries(
@@ -102,15 +102,15 @@ export function ClientAllocationEditor({
   );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="inline-flex w-fit gap-1 rounded-full bg-zinc-100 p-1 dark:bg-zinc-900">
+    <div className="flex flex-col gap-7">
+      <div className="inline-flex w-fit gap-1 rounded-full border border-line bg-paper p-1">
         <button
           type="button"
           onClick={() => setMode("percentage")}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
             mode === "percentage"
-              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              ? "bg-surface text-ink"
+              : "text-slate hover:text-ink"
           }`}
         >
           Pourcentage
@@ -118,17 +118,15 @@ export function ClientAllocationEditor({
         <button
           type="button"
           onClick={() => setMode("amount")}
-          className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-            mode === "amount"
-              ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-              : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+            mode === "amount" ? "bg-surface text-ink" : "text-slate hover:text-ink"
           }`}
         >
           Montant (€)
         </button>
       </div>
 
-      <div className="flex flex-col gap-8 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-10 sm:flex-row sm:items-start">
         <div className="flex-1">
           {mode === "percentage" ? (
             <AllocationForm entries={entries} onChange={handlePercentageChange} />
@@ -140,24 +138,24 @@ export function ClientAllocationEditor({
             />
           )}
 
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-5 flex items-center gap-2.5 border-t border-line pt-4">
             <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium ${
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-mono text-sm tabular-nums ${
                 total === 100
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
-                  : "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400"
+                  ? "bg-emerald-tint text-emerald-strong"
+                  : "bg-bronze-tint text-bronze"
               }`}
             >
-              Total : {total}%
+              Total {total}%
             </span>
             {mode === "percentage" && total < 100 && (
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-slate">
                 doit être égal à 100 %
               </span>
             )}
           </div>
           <p
-            className={`mt-1 h-4 text-xs ${statusColor[isPending ? "saving" : status]}`}
+            className={`mt-1.5 h-4 text-xs ${statusColor[isPending ? "saving" : status]}`}
           >
             {statusMessage[isPending ? "saving" : status]}
           </p>

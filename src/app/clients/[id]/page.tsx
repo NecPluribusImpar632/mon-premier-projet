@@ -7,6 +7,7 @@ import { ClientAllocationEditor } from "@/components/allocation/ClientAllocation
 import { PropertyList } from "@/components/property/PropertyList";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
 
 interface ClientDetailPageProps {
   params: Promise<{ id: string }>;
@@ -23,29 +24,27 @@ export default async function ClientDetailPage({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-12 sm:py-16">
-      <header className="flex items-center gap-4 pb-8">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+    <div className="mx-auto flex min-h-screen max-w-4xl flex-col px-6 py-14 sm:py-20">
+      <header className="flex items-center gap-5 pb-10">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-slate">
           <User className="h-6 w-6" />
         </span>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">
             {client.name}
           </h1>
-          <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-            {client.age} ans
-          </p>
+          <p className="mt-1 text-sm text-slate">{client.age} ans</p>
         </div>
       </header>
 
-      <div className="flex flex-col gap-10 border-t border-zinc-200 pt-10 dark:border-zinc-800">
-        <section className="flex flex-col gap-5">
+      <div className="flex flex-col gap-14 border-t border-line pt-12">
+        <section className="flex flex-col gap-6">
           <SectionHeading
             icon={PieChart}
             title="Allocation d'actifs"
             subtitle="Répartition du patrimoine par classe d'actifs"
           />
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="rounded-lg border border-line bg-surface p-7">
             <ClientAllocationEditor
               clientId={client.id}
               initialEntries={entriesFromClient(client)}
@@ -53,7 +52,7 @@ export default async function ClientDetailPage({
           </div>
         </section>
 
-        <section className="flex flex-col gap-5">
+        <section className="flex flex-col gap-6">
           <SectionHeading
             icon={Building2}
             title="Biens immobiliers"
@@ -61,7 +60,7 @@ export default async function ClientDetailPage({
             action={
               <Link
                 href={`/clients/${client.id}/properties/new`}
-                className="flex shrink-0 items-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
+                className={PRIMARY_BUTTON_CLASS}
               >
                 Ajouter un bien
                 <LinkPendingSpinner />

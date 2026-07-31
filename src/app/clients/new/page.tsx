@@ -1,22 +1,19 @@
 import { createClient } from "@/lib/actions/clients";
+import { FIELD_CLASS } from "@/components/ui/fieldStyles";
+import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
 
 export default function NewClientPage() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-12">
-      <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col gap-8 px-6 py-14 sm:py-20">
+      <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">
         Nouveau client
       </h1>
-      <form action={createClient} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+      <form action={createClient} className="flex flex-col gap-5">
+        <label className="flex flex-col gap-1.5 text-sm text-slate">
           Nom
-          <input
-            name="name"
-            type="text"
-            required
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition-shadow focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-zinc-50/10"
-          />
+          <input name="name" type="text" required className={FIELD_CLASS} />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-zinc-700 dark:text-zinc-300">
+        <label className="flex flex-col gap-1.5 text-sm text-slate">
           Âge
           <input
             name="age"
@@ -24,13 +21,10 @@ export default function NewClientPage() {
             min={0}
             max={120}
             required
-            className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition-shadow focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-zinc-50/10"
+            className={FIELD_CLASS}
           />
         </label>
-        <button
-          type="submit"
-          className="mt-2 rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
+        <button type="submit" className={`${PRIMARY_BUTTON_CLASS} mt-2`}>
           Créer
         </button>
       </form>

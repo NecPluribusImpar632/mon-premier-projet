@@ -2,6 +2,7 @@
 
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import { clampPercentage } from "@/lib/allocation/validation";
+import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import type { AllocationEntry } from "@/types/allocation";
 
 interface AllocationFormProps {
@@ -19,14 +20,14 @@ export function AllocationForm({ entries, onChange }: AllocationFormProps) {
             key={category.id}
             className="flex items-center justify-between gap-4"
           >
-            <span className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <span className="flex items-center gap-2 text-sm text-ink">
               <span
-                className="h-3 w-3 rounded-full"
+                className="h-2.5 w-2.5 rounded-full"
                 style={{ backgroundColor: category.color }}
               />
               {category.label}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5">
               <input
                 type="number"
                 min={0}
@@ -36,9 +37,9 @@ export function AllocationForm({ entries, onChange }: AllocationFormProps) {
                 onChange={(e) =>
                   onChange(category.id, clampPercentage(Number(e.target.value)))
                 }
-                className="w-20 rounded-md border border-zinc-300 bg-white px-2 py-1 text-right text-sm tabular-nums transition-shadow focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:ring-zinc-50/10"
+                className={`w-20 ${NUMERIC_FIELD_CLASS}`}
               />
-              <span className="text-sm text-zinc-500">%</span>
+              <span className="w-3 text-sm text-slate">%</span>
             </span>
           </label>
         );
