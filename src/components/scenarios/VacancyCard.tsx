@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { CalendarOff } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
@@ -10,12 +9,19 @@ import { FIELD_CLASS, NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 
 interface VacancyCardProps {
   properties: Property[];
+  propertyId: string;
+  onPropertyIdChange: (value: string) => void;
+  months: number;
+  onMonthsChange: (value: number) => void;
 }
 
-export function VacancyCard({ properties }: VacancyCardProps) {
-  const [propertyId, setPropertyId] = useState(properties[0]?.id ?? "");
-  const [months, setMonths] = useState(3);
-
+export function VacancyCard({
+  properties,
+  propertyId,
+  onPropertyIdChange,
+  months,
+  onMonthsChange,
+}: VacancyCardProps) {
   if (properties.length === 0) {
     return (
       <ScenarioCard
@@ -43,7 +49,7 @@ export function VacancyCard({ properties }: VacancyCardProps) {
         Bien
         <select
           value={property.id}
-          onChange={(e) => setPropertyId(e.target.value)}
+          onChange={(e) => onPropertyIdChange(e.target.value)}
           className={FIELD_CLASS}
         >
           {properties.map((p) => (
@@ -62,7 +68,7 @@ export function VacancyCard({ properties }: VacancyCardProps) {
           max={36}
           step={1}
           value={months}
-          onChange={(e) => setMonths(Math.max(0, Number(e.target.value)))}
+          onChange={(e) => onMonthsChange(Math.max(0, Number(e.target.value)))}
           className={`w-16 ${NUMERIC_FIELD_CLASS}`}
         />
       </label>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { Property } from "@/generated/prisma/client";
 import { AllocationForm } from "@/components/allocation/AllocationForm";
 import { AllocationAmountForm } from "@/components/allocation/AllocationAmountForm";
 import { AllocationDonutChart } from "@/components/allocation/AllocationDonutChart";
-import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
+import { FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
 import {
   updateClientAllocation,
   updateActionsProfile,
@@ -14,6 +15,10 @@ import {
   isAllocationComplete,
   percentagesFromAmounts,
 } from "@/lib/allocation/validation";
+import {
+  computeImmobilierPct,
+  overallEntriesFromFinancial,
+} from "@/lib/allocation/mapping";
 import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
 import type { AllocationEntry } from "@/types/allocation";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
@@ -21,13 +26,13 @@ import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 interface ClientAllocationEditorProps {
   clientId: string;
   initialEntries: AllocationEntry[];
+  initialFinancialWealthTotal: number;
   initialActionsBreakdown: ActionsProfileBreakdown;
+  properties: Property[];
 }
 
 type SaveStatus = "saved" | "saving" | "incomplete" | "error";
 type InputMode = "percentage" | "amount";
-
-const CATEGORY_IDS = ASSET_CATEGORIES.map((c) => c.id);
 
 const STATUS_MESSAGE: Record<SaveStatus, string> = {
   saved: "Enregistré",
@@ -46,9 +51,14 @@ const STATUS_COLOR: Record<SaveStatus, string> = {
 export function ClientAllocationEditor({
   clientId,
   initialEntries,
+  initialFinancialWealthTotal,
   initialActionsBreakdown,
+  properties,
 }: ClientAllocationEditorProps) {
   const [entries, setEntries] = useState<AllocationEntry[]>(initialEntries);
+  const [financialWealthTotal, setFinancialWealthTotal] = useState(
+    initialFinancialWealthTotal
+  );
   const [amounts, setAmounts] = useState<Record<string, number>>({});
   const [mode, setMode] = useState<InputMode>("percentage");
   const [isPending, startTransition] = useTransition();
@@ -65,11 +75,19 @@ export function ClientAllocationEditor({
   );
 
   const total = getTotalPercentage(entries);
+  const totalPropertyValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
+  const immobilierPct = computeImmobilierPct(financialWealthTotal, totalPropertyValue);
+  const overallEntries = overallEntriesFromFinancial(
+    entries,
+    financialWealthTotal,
+    totalPropertyValue
+  );
 
-  function persist(next: AllocationEntry[]) {
-    setEntries(next);
+  function persist(nextEntries: AllocationEntry[], nextTotal: number) {
+    setEntries(nextEntries);
+    setFinancialWealthTotal(nextTotal);
 
-    if (!isAllocationComplete(next)) {
+    if (!isAllocationComplete(nextEntries)) {
       setStatus("incomplete");
       return;
     }
@@ -77,7 +95,7 @@ export function ClientAllocationEditor({
     setStatus("saving");
     startTransition(async () => {
       try {
-        await updateClientAllocation(clientId, next);
+        await updateClientAllocation(clientId, nextEntries, nextTotal);
         setStatus("saved");
       } catch {
         setStatus("error");
@@ -95,20 +113,30 @@ export function ClientAllocationEditor({
     persist(
       entries.map((entry) =>
         entry.categoryId === categoryId ? { ...entry, percentage } : entry
-      )
+      ),
+      financialWealthTotal
     );
+  }
+
+  function handleFinancialWealthTotalChange(value: number) {
+    persist(entries, value);
   }
 
   function handleAmountChange(categoryId: string, amount: number) {
     const nextAmounts = { ...amounts, [categoryId]: amount };
     setAmounts(nextAmounts);
 
-    const nextPercentages = percentagesFromAmounts(nextAmounts, CATEGORY_IDS);
+    const nextPercentages = percentagesFromAmounts(nextAmounts, FINANCIAL_CATEGORY_IDS);
+    const nextTotal = FINANCIAL_CATEGORY_IDS.reduce(
+      (sum, id) => sum + (nextAmounts[id] ?? 0),
+      0
+    );
     persist(
-      CATEGORY_IDS.map((id) => ({
+      FINANCIAL_CATEGORY_IDS.map((id) => ({
         categoryId: id,
         percentage: nextPercentages[id] ?? 0,
-      }))
+      })),
+      nextTotal
     );
   }
 
@@ -180,6 +208,10 @@ export function ClientAllocationEditor({
             <AllocationForm
               entries={entries}
               onChange={handlePercentageChange}
+              financialWealthTotal={financialWealthTotal}
+              onFinancialWealthTotalChange={handleFinancialWealthTotalChange}
+              immobilierPct={immobilierPct}
+              totalPropertyValue={totalPropertyValue}
               actionsBreakdown={actionsBreakdown}
               onActionsBreakdownChange={handleActionsBreakdownChange}
               actionsStatusMessage={
@@ -194,6 +226,8 @@ export function ClientAllocationEditor({
               amounts={amounts}
               percentages={percentagesByCategory}
               onChange={handleAmountChange}
+              immobilierPct={immobilierPct}
+              totalPropertyValue={totalPropertyValue}
             />
           )}
 
@@ -222,7 +256,7 @@ export function ClientAllocationEditor({
       </div>
 
       <div className="min-w-0 flex-1">
-        <AllocationDonutChart entries={entries} />
+        <AllocationDonutChart entries={overallEntries} />
       </div>
     </div>
   );

@@ -196,3 +196,92 @@ export function computeVacancyImpact(
     lostRent: monthlyRent * months,
   };
 }
+
+export interface CombinedNetWorthResult {
+  totalBefore: number;
+  totalAfter: number;
+  deltaAmount: number;
+  deltaPct: number;
+}
+
+/**
+ * Combines all four shocks into a single before/after net worth figure, by
+ * reusing the per-shock functions above unchanged:
+ * - Stock shock moves only the Actions slice of financial wealth; the other
+ *   5 financial categories have no modeled shock and stay flat.
+ * - Real estate shock revalues each property's gross value; debt is nominal
+ *   and unaffected.
+ * - Inflation's contribution is the real erosion of outstanding debt,
+ *   counted as a positive wealth effect (nominal debt unchanged, but worth
+ *   less in real terms).
+ * - Vacancy is a direct lost-rent deduction for the selected property, if any.
+ */
+export function computeCombinedNetWorthImpact(params: {
+  financialWealthTotal: number;
+  actionsPctWithinFinancial: number;
+  actionsBreakdown: ActionsProfileBreakdown;
+  marketShockPct: number;
+  properties: Property[];
+  realEstateShockPct: number;
+  inflationPct: number;
+  inflationYears: number;
+  vacancyPropertyId: string | null;
+  vacancyMonths: number;
+}): CombinedNetWorthResult {
+  const {
+    financialWealthTotal,
+    actionsPctWithinFinancial,
+    actionsBreakdown,
+    marketShockPct,
+    properties,
+    realEstateShockPct,
+    inflationPct,
+    inflationYears,
+    vacancyPropertyId,
+    vacancyMonths,
+  } = params;
+
+  const totalPropertyValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
+  const totalDebt = properties.reduce((sum, p) => sum + p.remainingLoanAmount, 0);
+  const totalBefore = financialWealthTotal + totalPropertyValue - totalDebt;
+
+  const actionsValueBefore = (actionsPctWithinFinancial / 100) * financialWealthTotal;
+  const stockShock = computeStockShockImpact(
+    actionsBreakdown,
+    actionsPctWithinFinancial,
+    marketShockPct
+  );
+  const actionsValueAfter =
+    actionsValueBefore * (1 + stockShock.actionsImpactPct / 100);
+  const financialWealthAfter =
+    financialWealthTotal - actionsValueBefore + actionsValueAfter;
+
+  const realEstateShock = computeRealEstateShockImpact(properties, realEstateShockPct);
+
+  const inflationResult = computeInflationImpact(
+    properties,
+    inflationPct,
+    inflationYears
+  );
+  const totalDebtErosion = inflationResult.perProperty.reduce(
+    (sum, p) => sum + p.debtErosion,
+    0
+  );
+
+  const vacancyProperty = properties.find((p) => p.id === vacancyPropertyId);
+  const lostRent = vacancyProperty
+    ? computeVacancyImpact(vacancyProperty, vacancyMonths).lostRent
+    : 0;
+
+  const totalAfter =
+    financialWealthAfter +
+    realEstateShock.totalNewValue -
+    totalDebt +
+    totalDebtErosion -
+    lostRent;
+
+  const deltaAmount = totalAfter - totalBefore;
+  const deltaPct = totalBefore !== 0 ? (deltaAmount / totalBefore) * 100 : 0;
+
+  return { totalBefore, totalAfter, deltaAmount, deltaPct };
+}

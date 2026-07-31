@@ -2,9 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Building2, FlaskConical, PieChart, User } from "lucide-react";
 import { getClient } from "@/lib/actions/clients";
-import { actionsBreakdownFromClient, entriesFromClient } from "@/lib/allocation/mapping";
+import {
+  actionsBreakdownFromClient,
+  financialEntriesFromClient,
+} from "@/lib/allocation/mapping";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
 import { PropertyList } from "@/components/property/PropertyList";
+import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
@@ -60,8 +64,10 @@ export default async function ClientDetailPage({
           </div>
           <ClientAllocationEditor
             clientId={client.id}
-            initialEntries={entriesFromClient(client)}
+            initialEntries={financialEntriesFromClient(client)}
+            initialFinancialWealthTotal={client.financialWealthTotal}
             initialActionsBreakdown={actionsBreakdownFromClient(client)}
+            properties={client.properties}
           />
         </section>
 
@@ -81,6 +87,7 @@ export default async function ClientDetailPage({
                 </Link>
               }
             />
+            <PropertyOverview properties={client.properties} />
             <PropertyList properties={client.properties} />
           </section>
         </div>

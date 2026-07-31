@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { allocationFieldsFromEntries } from "@/lib/allocation/mapping";
+import { financialAllocationFieldsFromEntries } from "@/lib/allocation/mapping";
 import { isAllocationComplete } from "@/lib/allocation/validation";
 import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
 import type { AllocationEntry } from "@/types/allocation";
@@ -38,17 +38,24 @@ export async function createClient(formData: FormData) {
 
 export async function updateClientAllocation(
   clientId: string,
-  entries: AllocationEntry[]
+  entries: AllocationEntry[],
+  financialWealthTotal: number
 ) {
   if (!isAllocationComplete(entries)) {
     throw new Error(
       "L'allocation doit être composée de pourcentages entre 0 et 100 dont la somme fait 100."
     );
   }
+  if (!Number.isFinite(financialWealthTotal) || financialWealthTotal < 0) {
+    throw new Error("Le patrimoine financier total doit être un nombre positif.");
+  }
 
   await prisma.client.update({
     where: { id: clientId },
-    data: allocationFieldsFromEntries(entries),
+    data: {
+      ...financialAllocationFieldsFromEntries(entries),
+      financialWealthTotal,
+    },
   });
   revalidatePath(`/clients/${clientId}`);
 }

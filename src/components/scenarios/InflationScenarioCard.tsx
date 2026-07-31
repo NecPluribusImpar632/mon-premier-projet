@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { TrendingUp } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
@@ -13,15 +12,17 @@ interface InflationScenarioCardProps {
   properties: Property[];
   inflationPct: number;
   onInflationPctChange: (value: number) => void;
+  years: number;
+  onYearsChange: (value: number) => void;
 }
 
 export function InflationScenarioCard({
   properties,
   inflationPct,
   onInflationPctChange,
+  years,
+  onYearsChange,
 }: InflationScenarioCardProps) {
-  const [years, setYears] = useState(5);
-
   if (properties.length === 0) {
     return (
       <ScenarioCard
@@ -61,7 +62,7 @@ export function InflationScenarioCard({
           max={20}
           step={1}
           value={years}
-          onChange={(e) => setYears(Math.max(1, Number(e.target.value)))}
+          onChange={(e) => onYearsChange(Math.max(1, Number(e.target.value)))}
           className={`w-16 ${NUMERIC_FIELD_CLASS}`}
         />
       </label>

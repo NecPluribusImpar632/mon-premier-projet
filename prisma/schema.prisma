@@ -16,9 +16,9 @@ model Client {
   id                   String     @id @default(cuid())
   name                 String
   age                  Int
+  financialWealthTotal Float      @default(0)
   actionsPct           Float      @default(0)
   obligationsPct       Float      @default(0)
-  immobilierPct        Float      @default(0)
   liquiditesPct        Float      @default(0)
   privateEquityPct     Float      @default(0)
   matieresPremieresPct Float      @default(0)

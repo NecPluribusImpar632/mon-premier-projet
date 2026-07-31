@@ -22,3 +22,8 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
   },
   { id: "autres", label: "Autres", color: "#4a3aa7", onColor: WHITE },
 ];
+
+/** All categories except Immobilier, which is derived from real properties rather than entered directly. */
+export const FINANCIAL_CATEGORY_IDS = ASSET_CATEGORIES.filter(
+  (category) => category.id !== "immobilier"
+).map((category) => category.id);
