@@ -3,7 +3,10 @@
 import { useState } from "react";
 import type { Property } from "@/generated/prisma/client";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
-import { computeCombinedNetWorthImpact } from "@/lib/scenarios/calculations";
+import {
+  computeCombinedNetWorthImpact,
+  computeScpiShockImpact,
+} from "@/lib/scenarios/calculations";
 import {
   SCENARIO_PRESETS,
   CUSTOM_PRESET_ID,
@@ -13,6 +16,7 @@ import { ScenarioPresetTabs } from "@/components/scenarios/ScenarioPresetTabs";
 import { CombinedImpactBanner } from "@/components/scenarios/CombinedImpactBanner";
 import { StockShockCard } from "@/components/scenarios/StockShockCard";
 import { RealEstateShockCard } from "@/components/scenarios/RealEstateShockCard";
+import { ScpiShockCard } from "@/components/scenarios/ScpiShockCard";
 import { InflationScenarioCard } from "@/components/scenarios/InflationScenarioCard";
 import { VacancyCard } from "@/components/scenarios/VacancyCard";
 
@@ -20,6 +24,8 @@ interface ScenarioSimulatorProps {
   actionsPctOverall: number;
   actionsPctWithinFinancial: number;
   financialWealthTotal: number;
+  scpiAmount: number;
+  immobilierValue: number;
   actionsBreakdown: ActionsProfileBreakdown;
   properties: Property[];
 }
@@ -32,6 +38,8 @@ export function ScenarioSimulator({
   actionsPctOverall,
   actionsPctWithinFinancial,
   financialWealthTotal,
+  scpiAmount,
+  immobilierValue,
   actionsBreakdown,
   properties,
 }: ScenarioSimulatorProps) {
@@ -42,6 +50,7 @@ export function ScenarioSimulator({
   const [realEstateShockPct, setRealEstateShockPct] = useState(
     CUSTOM_PRESET.realEstateShockPct
   );
+  const [scpiShockPct, setScpiShockPct] = useState(0);
   const [inflationPct, setInflationPct] = useState(CUSTOM_PRESET.inflationPct);
   const [inflationYears, setInflationYears] = useState(5);
   const [vacancyPropertyId, setVacancyPropertyId] = useState(
@@ -66,12 +75,17 @@ export function ScenarioSimulator({
     setSelectedPresetId(CUSTOM_PRESET_ID);
   }
 
+  function handleScpiShockChange(value: number) {
+    setScpiShockPct(value);
+    setSelectedPresetId(CUSTOM_PRESET_ID);
+  }
+
   function handleInflationChange(value: number) {
     setInflationPct(value);
     setSelectedPresetId(CUSTOM_PRESET_ID);
   }
 
-  const combinedImpact = computeCombinedNetWorthImpact({
+  const baseImpact = computeCombinedNetWorthImpact({
     financialWealthTotal,
     actionsPctWithinFinancial,
     actionsBreakdown,
@@ -83,6 +97,23 @@ export function ScenarioSimulator({
     vacancyPropertyId,
     vacancyMonths,
   });
+
+  // computeCombinedNetWorthImpact only knows about detailed properties. Fold
+  // in what it can't see: the manual Immobilier amount when no property is
+  // itemized (used as-is, unshocked — there's no per-property data to model
+  // a price move against), and the SCPI shock on top of the flat SCPI amount
+  // already counted inside financialWealthTotal.
+  const immobilierBaseline = properties.length === 0 ? immobilierValue : 0;
+  const scpiShock = computeScpiShockImpact(scpiAmount, scpiShockPct);
+  const totalBefore = baseImpact.totalBefore + immobilierBaseline;
+  const totalAfter = baseImpact.totalAfter + immobilierBaseline + scpiShock.deltaValue;
+  const deltaAmount = totalAfter - totalBefore;
+  const combinedImpact = {
+    totalBefore,
+    totalAfter,
+    deltaAmount,
+    deltaPct: totalBefore !== 0 ? (deltaAmount / totalBefore) * 100 : 0,
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -105,6 +136,11 @@ export function ScenarioSimulator({
           properties={properties}
           shockPct={realEstateShockPct}
           onShockPctChange={handleRealEstateShockChange}
+        />
+        <ScpiShockCard
+          scpiAmount={scpiAmount}
+          shockPct={scpiShockPct}
+          onShockPctChange={handleScpiShockChange}
         />
         <InflationScenarioCard
           properties={properties}

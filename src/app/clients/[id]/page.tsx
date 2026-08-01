@@ -4,7 +4,7 @@ import { Building2, FlaskConical, PieChart, User } from "lucide-react";
 import { getClient } from "@/lib/actions/clients";
 import {
   actionsBreakdownFromClient,
-  financialAmountsFromClient,
+  amountsFromClient,
 } from "@/lib/allocation/mapping";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
 import { PropertyList } from "@/components/property/PropertyList";
@@ -64,7 +64,7 @@ export default async function ClientDetailPage({
           </div>
           <ClientAllocationEditor
             clientId={client.id}
-            initialAmounts={financialAmountsFromClient(client)}
+            initialAmounts={amountsFromClient(client)}
             initialActionsBreakdown={actionsBreakdownFromClient(client)}
             properties={client.properties}
           />

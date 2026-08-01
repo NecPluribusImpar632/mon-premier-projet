@@ -10,7 +10,7 @@ import {
   updateActionsProfile,
 } from "@/lib/actions/clients";
 import {
-  computeImmobilierPct,
+  effectiveImmobilierAmount,
   financialTotalFromAmounts,
   overallEntriesFromAmounts,
 } from "@/lib/allocation/mapping";
@@ -58,13 +58,17 @@ export function ClientAllocationEditor({
     isActionsBreakdownComplete(initialActionsBreakdown) ? "saved" : "incomplete"
   );
 
-  const totalPropertyValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
+  const hasDetailedProperties = properties.length > 0;
   const financialTotal = financialTotalFromAmounts(amounts);
-  const immobilierPct = computeImmobilierPct(financialTotal, totalPropertyValue);
-  const overallEntries = overallEntriesFromAmounts(amounts, totalPropertyValue);
+  const immobilierValue = effectiveImmobilierAmount(
+    amounts.immobilier ?? 0,
+    properties
+  );
+  const overallEntries = overallEntriesFromAmounts(amounts, properties);
   const percentagesByCategory = Object.fromEntries(
     overallEntries.map((entry) => [entry.categoryId, entry.percentage])
   );
+  const totalValue = financialTotal + immobilierValue;
 
   function handleAmountChange(categoryId: string, amount: number) {
     const nextAmounts = { ...amounts, [categoryId]: amount };
@@ -115,8 +119,8 @@ export function ClientAllocationEditor({
           amounts={amounts}
           percentages={percentagesByCategory}
           onChange={handleAmountChange}
-          immobilierPct={immobilierPct}
-          totalPropertyValue={totalPropertyValue}
+          immobilierValue={immobilierValue}
+          hasDetailedProperties={hasDetailedProperties}
           actionsBreakdown={actionsBreakdown}
           onActionsBreakdownChange={handleActionsBreakdownChange}
           actionsStatusMessage={
@@ -135,8 +139,12 @@ export function ClientAllocationEditor({
       </div>
 
       <div className="min-w-0 flex-1">
-        <WealthSummary financialWealthTotal={financialTotal} properties={properties} />
-        <AllocationDonutChart entries={overallEntries} />
+        <WealthSummary
+          financialWealthTotal={financialTotal}
+          immobilierValue={immobilierValue}
+          properties={properties}
+        />
+        <AllocationDonutChart entries={overallEntries} totalValue={totalValue} />
       </div>
     </div>
   );

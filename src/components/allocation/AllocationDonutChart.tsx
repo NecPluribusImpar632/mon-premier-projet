@@ -1,11 +1,14 @@
 "use client";
 
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
+import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
 import type { AllocationEntry } from "@/types/allocation";
 
 interface AllocationDonutChartProps {
   entries: AllocationEntry[];
+  /** Total patrimoine in €, shown at the center instead of the (always-100%) total. */
+  totalValue: number;
 }
 
 const WIDTH = 1060;
@@ -87,9 +90,8 @@ function buildCalloutPath(
   return `M ${round2(start.x)} ${round2(start.y)} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${round2(end.x)} ${round2(end.y)}`;
 }
 
-export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
+export function AllocationDonutChart({ entries, totalValue }: AllocationDonutChartProps) {
   const total = entries.reduce((sum, e) => sum + e.percentage, 0);
-  const displayTotal = roundPercent(total);
 
   const dashLengths = entries
     .filter((entry) => entry.percentage > 0)
@@ -155,7 +157,7 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-auto w-full"
         role="img"
-        aria-label={`Allocation d'actifs, total ${displayTotal}%`}
+        aria-label={`Allocation d'actifs, patrimoine total ${formatCurrency(totalValue)}`}
       >
         <circle
           cx={CENTER_X}
@@ -244,9 +246,11 @@ export function AllocationDonutChart({ entries }: AllocationDonutChartProps) {
           textAnchor="middle"
           dominantBaseline="middle"
           fontFamily="var(--font-serif)"
-          className="fill-ink text-8xl font-medium"
+          fontSize={42}
+          fontWeight={500}
+          className="fill-ink"
         >
-          {displayTotal}%
+          {formatCurrency(totalValue)}
         </text>
       </svg>
     </div>

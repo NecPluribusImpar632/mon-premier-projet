@@ -18,6 +18,8 @@ model Client {
   age                     Int
   actionsAmount           Float      @default(0)
   obligationsAmount       Float      @default(0)
+  immobilierAmount        Float      @default(0)
+  scpiAmount              Float      @default(0)
   liquiditesAmount        Float      @default(0)
   privateEquityAmount     Float      @default(0)
   matieresPremieresAmount Float      @default(0)

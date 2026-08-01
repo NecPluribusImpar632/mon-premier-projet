@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { financialAllocationFieldsFromAmounts } from "@/lib/allocation/mapping";
-import { FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
+import { allocationFieldsFromAmounts } from "@/lib/allocation/mapping";
+import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 
 export async function getClients() {
@@ -38,8 +38,8 @@ export async function updateClientAllocation(
   clientId: string,
   amounts: Record<string, number>
 ) {
-  const hasValidAmounts = FINANCIAL_CATEGORY_IDS.every((categoryId) => {
-    const amount = amounts[categoryId] ?? 0;
+  const hasValidAmounts = ASSET_CATEGORIES.every((category) => {
+    const amount = amounts[category.id] ?? 0;
     return Number.isFinite(amount) && amount >= 0;
   });
   if (!hasValidAmounts) {
@@ -48,7 +48,7 @@ export async function updateClientAllocation(
 
   await prisma.client.update({
     where: { id: clientId },
-    data: financialAllocationFieldsFromAmounts(amounts),
+    data: allocationFieldsFromAmounts(amounts),
   });
   revalidatePath(`/clients/${clientId}`);
 }

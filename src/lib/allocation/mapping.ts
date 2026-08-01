@@ -1,91 +1,104 @@
-import type { Client } from "@/generated/prisma/client";
+import type { Client, Property } from "@/generated/prisma/client";
 import type { AllocationEntry } from "@/types/allocation";
 import type { ActionsProfileBreakdown } from "./stockProfiles";
-import { FINANCIAL_CATEGORY_IDS } from "./categories";
+import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "./categories";
 
-type FinancialFieldName =
+type CategoryFieldName =
   | "actionsAmount"
   | "obligationsAmount"
+  | "immobilierAmount"
+  | "scpiAmount"
   | "liquiditesAmount"
   | "privateEquityAmount"
   | "matieresPremieresAmount"
   | "autresAmount";
 
-const FINANCIAL_FIELD_MAP: Record<string, FinancialFieldName> = {
+const CATEGORY_FIELD_MAP: Record<string, CategoryFieldName> = {
   actions: "actionsAmount",
   obligations: "obligationsAmount",
+  immobilier: "immobilierAmount",
+  scpi: "scpiAmount",
   liquidites: "liquiditesAmount",
   "private-equity": "privateEquityAmount",
   "matieres-premieres": "matieresPremieresAmount",
   autres: "autresAmount",
 };
 
-/** The 6 non-Immobilier categories' € amounts, as entered directly by the advisor. */
-export function financialAmountsFromClient(client: Client): Record<string, number> {
+/** All 8 categories' € amounts, as entered directly by the advisor (Immobilier included — see `effectiveImmobilierAmount`). */
+export function amountsFromClient(client: Client): Record<string, number> {
   return Object.fromEntries(
-    FINANCIAL_CATEGORY_IDS.map((categoryId) => [
-      categoryId,
-      client[FINANCIAL_FIELD_MAP[categoryId]],
+    ASSET_CATEGORIES.map((category) => [
+      category.id,
+      client[CATEGORY_FIELD_MAP[category.id]],
     ])
   );
 }
 
-export function financialAllocationFieldsFromAmounts(
+export function allocationFieldsFromAmounts(
   amounts: Record<string, number>
-): Partial<Record<FinancialFieldName, number>> {
-  const fields: Partial<Record<FinancialFieldName, number>> = {};
-  for (const categoryId of FINANCIAL_CATEGORY_IDS) {
-    fields[FINANCIAL_FIELD_MAP[categoryId]] = amounts[categoryId] ?? 0;
+): Partial<Record<CategoryFieldName, number>> {
+  const fields: Partial<Record<CategoryFieldName, number>> = {};
+  for (const category of ASSET_CATEGORIES) {
+    fields[CATEGORY_FIELD_MAP[category.id]] = amounts[category.id] ?? 0;
   }
   return fields;
 }
 
-/** Sum of the 6 financial categories' € amounts. */
+/** Sum of the financial categories' € amounts (everything except Immobilier). */
 export function financialTotalFromAmounts(amounts: Record<string, number>): number {
   return FINANCIAL_CATEGORY_IDS.reduce((sum, id) => sum + (amounts[id] ?? 0), 0);
+}
+
+/**
+ * The Immobilier amount actually used everywhere (donut, bilan patrimonial,
+ * stress test): the manually-entered figure by default, but overridden by
+ * the real sum of detailed properties as soon as at least one exists — the
+ * two are never both counted.
+ */
+export function effectiveImmobilierAmount(
+  manualAmount: number,
+  properties: Property[]
+): number {
+  if (properties.length === 0) return manualAmount;
+  return properties.reduce((sum, p) => sum + p.currentValue, 0);
 }
 
 /** Immobilier's share of the total patrimoine (financial + real estate), in %. */
 export function computeImmobilierPct(
   financialTotal: number,
-  totalPropertyValue: number
+  immobilierValue: number
 ): number {
-  const totalPatrimoine = financialTotal + totalPropertyValue;
-  return totalPatrimoine > 0 ? (totalPropertyValue / totalPatrimoine) * 100 : 0;
+  const totalPatrimoine = financialTotal + immobilierValue;
+  return totalPatrimoine > 0 ? (immobilierValue / totalPatrimoine) * 100 : 0;
 }
 
 /**
- * All 7 categories as % of the TOTAL patrimoine (financial + real estate),
- * derived directly from € amounts. There is no separate "total" to keep in
- * sync — the total simply is the sum of what's entered, and Immobilier is
- * derived from the real sum of property values so it can never drift out
- * of sync with the properties actually on file.
+ * All 8 categories as % of the TOTAL patrimoine (financial + real estate),
+ * derived directly from € amounts.
  */
 export function overallEntriesFromAmounts(
   amounts: Record<string, number>,
-  totalPropertyValue: number
+  properties: Property[]
 ): AllocationEntry[] {
   const financialTotal = financialTotalFromAmounts(amounts);
-  const grandTotal = financialTotal + totalPropertyValue;
+  const immobilierValue = effectiveImmobilierAmount(amounts.immobilier ?? 0, properties);
+  const grandTotal = financialTotal + immobilierValue;
 
   const financial = FINANCIAL_CATEGORY_IDS.map((categoryId) => ({
     categoryId,
     percentage: grandTotal > 0 ? ((amounts[categoryId] ?? 0) / grandTotal) * 100 : 0,
   }));
 
-  const immobilierPct = computeImmobilierPct(financialTotal, totalPropertyValue);
+  const immobilierPct = computeImmobilierPct(financialTotal, immobilierValue);
 
   return [...financial, { categoryId: "immobilier", percentage: immobilierPct }];
 }
 
 export function overallEntriesFromClient(
   client: Client,
-  totalPropertyValue: number
+  properties: Property[]
 ): AllocationEntry[] {
-  return overallEntriesFromAmounts(
-    financialAmountsFromClient(client),
-    totalPropertyValue
-  );
+  return overallEntriesFromAmounts(amountsFromClient(client), properties);
 }
 
 export function actionsBreakdownFromClient(

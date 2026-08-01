@@ -3,6 +3,7 @@ import { computeNetWorth } from "@/lib/wealth/netWorth";
 
 interface WealthSummaryProps {
   financialWealthTotal: number;
+  immobilierValue: number;
   properties: Property[];
 }
 
@@ -14,10 +15,12 @@ const currencyFormatter = new Intl.NumberFormat("fr-FR", {
 
 export function WealthSummary({
   financialWealthTotal,
+  immobilierValue,
   properties,
 }: WealthSummaryProps) {
   const { grossWealth, totalDebt, netWealth } = computeNetWorth(
     financialWealthTotal,
+    immobilierValue,
     properties
   );
 

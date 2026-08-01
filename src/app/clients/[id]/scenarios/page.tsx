@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import {
   actionsBreakdownFromClient,
-  financialAmountsFromClient,
+  amountsFromClient,
+  effectiveImmobilierAmount,
   financialTotalFromAmounts,
   overallEntriesFromAmounts,
 } from "@/lib/allocation/mapping";
@@ -20,13 +21,13 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
     notFound();
   }
 
-  const amounts = financialAmountsFromClient(client);
-  const totalPropertyValue = client.properties.reduce(
-    (sum, p) => sum + p.currentValue,
-    0
-  );
-  const overallEntries = overallEntriesFromAmounts(amounts, totalPropertyValue);
+  const amounts = amountsFromClient(client);
+  const overallEntries = overallEntriesFromAmounts(amounts, client.properties);
   const financialWealthTotal = financialTotalFromAmounts(amounts);
+  const immobilierValue = effectiveImmobilierAmount(
+    amounts.immobilier ?? 0,
+    client.properties
+  );
 
   const actionsPctOverall =
     overallEntries.find((entry) => entry.categoryId === "actions")?.percentage ??
@@ -50,6 +51,8 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
           actionsPctOverall={actionsPctOverall}
           actionsPctWithinFinancial={actionsPctWithinFinancial}
           financialWealthTotal={financialWealthTotal}
+          scpiAmount={amounts.scpi ?? 0}
+          immobilierValue={immobilierValue}
           actionsBreakdown={actionsBreakdownFromClient(client)}
           properties={client.properties}
         />

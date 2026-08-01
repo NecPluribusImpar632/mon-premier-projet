@@ -197,6 +197,30 @@ export function computeVacancyImpact(
   };
 }
 
+export interface ScpiShockResult {
+  currentValue: number;
+  newValue: number;
+  deltaValue: number;
+}
+
+/**
+ * Unlike a physical property, an SCPI's exposure isn't per-unit debt/rate —
+ * it's a lump € position that can be marked down (a "décote de part") in a
+ * downturn, so the shock is modeled as a flat price move on the amount
+ * held, independent of the direct real estate shock.
+ */
+export function computeScpiShockImpact(
+  scpiAmount: number,
+  shockPct: number
+): ScpiShockResult {
+  const newValue = scpiAmount * (1 + shockPct / 100);
+  return {
+    currentValue: scpiAmount,
+    newValue,
+    deltaValue: newValue - scpiAmount,
+  };
+}
+
 export interface CombinedNetWorthResult {
   totalBefore: number;
   totalAfter: number;
