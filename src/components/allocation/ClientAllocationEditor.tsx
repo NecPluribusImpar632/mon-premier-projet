@@ -241,11 +241,11 @@ export function ClientAllocationEditor({
                   : "bg-bronze-tint text-bronze"
               }`}
             >
-              Total {roundPercent(total)}%
+              Répartition financière : {roundPercent(total)}%
             </span>
             {mode === "percentage" && total < 100 && (
               <span className="text-xs text-slate">
-                doit être égal à 100 %
+                doit être égal à 100 % (hors immobilier)
               </span>
             )}
           </div>
