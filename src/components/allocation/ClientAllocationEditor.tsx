@@ -8,6 +8,7 @@ import { WealthSummary } from "@/components/allocation/WealthSummary";
 import {
   updateClientAllocation,
   updateActionsProfile,
+  updateProfessionalToolMainIncome,
 } from "@/lib/actions/clients";
 import {
   effectiveImmobilierAmount,
@@ -21,6 +22,7 @@ interface ClientAllocationEditorProps {
   clientId: string;
   initialAmounts: Record<string, number>;
   initialActionsBreakdown: ActionsProfileBreakdown;
+  initialProfessionalToolMainIncome: boolean;
   properties: Property[];
 }
 
@@ -44,11 +46,17 @@ export function ClientAllocationEditor({
   clientId,
   initialAmounts,
   initialActionsBreakdown,
+  initialProfessionalToolMainIncome,
   properties,
 }: ClientAllocationEditorProps) {
   const [amounts, setAmounts] = useState<Record<string, number>>(initialAmounts);
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<SaveStatus>("saved");
+
+  const [professionalToolMainIncome, setProfessionalToolMainIncome] = useState(
+    initialProfessionalToolMainIncome
+  );
+  const [, startMainIncomeTransition] = useTransition();
 
   const [actionsBreakdown, setActionsBreakdown] = useState<ActionsProfileBreakdown>(
     initialActionsBreakdown
@@ -81,6 +89,17 @@ export function ClientAllocationEditor({
         setStatus("saved");
       } catch {
         setStatus("error");
+      }
+    });
+  }
+
+  function handleProfessionalToolMainIncomeChange(value: boolean) {
+    setProfessionalToolMainIncome(value);
+    startMainIncomeTransition(async () => {
+      try {
+        await updateProfessionalToolMainIncome(clientId, value);
+      } catch {
+        setProfessionalToolMainIncome(!value);
       }
     });
   }
@@ -129,6 +148,8 @@ export function ClientAllocationEditor({
           actionsStatusColorClass={
             STATUS_COLOR[isActionsPending ? "saving" : actionsStatus]
           }
+          professionalToolMainIncome={professionalToolMainIncome}
+          onProfessionalToolMainIncomeChange={handleProfessionalToolMainIncomeChange}
         />
 
         <p
@@ -143,6 +164,7 @@ export function ClientAllocationEditor({
           financialWealthTotal={financialTotal}
           immobilierValue={immobilierValue}
           properties={properties}
+          showConcentrationWarning={professionalToolMainIncome}
         />
         <AllocationDonutChart entries={overallEntries} totalValue={totalValue} />
       </div>

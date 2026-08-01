@@ -1,3 +1,4 @@
+import { AlertTriangle } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { computeNetWorth } from "@/lib/wealth/netWorth";
 
@@ -5,6 +6,7 @@ interface WealthSummaryProps {
   financialWealthTotal: number;
   immobilierValue: number;
   properties: Property[];
+  showConcentrationWarning: boolean;
 }
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR", {
@@ -17,6 +19,7 @@ export function WealthSummary({
   financialWealthTotal,
   immobilierValue,
   properties,
+  showConcentrationWarning,
 }: WealthSummaryProps) {
   const { grossWealth, totalDebt, netWealth } = computeNetWorth(
     financialWealthTotal,
@@ -90,6 +93,16 @@ export function WealthSummary({
           </p>
         </div>
       </div>
+
+      {showConcentrationWarning && (
+        <div className="mt-6 flex items-start gap-2.5 rounded-md border border-bronze bg-bronze-tint p-3 text-sm text-bronze">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Patrimoine et revenus concentrés sur un même actif — risque non
+            couvert par les scénarios de marché standards.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

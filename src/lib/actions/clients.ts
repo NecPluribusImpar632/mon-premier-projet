@@ -53,6 +53,17 @@ export async function updateClientAllocation(
   revalidatePath(`/clients/${clientId}`);
 }
 
+export async function updateProfessionalToolMainIncome(
+  clientId: string,
+  mainIncome: boolean
+) {
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { professionalToolMainIncome: mainIncome },
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
 export async function updateActionsProfile(
   clientId: string,
   breakdown: ActionsProfileBreakdown

@@ -16,6 +16,12 @@ export const ASSET_CATEGORIES: AssetCategory[] = [
     onColor: INK,
   },
   {
+    id: "outil-professionnel",
+    label: "Entreprise / outil professionnel",
+    color: "#c0392b",
+    onColor: WHITE,
+  },
+  {
     id: "matieres-premieres",
     label: "Matières premières",
     color: "#008300",

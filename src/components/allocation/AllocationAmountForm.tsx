@@ -18,6 +18,8 @@ interface AllocationAmountFormProps {
   onActionsBreakdownChange: (profile: keyof Breakdown, percentage: number) => void;
   actionsStatusMessage: string;
   actionsStatusColorClass: string;
+  professionalToolMainIncome: boolean;
+  onProfessionalToolMainIncomeChange: (value: boolean) => void;
 }
 
 export function AllocationAmountForm({
@@ -30,6 +32,8 @@ export function AllocationAmountForm({
   onActionsBreakdownChange,
   actionsStatusMessage,
   actionsStatusColorClass,
+  professionalToolMainIncome,
+  onProfessionalToolMainIncomeChange,
 }: AllocationAmountFormProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -69,6 +73,38 @@ export function AllocationAmountForm({
                 statusMessage={actionsStatusMessage}
                 statusColorClass={actionsStatusColorClass}
               />
+            )}
+            {category.id === "outil-professionnel" && (
+              <div className="ml-4 flex items-center justify-between gap-4">
+                <span className="text-xs text-slate">
+                  Le client tire-t-il l&apos;essentiel de ses revenus de cette
+                  entreprise ?
+                </span>
+                <span className="inline-flex w-fit shrink-0 gap-1 rounded-full border border-line bg-paper p-1">
+                  <button
+                    type="button"
+                    onClick={() => onProfessionalToolMainIncomeChange(false)}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                      !professionalToolMainIncome
+                        ? "bg-surface text-ink"
+                        : "text-slate hover:text-ink"
+                    }`}
+                  >
+                    Non
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onProfessionalToolMainIncomeChange(true)}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                      professionalToolMainIncome
+                        ? "bg-surface text-ink"
+                        : "text-slate hover:text-ink"
+                    }`}
+                  >
+                    Oui
+                  </button>
+                </span>
+              </div>
             )}
           </div>
         );

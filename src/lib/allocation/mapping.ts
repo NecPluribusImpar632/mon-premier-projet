@@ -10,6 +10,7 @@ type CategoryFieldName =
   | "scpiAmount"
   | "liquiditesAmount"
   | "privateEquityAmount"
+  | "outilProfessionnelAmount"
   | "matieresPremieresAmount"
   | "autresAmount";
 
@@ -20,6 +21,7 @@ const CATEGORY_FIELD_MAP: Record<string, CategoryFieldName> = {
   scpi: "scpiAmount",
   liquidites: "liquiditesAmount",
   "private-equity": "privateEquityAmount",
+  "outil-professionnel": "outilProfessionnelAmount",
   "matieres-premieres": "matieresPremieresAmount",
   autres: "autresAmount",
 };
@@ -109,4 +111,9 @@ export function actionsBreakdownFromClient(
     defensif: client.actionsDefensifPct,
     croissance: client.actionsCroissancePct,
   };
+}
+
+/** Whether the client draws most of their income from their own/family business. */
+export function professionalToolMainIncomeFromClient(client: Client): boolean {
+  return client.professionalToolMainIncome;
 }

@@ -5,6 +5,7 @@ import { getClient } from "@/lib/actions/clients";
 import {
   actionsBreakdownFromClient,
   amountsFromClient,
+  professionalToolMainIncomeFromClient,
 } from "@/lib/allocation/mapping";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
 import { PropertyList } from "@/components/property/PropertyList";
@@ -66,6 +67,9 @@ export default async function ClientDetailPage({
             clientId={client.id}
             initialAmounts={amountsFromClient(client)}
             initialActionsBreakdown={actionsBreakdownFromClient(client)}
+            initialProfessionalToolMainIncome={professionalToolMainIncomeFromClient(
+              client
+            )}
             properties={client.properties}
           />
         </section>
