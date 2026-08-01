@@ -5,6 +5,7 @@ import type { Property } from "@/generated/prisma/client";
 import { AllocationForm } from "@/components/allocation/AllocationForm";
 import { AllocationAmountForm } from "@/components/allocation/AllocationAmountForm";
 import { AllocationDonutChart } from "@/components/allocation/AllocationDonutChart";
+import { WealthSummary } from "@/components/allocation/WealthSummary";
 import { FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
 import {
   updateClientAllocation,
@@ -257,6 +258,10 @@ export function ClientAllocationEditor({
       </div>
 
       <div className="min-w-0 flex-1">
+        <WealthSummary
+          financialWealthTotal={financialWealthTotal}
+          properties={properties}
+        />
         <AllocationDonutChart entries={overallEntries} />
       </div>
     </div>
