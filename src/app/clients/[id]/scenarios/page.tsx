@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import {
   actionsBreakdownFromClient,
-  financialEntriesFromClient,
-  overallEntriesFromFinancial,
+  financialAmountsFromClient,
+  financialTotalFromAmounts,
+  overallEntriesFromAmounts,
 } from "@/lib/allocation/mapping";
 import { ScenarioSimulator } from "@/components/scenarios/ScenarioSimulator";
 
@@ -19,23 +20,21 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
     notFound();
   }
 
-  const financialEntries = financialEntriesFromClient(client);
+  const amounts = financialAmountsFromClient(client);
   const totalPropertyValue = client.properties.reduce(
     (sum, p) => sum + p.currentValue,
     0
   );
-  const overallEntries = overallEntriesFromFinancial(
-    financialEntries,
-    client.financialWealthTotal,
-    totalPropertyValue
-  );
+  const overallEntries = overallEntriesFromAmounts(amounts, totalPropertyValue);
+  const financialWealthTotal = financialTotalFromAmounts(amounts);
 
   const actionsPctOverall =
     overallEntries.find((entry) => entry.categoryId === "actions")?.percentage ??
     0;
   const actionsPctWithinFinancial =
-    financialEntries.find((entry) => entry.categoryId === "actions")
-      ?.percentage ?? 0;
+    financialWealthTotal > 0
+      ? ((amounts.actions ?? 0) / financialWealthTotal) * 100
+      : 0;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-14 sm:py-20">
@@ -50,7 +49,7 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
         <ScenarioSimulator
           actionsPctOverall={actionsPctOverall}
           actionsPctWithinFinancial={actionsPctWithinFinancial}
-          financialWealthTotal={client.financialWealthTotal}
+          financialWealthTotal={financialWealthTotal}
           actionsBreakdown={actionsBreakdownFromClient(client)}
           properties={client.properties}
         />

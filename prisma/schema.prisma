@@ -13,22 +13,21 @@ datasource db {
 }
 
 model Client {
-  id                   String     @id @default(cuid())
-  name                 String
-  age                  Int
-  financialWealthTotal Float      @default(0)
-  actionsPct           Float      @default(0)
-  obligationsPct       Float      @default(0)
-  liquiditesPct        Float      @default(0)
-  privateEquityPct     Float      @default(0)
-  matieresPremieresPct Float      @default(0)
-  autresPct            Float      @default(0)
-  actionsIndicielPct   Float      @default(100)
-  actionsDefensifPct   Float      @default(0)
-  actionsCroissancePct Float      @default(0)
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-  properties           Property[]
+  id                      String     @id @default(cuid())
+  name                    String
+  age                     Int
+  actionsAmount           Float      @default(0)
+  obligationsAmount       Float      @default(0)
+  liquiditesAmount        Float      @default(0)
+  privateEquityAmount     Float      @default(0)
+  matieresPremieresAmount Float      @default(0)
+  autresAmount            Float      @default(0)
+  actionsIndicielPct      Float      @default(100)
+  actionsDefensifPct      Float      @default(0)
+  actionsCroissancePct    Float      @default(0)
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+  properties              Property[]
 }
 
 model Property {

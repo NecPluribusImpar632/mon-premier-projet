@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { financialAllocationFieldsFromEntries } from "@/lib/allocation/mapping";
-import type { AllocationEntry } from "@/types/allocation";
+import { financialAllocationFieldsFromAmounts } from "@/lib/allocation/mapping";
+import { FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 
 export async function getClients() {
@@ -36,28 +36,19 @@ export async function createClient(formData: FormData) {
 
 export async function updateClientAllocation(
   clientId: string,
-  entries: AllocationEntry[],
-  financialWealthTotal: number
+  amounts: Record<string, number>
 ) {
-  const hasValidPercentages = entries.every(
-    (entry) =>
-      Number.isFinite(entry.percentage) &&
-      entry.percentage >= 0 &&
-      entry.percentage <= 100
-  );
-  if (!hasValidPercentages) {
-    throw new Error("Chaque pourcentage doit être compris entre 0 et 100.");
-  }
-  if (!Number.isFinite(financialWealthTotal) || financialWealthTotal < 0) {
-    throw new Error("Le patrimoine financier total doit être un nombre positif.");
+  const hasValidAmounts = FINANCIAL_CATEGORY_IDS.every((categoryId) => {
+    const amount = amounts[categoryId] ?? 0;
+    return Number.isFinite(amount) && amount >= 0;
+  });
+  if (!hasValidAmounts) {
+    throw new Error("Chaque montant doit être un nombre positif.");
   }
 
   await prisma.client.update({
     where: { id: clientId },
-    data: {
-      ...financialAllocationFieldsFromEntries(entries),
-      financialWealthTotal,
-    },
+    data: financialAllocationFieldsFromAmounts(amounts),
   });
   revalidatePath(`/clients/${clientId}`);
 }
