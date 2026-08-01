@@ -45,19 +45,9 @@ export function AllocationForm({
           placeholder="0"
           className={NUMERIC_FIELD_CLASS}
         />
-        <span className="text-xs text-slate">
-          Sert de base pour convertir les % en € des 6 catégories ci-dessous.
-          L&apos;immobilier est calculé séparément, à partir des biens réels.
-          {financialWealthTotal === 0 &&
-            " Vous pouvez saisir la répartition en % dès maintenant : elle s'appliquera automatiquement dès que ce montant sera renseigné."}
-        </span>
       </label>
 
       <div className="flex flex-col gap-3 border-t border-line pt-4">
-        <p className="text-xs font-medium text-slate">
-          Répartition du patrimoine financier{" "}
-          <span className="font-normal">(hors immobilier, doit totaliser 100 %)</span>
-        </p>
         {ASSET_CATEGORIES.filter((category) =>
           FINANCIAL_CATEGORY_IDS.includes(category.id)
         ).map((category) => {
@@ -65,13 +55,7 @@ export function AllocationForm({
           return (
             <div key={category.id} className="flex flex-col gap-2">
               <label className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-2 text-sm text-ink">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  />
-                  {category.label}
-                </span>
+                <span className="text-sm text-ink">{category.label}</span>
                 <span className="flex items-center gap-1.5">
                   <input
                     type="number"
@@ -101,20 +85,8 @@ export function AllocationForm({
       </div>
 
       <div className="flex flex-col gap-1 border-t border-line pt-4">
-        <p className="text-xs font-medium text-slate">
-          Immobilier <span className="font-normal">(part du patrimoine total)</span>
-        </p>
         <label className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-2 text-sm text-ink">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{
-                backgroundColor: ASSET_CATEGORIES.find((c) => c.id === "immobilier")
-                  ?.color,
-              }}
-            />
-            Immobilier
-          </span>
+          <span className="text-sm text-ink">Immobilier</span>
           <span className="flex items-center gap-1.5">
             <span className="w-20 rounded-md border border-dashed border-line bg-paper px-2 py-1 text-right font-mono text-sm tabular-nums text-slate">
               {roundPercent(immobilierPct)}
@@ -122,10 +94,8 @@ export function AllocationForm({
             <span className="w-3 text-sm text-slate">%</span>
           </span>
         </label>
-        <p className="text-xs text-slate">
-          {roundPercent(immobilierPct)}% de votre patrimoine total (financier +
-          immobilier), calculé automatiquement à partir de vos biens —{" "}
-          {formatCurrency(totalPropertyValue)}. Ne fait pas partie des 100 % ci-dessus.
+        <p className="text-right font-mono text-xs tabular-nums text-slate">
+          {formatCurrency(totalPropertyValue)}
         </p>
       </div>
     </div>

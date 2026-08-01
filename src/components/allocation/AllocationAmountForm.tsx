@@ -23,10 +23,6 @@ export function AllocationAmountForm({
 }: AllocationAmountFormProps) {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-xs font-medium text-slate">
-        Répartition du patrimoine financier{" "}
-        <span className="font-normal">(hors immobilier, doit totaliser 100 %)</span>
-      </p>
       {ASSET_CATEGORIES.filter((category) =>
         FINANCIAL_CATEGORY_IDS.includes(category.id)
       ).map((category) => {
@@ -35,13 +31,7 @@ export function AllocationAmountForm({
             key={category.id}
             className="flex items-center justify-between gap-4"
           >
-            <span className="flex items-center gap-2 text-sm text-ink">
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: category.color }}
-              />
-              {category.label}
-            </span>
+            <span className="text-sm text-ink">{category.label}</span>
             <span className="flex items-center gap-2">
               <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-slate">
                 {roundPercent(percentages[category.id] ?? 0)}%
@@ -61,20 +51,8 @@ export function AllocationAmountForm({
       })}
 
       <div className="flex flex-col gap-1 border-t border-line pt-3">
-        <p className="text-xs font-medium text-slate">
-          Immobilier <span className="font-normal">(part du patrimoine total)</span>
-        </p>
         <label className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-2 text-sm text-ink">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{
-                backgroundColor: ASSET_CATEGORIES.find((c) => c.id === "immobilier")
-                  ?.color,
-              }}
-            />
-            Immobilier
-          </span>
+          <span className="text-sm text-ink">Immobilier</span>
           <span className="flex items-center gap-2">
             <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-slate">
               {roundPercent(immobilierPct)}%
@@ -84,10 +62,6 @@ export function AllocationAmountForm({
             </span>
           </span>
         </label>
-        <p className="text-xs text-slate">
-          {roundPercent(immobilierPct)}% de votre patrimoine total, calculé
-          automatiquement. Ne fait pas partie des 100 % ci-dessus.
-        </p>
       </div>
     </div>
   );

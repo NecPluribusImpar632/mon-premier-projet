@@ -39,7 +39,7 @@ type InputMode = "percentage" | "amount";
 const STATUS_MESSAGE: Record<SaveStatus, string> = {
   saved: "Enregistré",
   saving: "Enregistrement...",
-  incomplete: "Non enregistré — le total doit être égal à 100 %",
+  incomplete: "Enregistré — total incomplet",
   error: "Erreur lors de l'enregistrement",
 };
 
@@ -89,16 +89,12 @@ export function ClientAllocationEditor({
     setEntries(nextEntries);
     setFinancialWealthTotal(nextTotal);
 
-    if (!isAllocationComplete(nextEntries)) {
-      setStatus("incomplete");
-      return;
-    }
-
+    const complete = isAllocationComplete(nextEntries);
     setStatus("saving");
     startTransition(async () => {
       try {
         await updateClientAllocation(clientId, nextEntries, nextTotal);
-        setStatus("saved");
+        setStatus(complete ? "saved" : "incomplete");
       } catch {
         setStatus("error");
       }
@@ -157,16 +153,12 @@ export function ClientAllocationEditor({
     const next: ActionsProfileBreakdown = { ...actionsBreakdown, [profile]: percentage };
     setActionsBreakdown(next);
 
-    if (!isActionsBreakdownComplete(next)) {
-      setActionsStatus("incomplete");
-      return;
-    }
-
+    const complete = isActionsBreakdownComplete(next);
     setActionsStatus("saving");
     startActionsTransition(async () => {
       try {
         await updateActionsProfile(clientId, next);
-        setActionsStatus("saved");
+        setActionsStatus(complete ? "saved" : "incomplete");
       } catch {
         setActionsStatus("error");
       }
@@ -241,12 +233,10 @@ export function ClientAllocationEditor({
                   : "bg-bronze-tint text-bronze"
               }`}
             >
-              Répartition financière : {roundPercent(total)}%
+              Total {roundPercent(total)}%
             </span>
             {mode === "percentage" && total < 100 && (
-              <span className="text-xs text-slate">
-                doit être égal à 100 % (hors immobilier)
-              </span>
+              <span className="text-xs text-slate">doit être égal à 100 %</span>
             )}
           </div>
           <p

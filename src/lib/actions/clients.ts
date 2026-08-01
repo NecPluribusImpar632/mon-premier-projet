@@ -4,8 +4,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { financialAllocationFieldsFromEntries } from "@/lib/allocation/mapping";
-import { isAllocationComplete } from "@/lib/allocation/validation";
-import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
 import type { AllocationEntry } from "@/types/allocation";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 
@@ -41,10 +39,14 @@ export async function updateClientAllocation(
   entries: AllocationEntry[],
   financialWealthTotal: number
 ) {
-  if (!isAllocationComplete(entries)) {
-    throw new Error(
-      "L'allocation doit être composée de pourcentages entre 0 et 100 dont la somme fait 100."
-    );
+  const hasValidPercentages = entries.every(
+    (entry) =>
+      Number.isFinite(entry.percentage) &&
+      entry.percentage >= 0 &&
+      entry.percentage <= 100
+  );
+  if (!hasValidPercentages) {
+    throw new Error("Chaque pourcentage doit être compris entre 0 et 100.");
   }
   if (!Number.isFinite(financialWealthTotal) || financialWealthTotal < 0) {
     throw new Error("Le patrimoine financier total doit être un nombre positif.");
@@ -64,10 +66,11 @@ export async function updateActionsProfile(
   clientId: string,
   breakdown: ActionsProfileBreakdown
 ) {
-  if (!isActionsBreakdownComplete(breakdown)) {
-    throw new Error(
-      "La répartition des profils actions doit être composée de pourcentages entre 0 et 100 dont la somme fait 100."
-    );
+  const hasValidPercentages = Object.values(breakdown).every(
+    (value) => Number.isFinite(value) && value >= 0 && value <= 100
+  );
+  if (!hasValidPercentages) {
+    throw new Error("Chaque pourcentage doit être compris entre 0 et 100.");
   }
 
   await prisma.client.update({
