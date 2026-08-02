@@ -132,41 +132,44 @@ export function ClientAllocationEditor({
   }
 
   return (
-    <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-      <div className="mx-auto w-full max-w-3xl lg:mx-0 lg:w-[380px] lg:shrink-0">
-        <AllocationAmountForm
-          amounts={amounts}
-          percentages={percentagesByCategory}
-          onChange={handleAmountChange}
-          immobilierValue={immobilierValue}
-          hasDetailedProperties={hasDetailedProperties}
-          actionsBreakdown={actionsBreakdown}
-          onActionsBreakdownChange={handleActionsBreakdownChange}
-          actionsStatusMessage={
-            STATUS_MESSAGE[isActionsPending ? "saving" : actionsStatus]
-          }
-          actionsStatusColorClass={
-            STATUS_COLOR[isActionsPending ? "saving" : actionsStatus]
-          }
-          professionalToolMainIncome={professionalToolMainIncome}
-          onProfessionalToolMainIncomeChange={handleProfessionalToolMainIncomeChange}
-        />
+    <div className="flex flex-col gap-10">
+      <WealthSummary
+        financialWealthTotal={financialTotal}
+        immobilierValue={immobilierValue}
+        properties={properties}
+        showConcentrationWarning={professionalToolMainIncome}
+      />
 
-        <p
-          className={`mt-4 border-t border-line pt-4 text-xs ${STATUS_COLOR[isPending ? "saving" : status]}`}
-        >
-          {STATUS_MESSAGE[isPending ? "saving" : status]}
-        </p>
-      </div>
+      <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
+        <div className="mx-auto w-full max-w-3xl lg:mx-0 lg:w-[380px] lg:shrink-0">
+          <AllocationAmountForm
+            amounts={amounts}
+            percentages={percentagesByCategory}
+            onChange={handleAmountChange}
+            immobilierValue={immobilierValue}
+            hasDetailedProperties={hasDetailedProperties}
+            actionsBreakdown={actionsBreakdown}
+            onActionsBreakdownChange={handleActionsBreakdownChange}
+            actionsStatusMessage={
+              STATUS_MESSAGE[isActionsPending ? "saving" : actionsStatus]
+            }
+            actionsStatusColorClass={
+              STATUS_COLOR[isActionsPending ? "saving" : actionsStatus]
+            }
+            professionalToolMainIncome={professionalToolMainIncome}
+            onProfessionalToolMainIncomeChange={handleProfessionalToolMainIncomeChange}
+          />
 
-      <div className="min-w-0 flex-1">
-        <WealthSummary
-          financialWealthTotal={financialTotal}
-          immobilierValue={immobilierValue}
-          properties={properties}
-          showConcentrationWarning={professionalToolMainIncome}
-        />
-        <AllocationDonutChart entries={overallEntries} totalValue={totalValue} />
+          <p
+            className={`mt-4 border-t border-line pt-4 text-xs ${STATUS_COLOR[isPending ? "saving" : status]}`}
+          >
+            {STATUS_MESSAGE[isPending ? "saving" : status]}
+          </p>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <AllocationDonutChart entries={overallEntries} totalValue={totalValue} />
+        </div>
       </div>
     </div>
   );
