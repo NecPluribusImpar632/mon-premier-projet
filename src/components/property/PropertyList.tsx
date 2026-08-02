@@ -17,7 +17,7 @@ const currencyFormatter = new Intl.NumberFormat("fr-FR", {
 export function PropertyList({ properties }: PropertyListProps) {
   if (properties.length === 0) {
     return (
-      <div className="border-t border-line py-8 text-center">
+      <div className="border-t border-line py-5 text-center">
         <p className="text-sm text-slate">
           Aucun bien enregistré pour l&apos;instant.
         </p>
@@ -28,7 +28,7 @@ export function PropertyList({ properties }: PropertyListProps) {
   return (
     <div className="flex flex-col border-t border-line">
       {properties.map((property) => (
-        <article key={property.id} className="border-b border-line py-6">
+        <article key={property.id} className="border-b border-line py-5">
           <div className="mb-3 flex items-center gap-2.5">
             <Building2 className="h-4 w-4 shrink-0 text-slate" />
             <h3 className="font-serif text-lg text-ink">{property.name}</h3>

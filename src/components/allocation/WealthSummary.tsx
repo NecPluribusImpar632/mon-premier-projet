@@ -32,10 +32,10 @@ export function WealthSummary({
   const debtPct = 100 - netPct;
 
   return (
-    <div className="border-b border-line pb-8">
+    <div className="border-b border-line pb-4">
       <h2 className="font-serif text-lg text-ink">Bilan patrimonial</h2>
 
-      <div className="mt-4 flex h-3 w-full overflow-hidden rounded-full bg-line">
+      <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full bg-line">
         {netPct > 0 && (
           <div
             className="h-full bg-emerald"
@@ -73,7 +73,7 @@ export function WealthSummary({
         </span>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
         <div>
           <p className="text-xs text-slate">Patrimoine brut</p>
           <p className="mt-1 font-mono text-lg tabular-nums text-ink">
@@ -95,7 +95,7 @@ export function WealthSummary({
       </div>
 
       {showConcentrationWarning && (
-        <div className="mt-6 flex items-start gap-2.5 rounded-md border border-bronze bg-bronze-tint p-3 text-sm text-bronze">
+        <div className="mt-4 flex items-start gap-2.5 rounded-md border border-bronze bg-bronze-tint p-3 text-sm text-bronze">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
             Patrimoine et revenus concentrés sur un même actif — risque non

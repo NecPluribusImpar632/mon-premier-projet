@@ -132,7 +132,7 @@ export function ClientAllocationEditor({
   }
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-4">
       <WealthSummary
         financialWealthTotal={financialTotal}
         immobilierValue={immobilierValue}
@@ -140,7 +140,7 @@ export function ClientAllocationEditor({
         showConcentrationWarning={professionalToolMainIncome}
       />
 
-      <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
         <div className="mx-auto w-full max-w-3xl lg:mx-0 lg:w-[380px] lg:shrink-0">
           <AllocationAmountForm
             amounts={amounts}

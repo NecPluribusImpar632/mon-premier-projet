@@ -25,7 +25,7 @@ export function PropertyOverview({ properties }: PropertyOverviewProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-5 rounded-lg border border-line bg-surface p-5 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 rounded-lg border border-line bg-surface p-4 sm:grid-cols-4">
       {stats.map((stat) => (
         <div key={stat.label} className="flex flex-col gap-1">
           <span className="text-xs text-slate">{stat.label}</span>

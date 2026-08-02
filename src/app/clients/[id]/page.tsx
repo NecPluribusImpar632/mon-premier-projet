@@ -29,9 +29,9 @@ export default async function ClientDetailPage({
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-14 sm:py-20">
+    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-6">
       <div className="mx-auto w-full max-w-3xl">
-        <header className="flex items-center justify-between gap-5 pb-10">
+        <header className="flex items-center justify-between gap-5 pb-4">
           <div className="flex items-center gap-5">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-slate">
               <User className="h-6 w-6" />
@@ -54,8 +54,8 @@ export default async function ClientDetailPage({
         </header>
       </div>
 
-      <div className="flex flex-col gap-14 border-t border-line pt-12">
-        <section className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5 border-t border-line pt-6">
+        <section className="flex flex-col gap-4">
           <div className="mx-auto w-full max-w-3xl">
             <SectionHeading
               icon={PieChart}
@@ -75,7 +75,7 @@ export default async function ClientDetailPage({
         </section>
 
         <div className="mx-auto w-full max-w-3xl">
-          <section className="flex flex-col gap-6">
+          <section className="flex flex-col gap-4">
             <SectionHeading
               icon={Building2}
               title="Biens immobiliers"
