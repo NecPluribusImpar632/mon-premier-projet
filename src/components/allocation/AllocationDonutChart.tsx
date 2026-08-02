@@ -7,7 +7,7 @@ import type { AllocationEntry } from "@/types/allocation";
 
 interface AllocationDonutChartProps {
   entries: AllocationEntry[];
-  /** Total patrimoine in €, shown at the center instead of the (always-100%) total. */
+  /** Total patrimoine in €, used only for the chart's aria-label. */
   totalValue: number;
 }
 
@@ -15,8 +15,8 @@ const WIDTH = 1220;
 const HEIGHT = 880;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
-const RADIUS = 280;
-const STROKE_WIDTH = 64;
+const RADIUS = 225;
+const STROKE_WIDTH = 170;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const MIN_PERCENTAGE_FOR_INSIDE_LABEL = 8;
 
@@ -195,7 +195,6 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
             fill="none"
             stroke={`var(--segment-${segment.categoryId})`}
             strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round"
             strokeDasharray={segment.dashArray}
             strokeDashoffset={segment.dashOffset}
             transform={`rotate(-90 ${CENTER_X} ${CENTER_Y})`}
@@ -271,19 +270,6 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
             {roundPercent(segment.percentage)}%
           </text>
         ))}
-
-        <text
-          x={CENTER_X}
-          y={CENTER_Y}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontFamily="var(--font-serif)"
-          fontSize={42}
-          fontWeight={500}
-          className="fill-ink"
-        >
-          {formatCurrency(totalValue)}
-        </text>
       </svg>
     </div>
   );
