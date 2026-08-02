@@ -11,19 +11,21 @@ interface AllocationDonutChartProps {
   totalValue: number;
 }
 
-const WIDTH = 1060;
-const HEIGHT = 760;
+const WIDTH = 1220;
+const HEIGHT = 880;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
-const RADIUS = 190;
-const STROKE_WIDTH = 50;
+const RADIUS = 280;
+const STROKE_WIDTH = 64;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 const MIN_PERCENTAGE_FOR_INSIDE_LABEL = 8;
 
 const RING_OUTER = RADIUS + STROKE_WIDTH / 2;
 const LEADER_START_RADIUS = RING_OUTER + 8;
-const LABEL_OFFSET_X = RING_OUTER + 46;
+const LABEL_OFFSET_X = RING_OUTER + 36;
 const MIN_LABEL_GAP = 26;
+/** Width of the white cut separating each segment from its neighbors. */
+const SEPARATOR_WIDTH = 6;
 
 const PALETTE_STYLE = `
 .allocation-donut {
@@ -120,6 +122,23 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
     };
   });
 
+  // A white cut at the start of every segment (plus the wrap-around seam
+  // between the last and first segment, when the ring is fully allocated)
+  // reads as distinct slices rather than one continuous ring.
+  const isFullyAllocated = total >= 99.95;
+  const boundaries = dashLengths.map((_, index) =>
+    dashLengths.slice(0, index).reduce((sum, s) => sum + s.dash, 0)
+  );
+  const separatorAngles =
+    dashLengths.length > 1 ? (isFullyAllocated ? boundaries : boundaries.slice(1)) : [];
+  const separators = separatorAngles.map((cumulative) => {
+    const angleDeg = angleForArcLength(cumulative);
+    return {
+      inner: pointAtAngle(angleDeg, RADIUS - STROKE_WIDTH / 2),
+      outer: pointAtAngle(angleDeg, RADIUS + STROKE_WIDTH / 2),
+    };
+  });
+
   const insideLabels = segments
     .filter((segment) => segment.percentage >= MIN_PERCENTAGE_FOR_INSIDE_LABEL)
     .map((segment) => ({
@@ -151,7 +170,7 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
   ];
 
   return (
-    <div className="allocation-donut mx-auto max-w-[1060px]">
+    <div className="allocation-donut mx-auto max-w-[1220px]">
       <style>{PALETTE_STYLE}</style>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -180,6 +199,19 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
             strokeDasharray={segment.dashArray}
             strokeDashoffset={segment.dashOffset}
             transform={`rotate(-90 ${CENTER_X} ${CENTER_Y})`}
+          />
+        ))}
+
+        {separators.map((separator, index) => (
+          <line
+            key={index}
+            x1={separator.inner.x}
+            y1={separator.inner.y}
+            x2={separator.outer.x}
+            y2={separator.outer.y}
+            stroke="#ffffff"
+            strokeWidth={SEPARATOR_WIDTH}
+            strokeLinecap="round"
           />
         ))}
 
