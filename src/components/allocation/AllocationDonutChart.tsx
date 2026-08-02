@@ -12,7 +12,7 @@ interface AllocationDonutChartProps {
 }
 
 const WIDTH = 1220;
-const HEIGHT = 880;
+const HEIGHT = 720;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 const RADIUS = 225;
