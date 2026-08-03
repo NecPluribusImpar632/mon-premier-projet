@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { Property } from "@/generated/prisma/client";
 import { AllocationAmountForm } from "@/components/allocation/AllocationAmountForm";
 import { AllocationDonutChart } from "@/components/allocation/AllocationDonutChart";
@@ -65,6 +65,21 @@ export function ClientAllocationEditor({
   const [actionsStatus, setActionsStatus] = useState<SaveStatus>(
     isActionsBreakdownComplete(initialActionsBreakdown) ? "saved" : "incomplete"
   );
+
+  const formColumnRef = useRef<HTMLDivElement>(null);
+  const [formHeight, setFormHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = formColumnRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setFormHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const hasDetailedProperties = properties.length > 0;
   const financialTotal = financialTotalFromAmounts(amounts);
@@ -140,8 +155,11 @@ export function ClientAllocationEditor({
         showConcentrationWarning={professionalToolMainIncome}
       />
 
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:gap-8">
-        <div className="mx-auto w-full max-w-3xl lg:mx-0 lg:w-[380px] lg:shrink-0">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
+        <div
+          ref={formColumnRef}
+          className="mx-auto w-full max-w-3xl lg:mx-0 lg:w-[380px] lg:shrink-0"
+        >
           <AllocationAmountForm
             amounts={amounts}
             percentages={percentagesByCategory}
@@ -168,7 +186,11 @@ export function ClientAllocationEditor({
         </div>
 
         <div className="min-w-0 flex-1">
-          <AllocationDonutChart entries={overallEntries} totalValue={totalValue} />
+          <AllocationDonutChart
+            entries={overallEntries}
+            totalValue={totalValue}
+            targetHeight={formHeight}
+          />
         </div>
       </div>
     </div>

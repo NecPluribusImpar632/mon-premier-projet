@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
@@ -9,12 +10,16 @@ interface AllocationDonutChartProps {
   entries: AllocationEntry[];
   /** Total patrimoine in €, used only for the chart's aria-label. */
   totalValue: number;
+  /** Rendered height (px) of the form column, to match exactly — or null before it's measured. */
+  targetHeight: number | null;
 }
 
 const WIDTH = 1220;
-const HEIGHT = 820;
+/** Used before the form's height has been measured (first paint). */
+const DEFAULT_HEIGHT = 820;
+/** Never go below this — the floor needed to keep the ring and its external labels from clipping. */
+const MIN_HEIGHT = 720;
 const CENTER_X = WIDTH / 2;
-const CENTER_Y = HEIGHT / 2;
 const RADIUS = 225;
 const STROKE_WIDTH = 170;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -42,11 +47,11 @@ function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function pointAtAngle(angleDeg: number, radius: number) {
+function pointAtAngle(centerY: number, angleDeg: number, radius: number) {
   const rad = (angleDeg * Math.PI) / 180;
   return {
     x: round2(CENTER_X + radius * Math.cos(rad)),
-    y: round2(CENTER_Y + radius * Math.sin(rad)),
+    y: round2(centerY + radius * Math.sin(rad)),
   };
 }
 
@@ -92,7 +97,37 @@ function buildCalloutPath(
   return `M ${round2(start.x)} ${round2(start.y)} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${round2(end.x)} ${round2(end.y)}`;
 }
 
-export function AllocationDonutChart({ entries, totalValue }: AllocationDonutChartProps) {
+export function AllocationDonutChart({
+  entries,
+  totalValue,
+  targetHeight,
+}: AllocationDonutChartProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [renderedWidth, setRenderedWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setRenderedWidth(entry.contentRect.width);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Solve for the viewBox height that makes the SVG's rendered height (which
+  // scales as renderedWidth * height/WIDTH under a plain w-full/h-auto SVG)
+  // come out exactly equal to the form column's height, so the two stay
+  // matched at any viewport width — never below MIN_HEIGHT, so the ring and
+  // its external labels never get clipped.
+  const height =
+    renderedWidth && targetHeight
+      ? Math.max(MIN_HEIGHT, (targetHeight / renderedWidth) * WIDTH)
+      : DEFAULT_HEIGHT;
+  const centerY = height / 2;
+
   const total = entries.reduce((sum, e) => sum + e.percentage, 0);
 
   const dashLengths = entries
@@ -134,8 +169,8 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
   const separators = separatorAngles.map((cumulative) => {
     const angleDeg = angleForArcLength(cumulative);
     return {
-      inner: pointAtAngle(angleDeg, RADIUS - STROKE_WIDTH / 2),
-      outer: pointAtAngle(angleDeg, RADIUS + STROKE_WIDTH / 2),
+      inner: pointAtAngle(centerY, angleDeg, RADIUS - STROKE_WIDTH / 2),
+      outer: pointAtAngle(centerY, angleDeg, RADIUS + STROKE_WIDTH / 2),
     };
   });
 
@@ -143,14 +178,14 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
     .filter((segment) => segment.percentage >= MIN_PERCENTAGE_FOR_INSIDE_LABEL)
     .map((segment) => ({
       ...segment,
-      position: pointAtAngle(segment.angleDeg, RADIUS),
+      position: pointAtAngle(centerY, segment.angleDeg, RADIUS),
     }));
 
   const outsideRaw: ExternalLabel[] = segments
     .filter((segment) => segment.percentage < MIN_PERCENTAGE_FOR_INSIDE_LABEL)
     .map((segment) => {
       const angleRad = (segment.angleDeg * Math.PI) / 180;
-      const start = pointAtAngle(segment.angleDeg, LEADER_START_RADIUS);
+      const start = pointAtAngle(centerY, segment.angleDeg, LEADER_START_RADIUS);
       const side: "left" | "right" = Math.cos(angleRad) >= 0 ? "right" : "left";
       return {
         categoryId: segment.categoryId,
@@ -170,17 +205,17 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
   ];
 
   return (
-    <div className="allocation-donut mx-auto max-w-[1220px]">
+    <div ref={wrapperRef} className="allocation-donut mx-auto max-w-[1220px]">
       <style>{PALETTE_STYLE}</style>
       <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${WIDTH} ${height}`}
         className="h-auto w-full"
         role="img"
         aria-label={`Allocation d'actifs, patrimoine total ${formatCurrency(totalValue)}`}
       >
         <circle
           cx={CENTER_X}
-          cy={CENTER_Y}
+          cy={centerY}
           r={RADIUS}
           fill="none"
           stroke="var(--color-line)"
@@ -190,14 +225,14 @@ export function AllocationDonutChart({ entries, totalValue }: AllocationDonutCha
           <circle
             key={segment.categoryId}
             cx={CENTER_X}
-            cy={CENTER_Y}
+            cy={centerY}
             r={RADIUS}
             fill="none"
             stroke={`var(--segment-${segment.categoryId})`}
             strokeWidth={STROKE_WIDTH}
             strokeDasharray={segment.dashArray}
             strokeDashoffset={segment.dashOffset}
-            transform={`rotate(-90 ${CENTER_X} ${CENTER_Y})`}
+            transform={`rotate(-90 ${CENTER_X} ${centerY})`}
           />
         ))}
 
