@@ -5,7 +5,7 @@ import { RATE_TYPES, RATE_TYPE_LABELS } from "@/lib/property/rateType";
 import { LocationFields } from "@/components/property/LocationFields";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { FIELD_CLASS, NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
-import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 interface NewPropertyPageProps {
   params: Promise<{ id: string }>;
@@ -81,9 +81,7 @@ export default async function NewPropertyPage({ params }: NewPropertyPageProps) 
             ))}
           </select>
         </label>
-        <button type="submit" className={`${PRIMARY_BUTTON_CLASS} mt-2`}>
-          Créer
-        </button>
+        <SubmitButton>Créer</SubmitButton>
       </form>
     </div>
   );

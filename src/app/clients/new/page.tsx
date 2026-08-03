@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/actions/clients";
 import { FIELD_CLASS } from "@/components/ui/fieldStyles";
-import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 export default function NewClientPage() {
   return (
@@ -24,9 +24,7 @@ export default function NewClientPage() {
             className={FIELD_CLASS}
           />
         </label>
-        <button type="submit" className={`${PRIMARY_BUTTON_CLASS} mt-2`}>
-          Créer
-        </button>
+        <SubmitButton>Créer</SubmitButton>
       </form>
     </div>
   );
