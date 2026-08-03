@@ -15,7 +15,7 @@ function parseRequiredNonNegativeNumber(value: unknown): number {
   return parsed;
 }
 
-export async function createProperty(clientId: string, formData: FormData) {
+function parsePropertyFormData(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const currentValue = parseRequiredNonNegativeNumber(formData.get("currentValue"));
 
@@ -50,20 +50,59 @@ export async function createProperty(clientId: string, formData: FormData) {
     throw new Error("Merci de sélectionner un département valide.");
   }
 
-  await prisma.property.create({
-    data: {
-      clientId,
-      name,
-      currentValue,
-      monthlyRent,
-      remainingLoanAmount,
-      loanRate,
-      rateType,
-      department,
-      arrondissement,
-    },
-  });
+  return {
+    name,
+    currentValue,
+    monthlyRent,
+    remainingLoanAmount,
+    loanRate,
+    rateType,
+    department,
+    arrondissement,
+  };
+}
+
+export async function getProperty(propertyId: string, clientId: string) {
+  const property = await prisma.property.findUnique({ where: { id: propertyId } });
+  if (!property || property.clientId !== clientId) {
+    return null;
+  }
+  return property;
+}
+
+export async function createProperty(clientId: string, formData: FormData) {
+  const data = parsePropertyFormData(formData);
+
+  await prisma.property.create({ data: { clientId, ...data } });
 
   revalidatePath(`/clients/${clientId}`);
   redirect(`/clients/${clientId}`);
+}
+
+export async function updateProperty(
+  propertyId: string,
+  clientId: string,
+  formData: FormData
+) {
+  const existing = await getProperty(propertyId, clientId);
+  if (!existing) {
+    throw new Error("Bien introuvable pour ce client.");
+  }
+
+  const data = parsePropertyFormData(formData);
+
+  await prisma.property.update({ where: { id: propertyId }, data });
+
+  revalidatePath(`/clients/${clientId}`);
+  redirect(`/clients/${clientId}`);
+}
+
+export async function deleteProperty(propertyId: string, clientId: string) {
+  const existing = await getProperty(propertyId, clientId);
+  if (!existing) {
+    throw new Error("Bien introuvable pour ce client.");
+  }
+
+  await prisma.property.delete({ where: { id: propertyId } });
+  revalidatePath(`/clients/${clientId}`);
 }

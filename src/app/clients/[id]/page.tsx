@@ -91,7 +91,7 @@ export default async function ClientDetailPage({
               }
             />
             <PropertyOverview properties={client.properties} />
-            <PropertyList properties={client.properties} />
+            <PropertyList clientId={client.id} properties={client.properties} />
           </section>
         </div>
       </div>

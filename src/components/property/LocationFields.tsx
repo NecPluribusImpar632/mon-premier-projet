@@ -6,8 +6,16 @@ import { FIELD_CLASS } from "@/components/ui/fieldStyles";
 
 const PARIS_CODE = "75";
 
-export function LocationFields() {
-  const [department, setDepartment] = useState("");
+interface LocationFieldsProps {
+  defaultDepartment?: string;
+  defaultArrondissement?: number;
+}
+
+export function LocationFields({
+  defaultDepartment = "",
+  defaultArrondissement,
+}: LocationFieldsProps) {
+  const [department, setDepartment] = useState(defaultDepartment);
 
   return (
     <>
@@ -34,7 +42,12 @@ export function LocationFields() {
       {department === PARIS_CODE && (
         <label className="flex flex-col gap-1.5 text-sm text-slate">
           Arrondissement
-          <select name="arrondissement" required defaultValue="" className={FIELD_CLASS}>
+          <select
+            name="arrondissement"
+            required
+            defaultValue={defaultArrondissement ?? ""}
+            className={FIELD_CLASS}
+          >
             <option value="" disabled>
               Sélectionner un arrondissement
             </option>

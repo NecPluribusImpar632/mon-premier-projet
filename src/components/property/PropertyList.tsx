@@ -1,11 +1,14 @@
 import type { ComponentType } from "react";
+import Link from "next/link";
 import { Building2, Coins, Key, Landmark, MapPin, Percent } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
 import { DEPARTMENT_LABEL, arrondissementLabel } from "@/lib/property/departments";
 import { roundPercent } from "@/lib/format/percent";
+import { DeletePropertyButton } from "@/components/property/DeletePropertyButton";
 
 interface PropertyListProps {
+  clientId: string;
   properties: Property[];
 }
 
@@ -15,7 +18,7 @@ const currencyFormatter = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 0,
 });
 
-export function PropertyList({ properties }: PropertyListProps) {
+export function PropertyList({ clientId, properties }: PropertyListProps) {
   if (properties.length === 0) {
     return (
       <div className="border-t border-line py-5 text-center">
@@ -30,9 +33,24 @@ export function PropertyList({ properties }: PropertyListProps) {
     <div className="flex flex-col border-t border-line">
       {properties.map((property) => (
         <article key={property.id} className="border-b border-line py-5">
-          <div className="mb-3 flex items-center gap-2.5">
-            <Building2 className="h-4 w-4 shrink-0 text-slate" />
-            <h3 className="font-serif text-lg text-ink">{property.name}</h3>
+          <div className="mb-3 flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <Building2 className="h-4 w-4 shrink-0 text-slate" />
+              <h3 className="font-serif text-lg text-ink">{property.name}</h3>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link
+                href={`/clients/${clientId}/properties/${property.id}/edit`}
+                className="rounded-full border border-line px-3 py-1 text-xs font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+              >
+                Modifier
+              </Link>
+              <DeletePropertyButton
+                propertyId={property.id}
+                clientId={clientId}
+                propertyName={property.name}
+              />
+            </div>
           </div>
 
           <dl className="flex flex-col">
