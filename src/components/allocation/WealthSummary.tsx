@@ -76,19 +76,19 @@ export function WealthSummary({
       <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
         <div>
           <p className="text-xs text-slate">Patrimoine brut</p>
-          <p className="mt-1 font-mono text-lg tabular-nums text-ink">
+          <p className="mt-1 font-mono text-base tabular-nums text-slate">
             {currencyFormatter.format(grossWealth)}
           </p>
         </div>
         <div>
           <p className="text-xs text-slate">Dette totale</p>
-          <p className="mt-1 font-mono text-lg tabular-nums text-ink">
+          <p className="mt-1 font-mono text-base tabular-nums text-slate">
             {currencyFormatter.format(totalDebt)}
           </p>
         </div>
         <div className="col-span-2 sm:col-span-1">
           <p className="text-xs text-slate">Patrimoine net</p>
-          <p className="mt-1 font-serif text-3xl font-medium tabular-nums text-ink">
+          <p className="mt-1 font-mono text-5xl font-semibold tabular-nums text-ink">
             {currencyFormatter.format(netWealth)}
           </p>
         </div>

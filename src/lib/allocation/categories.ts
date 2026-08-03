@@ -4,30 +4,30 @@ const INK = "#14213d";
 const WHITE = "#ffffff";
 
 export const ASSET_CATEGORIES: AssetCategory[] = [
-  { id: "actions", label: "Actions", color: "#2a78d6", onColor: INK },
-  { id: "obligations", label: "Obligations", color: "#eb6834", onColor: INK },
-  { id: "immobilier", label: "Immobilier", color: "#1baf7a", onColor: INK },
-  { id: "scpi", label: "SCPI", color: "#8c6239", onColor: WHITE },
-  { id: "liquidites", label: "Liquidités", color: "#eda100", onColor: INK },
+  { id: "actions", label: "Actions", color: "#3B6E8C", onColor: WHITE },
+  { id: "obligations", label: "Obligations", color: "#8C6E3B", onColor: WHITE },
+  { id: "immobilier", label: "Immobilier", color: "#2F6F5E", onColor: WHITE },
+  { id: "scpi", label: "SCPI", color: "#6E8C3B", onColor: WHITE },
+  { id: "liquidites", label: "Liquidités", color: "#C9A227", onColor: INK },
   {
     id: "private-equity",
     label: "Private Equity",
-    color: "#e87ba4",
-    onColor: INK,
+    color: "#8C3B6E",
+    onColor: WHITE,
   },
   {
     id: "outil-professionnel",
     label: "Entreprise / outil professionnel",
-    color: "#c0392b",
+    color: "#6E3B8C",
     onColor: WHITE,
   },
   {
     id: "matieres-premieres",
     label: "Matières premières",
-    color: "#008300",
+    color: "#8C5A3B",
     onColor: WHITE,
   },
-  { id: "autres", label: "Autres", color: "#4a3aa7", onColor: WHITE },
+  { id: "autres", label: "Autres", color: "#6B7280", onColor: WHITE },
 ];
 
 /**
