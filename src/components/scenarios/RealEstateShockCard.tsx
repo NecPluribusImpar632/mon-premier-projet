@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Home } from "lucide-react";
-import type { Property } from "@/generated/prisma/client";
+import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import {
@@ -14,7 +14,7 @@ import { roundPercent } from "@/lib/format/percent";
 import { FIELD_CLASS } from "@/components/ui/fieldStyles";
 
 interface RealEstateShockCardProps {
-  properties: Property[];
+  properties: PropertyWithSensitivity[];
   oatRateChangePts: number;
   onOatRateChangePtsChange: (value: number) => void;
 }

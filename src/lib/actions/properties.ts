@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isRateType } from "@/lib/property/rateType";
 import { isDepartmentCode } from "@/lib/property/departments";
+import { DEPARTMENT_SENSITIVITY } from "@/lib/scenarios/realEstateSensitivity";
+import { getCommunesForDepartment } from "@/lib/property/communesZonage";
 
 function parseRequiredNonNegativeNumber(value: unknown): number {
   const sanitized = String(value ?? "").replace(/[^\d.]/g, "");
@@ -50,6 +52,21 @@ function parsePropertyFormData(formData: FormData) {
     throw new Error("Merci de sélectionner un département valide.");
   }
 
+  // A commune is only meaningful (and only asked for in the form) for
+  // departments without their own dedicated Notaires-INSEE coefficient: Paris
+  // uses its arrondissement instead, and the other 7 IDF departments already
+  // have a department-level coefficient regardless of commune.
+  const needsCommune = department !== "75" && !(department in DEPARTMENT_SENSITIVITY);
+  const communeCodeRaw = String(formData.get("communeCode") ?? "").trim();
+  let communeCode: string | null = null;
+  if (needsCommune) {
+    const validCommunes = getCommunesForDepartment(department);
+    if (!validCommunes.some((c) => c.code === communeCodeRaw)) {
+      throw new Error("Merci de sélectionner une commune valide pour ce département.");
+    }
+    communeCode = communeCodeRaw;
+  }
+
   return {
     name,
     currentValue,
@@ -59,6 +76,7 @@ function parsePropertyFormData(formData: FormData) {
     rateType,
     department,
     arrondissement,
+    communeCode,
   };
 }
 

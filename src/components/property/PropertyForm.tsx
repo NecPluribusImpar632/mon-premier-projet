@@ -29,6 +29,7 @@ export function PropertyForm({ action, defaultValues, submitLabel }: PropertyFor
       <LocationFields
         defaultDepartment={defaultValues?.department ?? undefined}
         defaultArrondissement={defaultValues?.arrondissement ?? undefined}
+        defaultCommuneCode={defaultValues?.communeCode ?? undefined}
       />
       <label className="flex flex-col gap-1.5 text-sm text-slate">
         Valeur actuelle (€)

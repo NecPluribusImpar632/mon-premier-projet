@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Property } from "@/generated/prisma/client";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import {
   computeCombinedNetWorthImpact,
   computeScpiShockImpact,
@@ -27,7 +27,7 @@ interface ScenarioSimulatorProps {
   scpiAmount: number;
   immobilierValue: number;
   actionsBreakdown: ActionsProfileBreakdown;
-  properties: Property[];
+  properties: PropertyWithSensitivity[];
 }
 
 const CUSTOM_PRESET =

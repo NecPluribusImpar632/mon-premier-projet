@@ -4,6 +4,7 @@ import { Building2, Coins, Key, Landmark, MapPin, Percent } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
 import { DEPARTMENT_LABEL, arrondissementLabel } from "@/lib/property/departments";
+import { getCommuneName } from "@/lib/property/communesZonage";
 import { roundPercent } from "@/lib/format/percent";
 import { DeletePropertyButton } from "@/components/property/DeletePropertyButton";
 
@@ -65,7 +66,9 @@ export function PropertyList({ clientId, properties }: PropertyListProps) {
               hint={
                 property.department === "75" && property.arrondissement
                   ? arrondissementLabel(property.arrondissement)
-                  : undefined
+                  : property.communeCode
+                    ? (getCommuneName(property.communeCode) ?? undefined)
+                    : undefined
               }
               muted={!property.department}
             />

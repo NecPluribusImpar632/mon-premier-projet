@@ -8,6 +8,7 @@ import {
   overallEntriesFromAmounts,
 } from "@/lib/allocation/mapping";
 import { ScenarioSimulator } from "@/components/scenarios/ScenarioSimulator";
+import { withResolvedSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 
 interface ScenariosPageProps {
   params: Promise<{ id: string }>;
@@ -37,6 +38,8 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
       ? ((amounts.actions ?? 0) / financialWealthTotal) * 100
       : 0;
 
+  const propertiesWithSensitivity = withResolvedSensitivity(client.properties);
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-14 sm:py-20">
       <div>
@@ -54,7 +57,7 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
           scpiAmount={amounts.scpi ?? 0}
           immobilierValue={immobilierValue}
           actionsBreakdown={actionsBreakdownFromClient(client)}
-          properties={client.properties}
+          properties={propertiesWithSensitivity}
         />
       </div>
     </div>

@@ -8,7 +8,7 @@
  * est celui qui maximise le R². `coefficient` s'exprime en points de variation de
  * prix (%) par point de variation du taux OAT.
  *
- * Fiabilité statistique modeste partout (R² généralement entre 3 % et 20 %) : une
+ * Fiabilité statistique modeste à correcte selon les zones (R² de 3 % à 46 %) : une
  * tendance historique indicative, pas une certitude. Aucune formule ici — ce
  * fichier n'est que de la donnée ; voir `resolveRealEstateSensitivity` pour la
  * logique de résolution.
@@ -144,15 +144,33 @@ export const PARIS_ARRONDISSEMENT_SENSITIVITY: Record<number, ZoneSensitivity> =
   20: { zoneLabel: "Paris 20e", coefficient: -2.75, lagQuarters: 4, r2Pct: 6.9, n: 116 },
 };
 
+// Indices Notaires-INSEE par zonage A/A bis/B1/B2/C (le zonage réglementaire du
+// logement, https://www.data.gouv.fr/datasets/liste-des-communes-selon-le-zonage-abc) —
+// classe chaque commune de France par tension immobilière, indépendamment de la
+// région administrative. Couvre 100% du territoire ; R² nettement meilleurs que
+// les régions/départements ci-dessus car chaque zone agrège un marché plus homogène.
+export type ZonageAbc = "Abis" | "A" | "B1" | "B2" | "C";
+
+export const ZONE_ABC_SENSITIVITY: Record<ZonageAbc, ZoneSensitivity> = {
+  Abis: { zoneLabel: "Zone A bis", coefficient: -3.38, lagQuarters: 5, r2Pct: 45.7, n: 45 },
+  A: { zoneLabel: "Zone A", coefficient: -2.24, lagQuarters: 6, r2Pct: 34.5, n: 45 },
+  B1: { zoneLabel: "Zone B1", coefficient: -2.77, lagQuarters: 6, r2Pct: 38.1, n: 45 },
+  B2: { zoneLabel: "Zone B2", coefficient: -2.17, lagQuarters: 6, r2Pct: 23, n: 45 },
+  C: { zoneLabel: "Zone C", coefficient: -2.01, lagQuarters: 6, r2Pct: 23.1, n: 45 },
+};
+
 /**
  * Hiérarchie de repli : arrondissement parisien → département (si un des 8
- * franciliens couverts) → région (si dans une des 3 régions couvertes) → national.
- * Les données Notaires-INSEE ne couvrent pas les 96 départements individuellement ;
- * en dehors de l'Île-de-France, seules 3 régions ont une série dédiée.
+ * franciliens couverts, données Notaires-INSEE dédiées) → zonage A/B/C de la
+ * commune (couvre le reste de la France) → région (si dans une des 3 régions
+ * couvertes — filet de sécurité si la commune n'a pas pu être résolue) → national.
+ * `communeZone` doit être résolu par l'appelant (voir `resolvePropertySensitivity`,
+ * qui a accès à la table commune → zone) ; ce fichier ne contient que des données.
  */
 export function resolveRealEstateSensitivity(
   department: string | null | undefined,
   arrondissement: number | null | undefined,
+  communeZone: ZonageAbc | null | undefined,
   departmentToRegion: Record<string, RegionId>
 ): ZoneSensitivity {
   if (department === "75" && arrondissement && PARIS_ARRONDISSEMENT_SENSITIVITY[arrondissement]) {
@@ -160,6 +178,9 @@ export function resolveRealEstateSensitivity(
   }
   if (department && DEPARTMENT_SENSITIVITY[department]) {
     return DEPARTMENT_SENSITIVITY[department];
+  }
+  if (communeZone && ZONE_ABC_SENSITIVITY[communeZone]) {
+    return ZONE_ABC_SENSITIVITY[communeZone];
   }
   if (department) {
     const region = departmentToRegion[department];

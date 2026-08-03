@@ -3,11 +3,8 @@ import {
   STOCK_PROFILE_BETA,
   type ActionsProfileBreakdown,
 } from "@/lib/allocation/stockProfiles";
-import { DEPARTMENT_TO_REGION } from "@/lib/property/departments";
-import {
-  resolveRealEstateSensitivity,
-  type ZoneSensitivity,
-} from "@/lib/scenarios/realEstateSensitivity";
+import type { ZoneSensitivity } from "@/lib/scenarios/realEstateSensitivity";
+import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 
 export interface StockShockResult {
   weightedBeta: number;
@@ -58,19 +55,17 @@ export interface RealEstateShockResult {
 
 /**
  * Chaque bien revalorise selon le coefficient de sensibilité prix/taux de sa propre
- * zone (voir `resolveRealEstateSensitivity`), pas un pourcentage national unique :
- * shockPct = coefficient_zone × oatRateChangePts.
+ * zone, pas un pourcentage national unique : shockPct = coefficient_zone ×
+ * oatRateChangePts. La zone de chaque bien est résolue en amont, côté serveur
+ * (voir `resolvePropertySensitivity`) — cette fonction ne fait que lire
+ * `property.sensitivity`, elle n'a pas accès à la table commune → zone.
  */
 export function computeRealEstateShockImpact(
-  properties: Property[],
+  properties: PropertyWithSensitivity[],
   oatRateChangePts: number
 ): RealEstateShockResult {
   const perProperty = properties.map((property) => {
-    const sensitivity = resolveRealEstateSensitivity(
-      property.department,
-      property.arrondissement,
-      DEPARTMENT_TO_REGION
-    );
+    const sensitivity = property.sensitivity;
     const shockPct = sensitivity.coefficient * oatRateChangePts;
     const newValue = property.currentValue * (1 + shockPct / 100);
     const newEquity = newValue - property.remainingLoanAmount;
@@ -265,7 +260,7 @@ export function computeCombinedNetWorthImpact(params: {
   actionsPctWithinFinancial: number;
   actionsBreakdown: ActionsProfileBreakdown;
   marketShockPct: number;
-  properties: Property[];
+  properties: PropertyWithSensitivity[];
   oatRateChangePts: number;
   inflationPct: number;
   inflationYears: number;
