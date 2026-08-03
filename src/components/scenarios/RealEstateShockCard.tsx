@@ -19,6 +19,21 @@ interface RealEstateShockCardProps {
   onOatRateChangePtsChange: (value: number) => void;
 }
 
+// R² reliability scale for the calibrated zone coefficients. The app's palette
+// only has ink/slate/emerald/bronze (no literal red/green) — bronze doubles as
+// the existing "warning" color, emerald as the existing "accent/highlight"
+// color, and plain ink for the broad middle tier where most zones actually
+// fall (the methodology note already says R² is generally 3-15%).
+function reliabilityTier(r2Pct: number): { className: string; label: string } {
+  if (r2Pct < 5) {
+    return { className: "text-bronze", label: "⚠ peu fiable" };
+  }
+  if (r2Pct >= 15) {
+    return { className: "text-emerald", label: "· plus fiable" };
+  }
+  return { className: "text-ink", label: "· fiabilité modérée" };
+}
+
 export function RealEstateShockCard({
   properties,
   oatRateChangePts,
@@ -148,15 +163,21 @@ export function RealEstateShockCard({
           et 15 % selon les zones) — une tendance indicative, pas une certitude.
         </p>
         <ul className="flex flex-col gap-0.5">
-          {zonesUsed.map((zone) => (
-            <li key={zone.zoneLabel} className="flex items-center justify-between gap-3">
-              <span>{zone.zoneLabel}</span>
-              <span className="font-mono tabular-nums">
-                {zone.coefficient > 0 ? "+" : ""}
-                {zone.coefficient} %/pt · R² {zone.r2Pct}%
-              </span>
-            </li>
-          ))}
+          {zonesUsed.map((zone) => {
+            const reliability = reliabilityTier(zone.r2Pct);
+            return (
+              <li key={zone.zoneLabel} className="flex items-center justify-between gap-3">
+                <span>{zone.zoneLabel}</span>
+                <span className="font-mono tabular-nums">
+                  {zone.coefficient > 0 ? "+" : ""}
+                  {zone.coefficient} %/pt ·{" "}
+                  <span className={`font-bold ${reliability.className}`}>
+                    R² {zone.r2Pct}% {reliability.label}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
