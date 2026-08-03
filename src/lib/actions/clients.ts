@@ -34,6 +34,11 @@ export async function createClient(formData: FormData) {
   redirect(`/clients/${client.id}`);
 }
 
+export async function deleteClient(clientId: string) {
+  await prisma.client.delete({ where: { id: clientId } });
+  revalidatePath("/clients");
+}
+
 export async function updateClientAllocation(
   clientId: string,
   amounts: Record<string, number>

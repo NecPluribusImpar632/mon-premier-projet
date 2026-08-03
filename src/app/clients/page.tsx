@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getClients } from "@/lib/actions/clients";
+import { DeleteClientButton } from "@/components/client/DeleteClientButton";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
 
@@ -31,16 +32,17 @@ export default async function ClientsPage() {
       ) : (
         <ul className="flex flex-col border-t border-line">
           {clients.map((client) => (
-            <li key={client.id} className="border-b border-line">
+            <li key={client.id} className="flex items-center border-b border-line">
               <Link
                 href={`/clients/${client.id}`}
-                className="flex items-center justify-between px-1 py-4 transition-colors hover:bg-emerald-tint/40"
+                className="flex flex-1 items-center justify-between px-1 py-4 transition-colors hover:bg-emerald-tint/40"
               >
                 <span className="font-medium text-ink">{client.name}</span>
                 <span className="font-mono text-sm tabular-nums text-slate">
                   {client.age} ans
                 </span>
               </Link>
+              <DeleteClientButton clientId={client.id} clientName={client.name} />
             </li>
           ))}
         </ul>
