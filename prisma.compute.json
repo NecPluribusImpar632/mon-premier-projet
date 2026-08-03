@@ -1,0 +1,11 @@
+{
+  "region": "eu-central-1",
+  "app": {
+    "name": "mon-premier-projet",
+    "framework": "nextjs",
+    "httpPort": 3000,
+    "build": {
+      "command": "next build"
+    }
+  }
+}
