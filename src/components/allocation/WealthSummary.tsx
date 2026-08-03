@@ -88,7 +88,7 @@ export function WealthSummary({
         </div>
         <div className="col-span-2 sm:col-span-1">
           <p className="text-xs text-slate">Patrimoine net</p>
-          <p className="mt-1 font-mono text-5xl font-semibold tabular-nums text-ink">
+          <p className="mt-1 font-serif text-5xl font-semibold tabular-nums text-ink">
             {currencyFormatter.format(netWealth)}
           </p>
         </div>
