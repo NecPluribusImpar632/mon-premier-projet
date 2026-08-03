@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import { createProperty } from "@/lib/actions/properties";
 import { RATE_TYPES, RATE_TYPE_LABELS } from "@/lib/property/rateType";
+import { LocationFields } from "@/components/property/LocationFields";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { FIELD_CLASS, NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
@@ -33,6 +34,7 @@ export default async function NewPropertyPage({ params }: NewPropertyPageProps) 
           Nom / adresse
           <input name="name" type="text" required className={FIELD_CLASS} />
         </label>
+        <LocationFields />
         <label className="flex flex-col gap-1.5 text-sm text-slate">
           Valeur actuelle (€)
           <FormattedNumberInput

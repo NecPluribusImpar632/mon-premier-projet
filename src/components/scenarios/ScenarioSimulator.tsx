@@ -47,8 +47,8 @@ export function ScenarioSimulator({
   const [marketShockPct, setMarketShockPct] = useState(
     CUSTOM_PRESET.marketShockPct
   );
-  const [realEstateShockPct, setRealEstateShockPct] = useState(
-    CUSTOM_PRESET.realEstateShockPct
+  const [oatRateChangePts, setOatRateChangePts] = useState(
+    CUSTOM_PRESET.oatRateChangePts
   );
   const [scpiShockPct, setScpiShockPct] = useState(0);
   const [inflationPct, setInflationPct] = useState(CUSTOM_PRESET.inflationPct);
@@ -61,7 +61,7 @@ export function ScenarioSimulator({
   function applyPreset(preset: ScenarioPreset) {
     setSelectedPresetId(preset.id);
     setMarketShockPct(preset.marketShockPct);
-    setRealEstateShockPct(preset.realEstateShockPct);
+    setOatRateChangePts(preset.oatRateChangePts);
     setInflationPct(preset.inflationPct);
   }
 
@@ -70,8 +70,8 @@ export function ScenarioSimulator({
     setSelectedPresetId(CUSTOM_PRESET_ID);
   }
 
-  function handleRealEstateShockChange(value: number) {
-    setRealEstateShockPct(value);
+  function handleOatRateChangePts(value: number) {
+    setOatRateChangePts(value);
     setSelectedPresetId(CUSTOM_PRESET_ID);
   }
 
@@ -91,7 +91,7 @@ export function ScenarioSimulator({
     actionsBreakdown,
     marketShockPct,
     properties,
-    realEstateShockPct,
+    oatRateChangePts,
     inflationPct,
     inflationYears,
     vacancyPropertyId,
@@ -134,8 +134,8 @@ export function ScenarioSimulator({
         />
         <RealEstateShockCard
           properties={properties}
-          shockPct={realEstateShockPct}
-          onShockPctChange={handleRealEstateShockChange}
+          oatRateChangePts={oatRateChangePts}
+          onOatRateChangePtsChange={handleOatRateChangePts}
         />
         <ScpiShockCard
           scpiAmount={scpiAmount}

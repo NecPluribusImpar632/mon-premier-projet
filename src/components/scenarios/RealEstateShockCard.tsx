@@ -10,23 +10,19 @@ import {
   computeRateHikeImpact,
 } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
+import { roundPercent } from "@/lib/format/percent";
 import { FIELD_CLASS } from "@/components/ui/fieldStyles";
 
 interface RealEstateShockCardProps {
   properties: Property[];
-  shockPct: number;
-  onShockPctChange: (value: number) => void;
+  oatRateChangePts: number;
+  onOatRateChangePtsChange: (value: number) => void;
 }
-
-// Illustrative reference hike for the fixed/variable summary line only — most
-// French mortgages are fixed-rate, so a dedicated slider for this wasn't
-// pulling its weight as a standalone scenario.
-const REFERENCE_RATE_HIKE_PTS = 1;
 
 export function RealEstateShockCard({
   properties,
-  shockPct,
-  onShockPctChange,
+  oatRateChangePts,
+  onOatRateChangePtsChange,
 }: RealEstateShockCardProps) {
   const [needsLiquidity, setNeedsLiquidity] = useState(false);
   const [liquidityPropertyId, setLiquidityPropertyId] = useState(
@@ -47,14 +43,22 @@ export function RealEstateShockCard({
     );
   }
 
-  const result = computeRealEstateShockImpact(properties, shockPct);
-  const rateHike = computeRateHikeImpact(properties, REFERENCE_RATE_HIKE_PTS);
+  const result = computeRealEstateShockImpact(properties, oatRateChangePts);
+  const rateHike = computeRateHikeImpact(properties, oatRateChangePts);
   const fixedCount = rateHike.perProperty.filter((p) => p.isFixed).length;
   const variableCount = rateHike.perProperty.length - fixedCount;
 
   const liquidityProperty = properties.find((p) => p.id === liquidityPropertyId);
   const liquidityImpact = result.perProperty.find(
     (p) => p.propertyId === liquidityPropertyId
+  );
+
+  // One methodology line per distinct zone actually used by this client's biens,
+  // rather than repeating the same zone for every property.
+  const zonesUsed = Array.from(
+    new Map(
+      result.perProperty.map((p) => [p.sensitivity.zoneLabel, p.sensitivity])
+    ).values()
   );
 
   return (
@@ -64,11 +68,13 @@ export function RealEstateShockCard({
       description="Baisse du prix des biens, sensibilité aux taux et besoin de liquidité."
     >
       <ShockSlider
-        label="Baisse des prix"
-        value={shockPct}
-        min={-40}
-        max={0}
-        onChange={onShockPctChange}
+        label="Variation du taux OAT"
+        value={oatRateChangePts}
+        min={-3}
+        max={8}
+        step={0.5}
+        suffix=" pt"
+        onChange={onOatRateChangePtsChange}
       />
 
       <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
@@ -98,7 +104,14 @@ export function RealEstateShockCard({
             key={property.propertyId}
             className="flex items-center justify-between gap-3"
           >
-            <span className="text-slate">{property.propertyName}</span>
+            <span className="text-slate">
+              {property.propertyName}
+              <span className="ml-1.5 text-slate/70">
+                ({property.sensitivity.zoneLabel},{" "}
+                {property.shockPct > 0 ? "+" : ""}
+                {roundPercent(property.shockPct, 1)}%)
+              </span>
+            </span>
             <span
               className={`font-mono tabular-nums ${
                 property.isUnderwater ? "text-bronze" : "text-ink"
@@ -120,10 +133,32 @@ export function RealEstateShockCard({
             · {variableCount} bien{variableCount > 1 ? "s" : ""} à taux
             variable (impact estimé : -
             {formatCurrency(rateHike.totalExtraMonthlyCost)}/mois si les taux
-            montent de {REFERENCE_RATE_HIKE_PTS} pt)
+            montent de {roundPercent(oatRateChangePts, 2)} pt)
           </>
         )}
       </p>
+
+      <div className="flex flex-col gap-1 border-t border-line pt-3 text-xs text-slate">
+        <p>
+          Méthodologie : le choc prix applique, pour chaque bien, le coefficient de
+          sensibilité prix/taux calibré sur sa zone (régression historique
+          Notaires-INSEE / Notaires du Grand Paris entre variation du taux OAT 10 ans
+          et croissance des prix, en glissement annuel, meilleur décalage retenu entre
+          0 et 8 trimestres). Fiabilité statistique modeste (R² généralement entre 3 %
+          et 15 % selon les zones) — une tendance indicative, pas une certitude.
+        </p>
+        <ul className="flex flex-col gap-0.5">
+          {zonesUsed.map((zone) => (
+            <li key={zone.zoneLabel} className="flex items-center justify-between gap-3">
+              <span>{zone.zoneLabel}</span>
+              <span className="font-mono tabular-nums">
+                {zone.coefficient > 0 ? "+" : ""}
+                {zone.coefficient} %/pt · R² {zone.r2Pct}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <div className="flex flex-col gap-2.5 border-t border-line pt-3">
         <p className="text-sm text-ink">

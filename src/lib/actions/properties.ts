@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isRateType } from "@/lib/property/rateType";
+import { isDepartmentCode } from "@/lib/property/departments";
 
 function parseRequiredNonNegativeNumber(value: unknown): number {
   const sanitized = String(value ?? "").replace(/[^\d.]/g, "");
@@ -27,12 +28,26 @@ export async function createProperty(clientId: string, formData: FormData) {
   );
   const loanRate = parseRequiredNonNegativeNumber(formData.get("loanRate") || 0);
   const rateType = String(formData.get("rateType") ?? "fixed");
+  const department = String(formData.get("department") ?? "").trim();
+
+  const arrondissementRaw = String(formData.get("arrondissement") ?? "").trim();
+  let arrondissement: number | null = null;
+  if (department === "75" && arrondissementRaw !== "") {
+    const parsed = Number(arrondissementRaw);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 20) {
+      throw new Error("L'arrondissement doit être compris entre 1 et 20.");
+    }
+    arrondissement = parsed;
+  }
 
   if (!name) {
     throw new Error("Le nom / l'adresse du bien est requis.");
   }
   if (!isRateType(rateType)) {
     throw new Error("Le type de taux doit être fixe ou variable.");
+  }
+  if (!isDepartmentCode(department)) {
+    throw new Error("Merci de sélectionner un département valide.");
   }
 
   await prisma.property.create({
@@ -44,6 +59,8 @@ export async function createProperty(clientId: string, formData: FormData) {
       remainingLoanAmount,
       loanRate,
       rateType,
+      department,
+      arrondissement,
     },
   });
 

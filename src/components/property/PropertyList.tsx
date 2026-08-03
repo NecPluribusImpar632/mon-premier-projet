@@ -1,7 +1,8 @@
 import type { ComponentType } from "react";
-import { Building2, Coins, Key, Landmark, Percent } from "lucide-react";
+import { Building2, Coins, Key, Landmark, MapPin, Percent } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
+import { DEPARTMENT_LABEL, arrondissementLabel } from "@/lib/property/departments";
 import { roundPercent } from "@/lib/format/percent";
 
 interface PropertyListProps {
@@ -35,6 +36,21 @@ export function PropertyList({ properties }: PropertyListProps) {
           </div>
 
           <dl className="flex flex-col">
+            <PropertyLine
+              icon={MapPin}
+              label="Localisation"
+              value={
+                property.department
+                  ? DEPARTMENT_LABEL[property.department] ?? property.department
+                  : "Non renseignée"
+              }
+              hint={
+                property.department === "75" && property.arrondissement
+                  ? arrondissementLabel(property.arrondissement)
+                  : undefined
+              }
+              muted={!property.department}
+            />
             <PropertyLine
               icon={Coins}
               label="Valeur actuelle"

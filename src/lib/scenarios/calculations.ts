@@ -3,6 +3,11 @@ import {
   STOCK_PROFILE_BETA,
   type ActionsProfileBreakdown,
 } from "@/lib/allocation/stockProfiles";
+import { DEPARTMENT_TO_REGION } from "@/lib/property/departments";
+import {
+  resolveRealEstateSensitivity,
+  type ZoneSensitivity,
+} from "@/lib/scenarios/realEstateSensitivity";
 
 export interface StockShockResult {
   weightedBeta: number;
@@ -40,6 +45,8 @@ export interface PropertyValueImpact {
   remainingLoanAmount: number;
   newEquity: number;
   isUnderwater: boolean;
+  shockPct: number;
+  sensitivity: ZoneSensitivity;
 }
 
 export interface RealEstateShockResult {
@@ -49,11 +56,22 @@ export interface RealEstateShockResult {
   totalDelta: number;
 }
 
+/**
+ * Chaque bien revalorise selon le coefficient de sensibilité prix/taux de sa propre
+ * zone (voir `resolveRealEstateSensitivity`), pas un pourcentage national unique :
+ * shockPct = coefficient_zone × oatRateChangePts.
+ */
 export function computeRealEstateShockImpact(
   properties: Property[],
-  shockPct: number
+  oatRateChangePts: number
 ): RealEstateShockResult {
   const perProperty = properties.map((property) => {
+    const sensitivity = resolveRealEstateSensitivity(
+      property.department,
+      property.arrondissement,
+      DEPARTMENT_TO_REGION
+    );
+    const shockPct = sensitivity.coefficient * oatRateChangePts;
     const newValue = property.currentValue * (1 + shockPct / 100);
     const newEquity = newValue - property.remainingLoanAmount;
     return {
@@ -65,6 +83,8 @@ export function computeRealEstateShockImpact(
       remainingLoanAmount: property.remainingLoanAmount,
       newEquity,
       isUnderwater: newEquity < 0,
+      shockPct,
+      sensitivity,
     };
   });
 
@@ -246,7 +266,7 @@ export function computeCombinedNetWorthImpact(params: {
   actionsBreakdown: ActionsProfileBreakdown;
   marketShockPct: number;
   properties: Property[];
-  realEstateShockPct: number;
+  oatRateChangePts: number;
   inflationPct: number;
   inflationYears: number;
   vacancyPropertyId: string | null;
@@ -258,7 +278,7 @@ export function computeCombinedNetWorthImpact(params: {
     actionsBreakdown,
     marketShockPct,
     properties,
-    realEstateShockPct,
+    oatRateChangePts,
     inflationPct,
     inflationYears,
     vacancyPropertyId,
@@ -280,7 +300,7 @@ export function computeCombinedNetWorthImpact(params: {
   const financialWealthAfter =
     financialWealthTotal - actionsValueBefore + actionsValueAfter;
 
-  const realEstateShock = computeRealEstateShockImpact(properties, realEstateShockPct);
+  const realEstateShock = computeRealEstateShockImpact(properties, oatRateChangePts);
 
   const inflationResult = computeInflationImpact(
     properties,
