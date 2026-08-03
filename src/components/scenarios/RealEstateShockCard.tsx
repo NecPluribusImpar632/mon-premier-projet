@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
 import { FIELD_CLASS } from "@/components/ui/fieldStyles";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 interface RealEstateShockCardProps {
   properties: PropertyWithSensitivity[];
@@ -153,32 +154,36 @@ export function RealEstateShockCard({
         )}
       </p>
 
-      <div className="flex flex-col gap-1 border-t border-line pt-3 text-xs text-slate">
-        <p>
-          Méthodologie : le choc prix applique, pour chaque bien, le coefficient de
-          sensibilité prix/taux calibré sur sa zone (régression historique
-          Notaires-INSEE / Notaires du Grand Paris entre variation du taux OAT 10 ans
-          et croissance des prix, en glissement annuel, meilleur décalage retenu entre
-          0 et 8 trimestres). Fiabilité statistique modeste (R² généralement entre 3 %
-          et 15 % selon les zones) — une tendance indicative, pas une certitude.
-        </p>
-        <ul className="flex flex-col gap-0.5">
-          {zonesUsed.map((zone) => {
-            const reliability = reliabilityTier(zone.r2Pct);
-            return (
-              <li key={zone.zoneLabel} className="flex items-center justify-between gap-3">
-                <span>{zone.zoneLabel}</span>
-                <span className="font-mono tabular-nums">
-                  {zone.coefficient > 0 ? "+" : ""}
-                  {zone.coefficient} %/pt ·{" "}
-                  <span className={`font-bold ${reliability.className}`}>
-                    R² {zone.r2Pct}% {reliability.label}
+      <div className="flex items-center gap-1.5 border-t border-line pt-3 text-xs text-slate">
+        <span>Méthodologie</span>
+        <InfoTooltip>
+          <p>
+            Le choc prix applique, pour chaque bien, le coefficient de
+            sensibilité prix/taux calibré sur sa zone (régression historique
+            Notaires-INSEE / Notaires du Grand Paris entre variation du taux
+            OAT 10 ans et croissance des prix, en glissement annuel, meilleur
+            décalage retenu entre 0 et 8 trimestres). Fiabilité statistique
+            modeste à correcte selon les zones (R² de 3 % à 46 %) — une
+            tendance indicative, pas une certitude.
+          </p>
+          <ul className="mt-2 flex flex-col gap-0.5 border-t border-line pt-2">
+            {zonesUsed.map((zone) => {
+              const reliability = reliabilityTier(zone.r2Pct);
+              return (
+                <li key={zone.zoneLabel} className="flex items-center justify-between gap-3">
+                  <span>{zone.zoneLabel}</span>
+                  <span className="font-mono tabular-nums">
+                    {zone.coefficient > 0 ? "+" : ""}
+                    {zone.coefficient} %/pt ·{" "}
+                    <span className={`font-bold ${reliability.className}`}>
+                      R² {zone.r2Pct}% {reliability.label}
+                    </span>
                   </span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+                </li>
+              );
+            })}
+          </ul>
+        </InfoTooltip>
       </div>
 
       <div className="flex flex-col gap-2.5 border-t border-line pt-3">

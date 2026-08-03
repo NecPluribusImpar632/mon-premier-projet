@@ -5,6 +5,7 @@ import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { computeScpiShockImpact } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 interface ScpiShockCardProps {
   scpiAmount: number;
@@ -68,11 +69,14 @@ export function ScpiShockCard({
         </p>
       </div>
 
-      <p className="border-t border-line pt-3 text-xs text-slate">
-        Méthodologie : une SCPI peut subir une décote de son prix de part et
-        un risque de suspension des rachats en période de crise, distinct de
-        l&apos;illiquidité d&apos;un bien physique.
-      </p>
+      <div className="flex items-center gap-1.5 border-t border-line pt-3 text-xs text-slate">
+        <span>Méthodologie</span>
+        <InfoTooltip>
+          Une SCPI peut subir une décote de son prix de part et un risque de
+          suspension des rachats en période de crise, distinct de
+          l&apos;illiquidité d&apos;un bien physique.
+        </InfoTooltip>
+      </div>
     </ScenarioCard>
   );
 }
