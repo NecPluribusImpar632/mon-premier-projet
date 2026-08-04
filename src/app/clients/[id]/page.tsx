@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, FlaskConical, PieChart, User } from "lucide-react";
+import { Building2, Download, FlaskConical, PieChart, User } from "lucide-react";
 import { getClient } from "@/lib/actions/clients";
 import {
   actionsBreakdownFromClient,
@@ -8,6 +8,7 @@ import {
   professionalToolMainIncomeFromClient,
 } from "@/lib/allocation/mapping";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
+import { ClientProfile } from "@/components/client/ClientProfile";
 import { PropertyList } from "@/components/property/PropertyList";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
@@ -43,15 +44,30 @@ export default async function ClientDetailPage({
               <p className="mt-1 text-sm text-slate">{client.age} ans</p>
             </div>
           </div>
-          <Link
-            href={`/clients/${client.id}/scenarios`}
-            className={PRIMARY_BUTTON_CLASS}
-          >
-            <FlaskConical className="h-4 w-4" />
-            Simuler des scénarios
-            <LinkPendingSpinner />
-          </Link>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <a
+              href={`/clients/${client.id}/pdf`}
+              className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+            >
+              <Download className="h-4 w-4" />
+              Exporter en PDF
+            </a>
+            <Link
+              href={`/clients/${client.id}/scenarios`}
+              className={PRIMARY_BUTTON_CLASS}
+            >
+              <FlaskConical className="h-4 w-4" />
+              Simuler des scénarios
+              <LinkPendingSpinner />
+            </Link>
+          </div>
         </header>
+
+        <ClientProfile
+          clientId={client.id}
+          initialRiskProfile={client.riskProfile}
+          initialNotes={client.notes}
+        />
       </div>
 
       <div className="flex flex-col gap-5 border-t border-line pt-6">

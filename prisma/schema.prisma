@@ -29,6 +29,8 @@ model Client {
   actionsIndicielPct           Float      @default(100)
   actionsDefensifPct           Float      @default(0)
   actionsCroissancePct         Float      @default(0)
+  riskProfile                  String?
+  notes                        String?
   createdAt                    DateTime   @default(now())
   updatedAt                    DateTime   @updatedAt
   properties                   Property[]

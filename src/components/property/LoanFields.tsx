@@ -125,7 +125,7 @@ export function LoanFields({ defaultLoans = [] }: LoanFieldsProps) {
                 name={`loan.${row.key}.rate`}
                 type="number"
                 min={0}
-                step="0.01"
+                step="0.1"
                 defaultValue={row.loan?.rate ?? 0}
                 className={NUMERIC_FIELD_CLASS}
               />

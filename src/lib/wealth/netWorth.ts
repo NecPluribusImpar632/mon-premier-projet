@@ -1,3 +1,9 @@
+import type { Client } from "@/generated/prisma/client";
+import {
+  amountsFromClient,
+  effectiveImmobilierAmount,
+  financialTotalFromAmounts,
+} from "@/lib/allocation/mapping";
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 
 export interface NetWorthSummary {
@@ -29,4 +35,25 @@ export function computeNetWorth(
     totalDebt,
     netWealth: grossWealth - totalDebt,
   };
+}
+
+/**
+ * Same computation as `computeNetWorth`, but starting straight from a
+ * `Client` + its properties — the composition (amounts → financial total →
+ * effective Immobilier → net worth) that was previously only inlined inside
+ * `WealthSummary`/`ClientAllocationEditor`. Used wherever a client's net
+ * worth is needed without rendering the allocation editor (clients list,
+ * PDF export).
+ */
+export function computeClientNetWorth(
+  client: Client,
+  properties: PropertyWithLoans[]
+): NetWorthSummary {
+  const amounts = amountsFromClient(client);
+  const financialWealthTotal = financialTotalFromAmounts(amounts);
+  const immobilierValue = effectiveImmobilierAmount(
+    amounts.immobilier ?? 0,
+    properties
+  );
+  return computeNetWorth(financialWealthTotal, immobilierValue, properties);
 }

@@ -6,9 +6,13 @@ import { prisma } from "@/lib/prisma";
 import { allocationFieldsFromAmounts } from "@/lib/allocation/mapping";
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import { isRiskProfile } from "@/lib/client/riskProfile";
 
 export async function getClients() {
-  return prisma.client.findMany({ orderBy: { name: "asc" } });
+  return prisma.client.findMany({
+    orderBy: { name: "asc" },
+    include: { properties: { include: { loans: true } } },
+  });
 }
 
 export async function getClient(id: string) {
@@ -72,6 +76,23 @@ export async function updateProfessionalToolMainIncome(
     data: { professionalToolMainIncome: mainIncome },
   });
   revalidatePath(`/clients/${clientId}`);
+}
+
+export async function updateClientProfile(
+  clientId: string,
+  riskProfile: string | null,
+  notes: string | null
+) {
+  if (riskProfile !== null && !isRiskProfile(riskProfile)) {
+    throw new Error("Profil de risque invalide.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { riskProfile, notes },
+  });
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/clients");
 }
 
 export async function updateActionsProfile(
