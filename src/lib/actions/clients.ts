@@ -95,6 +95,29 @@ export async function updateClientProfile(
   revalidatePath("/clients");
 }
 
+export async function updateRetirementGoal(
+  clientId: string,
+  retirementAge: number,
+  monthlySavingsAmount: number,
+  expectedAnnualReturnPct: number
+) {
+  if (!Number.isInteger(retirementAge) || retirementAge < 0) {
+    throw new Error("L'âge de départ à la retraite doit être un nombre entier positif.");
+  }
+  if (!Number.isFinite(monthlySavingsAmount) || monthlySavingsAmount < 0) {
+    throw new Error("L'épargne mensuelle doit être un nombre positif.");
+  }
+  if (!Number.isFinite(expectedAnnualReturnPct)) {
+    throw new Error("Le rendement attendu doit être un nombre.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { retirementAge, monthlySavingsAmount, expectedAnnualReturnPct },
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
 export async function updateActionsProfile(
   clientId: string,
   breakdown: ActionsProfileBreakdown
