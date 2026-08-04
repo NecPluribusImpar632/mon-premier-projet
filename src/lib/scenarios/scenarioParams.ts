@@ -51,3 +51,48 @@ export function scenarioParamsFromSavedScenario(saved: SavedScenario): ScenarioP
     peIlliquidityDiscountPct: saved.peIlliquidityDiscountPct,
   };
 }
+
+/** Serializes the simulator's live state into URL query params, for the "Exporter
+ * le rapport en PDF" link — the PDF route has no other way to know which scenario
+ * (preset, saved, or freely tweaked) is currently on screen. */
+export function scenarioParamsToSearchParams(params: ScenarioParams): URLSearchParams {
+  return new URLSearchParams({
+    marketShockPct: String(params.marketShockPct),
+    oatRateChangePts: String(params.oatRateChangePts),
+    scpiShockPct: String(params.scpiShockPct),
+    inflationPct: String(params.inflationPct),
+    inflationYears: String(params.inflationYears),
+    vacancyPropertyId: params.vacancyPropertyId ?? "",
+    vacancyMonths: String(params.vacancyMonths),
+    obligationsDurationYears: String(params.obligationsDurationYears),
+    peIlliquidityDiscountPct: String(params.peIlliquidityDiscountPct),
+  });
+}
+
+export function scenarioParamsFromSearchParams(
+  searchParams: URLSearchParams
+): ScenarioParams {
+  const num = (key: string, fallback: number) => {
+    const parsed = Number(searchParams.get(key));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  const vacancyPropertyId = searchParams.get("vacancyPropertyId");
+
+  return {
+    marketShockPct: num("marketShockPct", DEFAULT_SCENARIO_PARAMS.marketShockPct),
+    oatRateChangePts: num("oatRateChangePts", DEFAULT_SCENARIO_PARAMS.oatRateChangePts),
+    scpiShockPct: num("scpiShockPct", DEFAULT_SCENARIO_PARAMS.scpiShockPct),
+    inflationPct: num("inflationPct", DEFAULT_SCENARIO_PARAMS.inflationPct),
+    inflationYears: num("inflationYears", DEFAULT_SCENARIO_PARAMS.inflationYears),
+    vacancyPropertyId: vacancyPropertyId ? vacancyPropertyId : null,
+    vacancyMonths: num("vacancyMonths", DEFAULT_SCENARIO_PARAMS.vacancyMonths),
+    obligationsDurationYears: num(
+      "obligationsDurationYears",
+      DEFAULT_SCENARIO_PARAMS.obligationsDurationYears
+    ),
+    peIlliquidityDiscountPct: num(
+      "peIlliquidityDiscountPct",
+      DEFAULT_SCENARIO_PARAMS.peIlliquidityDiscountPct
+    ),
+  };
+}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { GitCompare } from "lucide-react";
+import { Download, GitCompare } from "lucide-react";
 import type { SavedScenario } from "@/generated/prisma/client";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
@@ -15,7 +15,11 @@ import {
   CUSTOM_PRESET_ID,
   type ScenarioPreset,
 } from "@/lib/scenarios/presets";
-import { scenarioParamsFromSavedScenario, type ScenarioParams } from "@/lib/scenarios/scenarioParams";
+import {
+  scenarioParamsFromSavedScenario,
+  scenarioParamsToSearchParams,
+  type ScenarioParams,
+} from "@/lib/scenarios/scenarioParams";
 import {
   createSavedScenario,
   deleteSavedScenario,
@@ -176,6 +180,16 @@ export function ScenarioSimulator({
 
   const combinedImpact = computeFullScenarioImpact(context, currentParams);
 
+  const activeScenarioLabel = selectedSavedScenarioId
+    ? savedScenarios.find((s) => s.id === selectedSavedScenarioId)?.name ??
+      "Scénario personnalisé"
+    : SCENARIO_PRESETS.find((p) => p.id === selectedPresetId)?.label ??
+      "Scénario personnalisé";
+
+  const pdfSearchParams = scenarioParamsToSearchParams(currentParams);
+  pdfSearchParams.set("scenarioLabel", activeScenarioLabel);
+  const pdfHref = `/clients/${clientId}/scenarios/pdf?${pdfSearchParams.toString()}`;
+
   return (
     <div className="flex flex-col gap-8">
       <CombinedImpactBanner result={combinedImpact} />
@@ -195,13 +209,22 @@ export function ScenarioSimulator({
             onDelete={handleDeleteScenario}
           />
         </div>
-        <Link
-          href={`/clients/${clientId}/scenarios/compare`}
-          className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
-        >
-          <GitCompare className="h-4 w-4" />
-          Comparer deux scénarios
-        </Link>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <a
+            href={pdfHref}
+            className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+          >
+            <Download className="h-4 w-4" />
+            Exporter le rapport en PDF
+          </a>
+          <Link
+            href={`/clients/${clientId}/scenarios/compare`}
+            className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+          >
+            <GitCompare className="h-4 w-4" />
+            Comparer deux scénarios
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

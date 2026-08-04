@@ -1,15 +1,9 @@
 import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import { getSavedScenarios } from "@/lib/actions/scenarios";
-import {
-  actionsBreakdownFromClient,
-  amountsFromClient,
-  effectiveImmobilierAmount,
-  financialTotalFromAmounts,
-  overallEntriesFromAmounts,
-} from "@/lib/allocation/mapping";
+import { amountsFromClient, overallEntriesFromAmounts } from "@/lib/allocation/mapping";
 import { ScenarioSimulator } from "@/components/scenarios/ScenarioSimulator";
-import { withResolvedSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
+import { buildClientScenarioContext } from "@/lib/scenarios/clientContext";
 
 interface ScenariosPageProps {
   params: Promise<{ id: string }>;
@@ -23,23 +17,10 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
     notFound();
   }
 
-  const amounts = amountsFromClient(client);
-  const overallEntries = overallEntriesFromAmounts(amounts, client.properties);
-  const financialWealthTotal = financialTotalFromAmounts(amounts);
-  const immobilierValue = effectiveImmobilierAmount(
-    amounts.immobilier ?? 0,
-    client.properties
-  );
-
+  const context = buildClientScenarioContext(client);
+  const overallEntries = overallEntriesFromAmounts(amountsFromClient(client), client.properties);
   const actionsPctOverall =
-    overallEntries.find((entry) => entry.categoryId === "actions")?.percentage ??
-    0;
-  const actionsPctWithinFinancial =
-    financialWealthTotal > 0
-      ? ((amounts.actions ?? 0) / financialWealthTotal) * 100
-      : 0;
-
-  const propertiesWithSensitivity = withResolvedSensitivity(client.properties);
+    overallEntries.find((entry) => entry.categoryId === "actions")?.percentage ?? 0;
   const savedScenarios = await getSavedScenarios(id);
 
   return (
@@ -55,15 +36,8 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
         <ScenarioSimulator
           clientId={id}
           actionsPctOverall={actionsPctOverall}
-          actionsPctWithinFinancial={actionsPctWithinFinancial}
-          financialWealthTotal={financialWealthTotal}
-          scpiAmount={amounts.scpi ?? 0}
-          obligationsAmount={amounts.obligations ?? 0}
-          privateEquityAmount={amounts["private-equity"] ?? 0}
-          immobilierValue={immobilierValue}
-          actionsBreakdown={actionsBreakdownFromClient(client)}
-          properties={propertiesWithSensitivity}
           initialSavedScenarios={savedScenarios}
+          {...context}
         />
       </div>
     </div>
