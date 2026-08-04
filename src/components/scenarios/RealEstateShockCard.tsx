@@ -61,8 +61,11 @@ export function RealEstateShockCard({
 
   const result = computeRealEstateShockImpact(properties, oatRateChangePts);
   const rateHike = computeRateHikeImpact(properties, oatRateChangePts);
-  const fixedCount = rateHike.perProperty.filter((p) => p.isFixed).length;
-  const variableCount = rateHike.perProperty.length - fixedCount;
+  const totalFixedDebt = rateHike.perProperty.reduce((sum, p) => sum + p.fixedDebt, 0);
+  const totalVariableDebt = rateHike.perProperty.reduce(
+    (sum, p) => sum + p.variableDebt,
+    0
+  );
 
   const liquidityProperty = properties.find((p) => p.id === liquidityPropertyId);
   const liquidityImpact = result.perProperty.find(
@@ -140,19 +143,21 @@ export function RealEstateShockCard({
         ))}
       </ul>
 
-      <p className="border-t border-line pt-3 text-xs text-slate">
-        {fixedCount} bien{fixedCount > 1 ? "s" : ""} à taux fixe (protégé
-        {fixedCount > 1 ? "s" : ""})
-        {variableCount > 0 && (
-          <>
-            {" "}
-            · {variableCount} bien{variableCount > 1 ? "s" : ""} à taux
-            variable (impact estimé : -
-            {formatCurrency(rateHike.totalExtraMonthlyCost)}/mois si les taux
-            montent de {roundPercent(oatRateChangePts, 2)} pt)
-          </>
-        )}
-      </p>
+      {(totalFixedDebt > 0 || totalVariableDebt > 0) && (
+        <p className="border-t border-line pt-3 text-xs text-slate">
+          {totalFixedDebt > 0 && (
+            <>{formatCurrency(totalFixedDebt)} de dette à taux fixe (protégée)</>
+          )}
+          {totalVariableDebt > 0 && (
+            <>
+              {totalFixedDebt > 0 && " · "}
+              {formatCurrency(totalVariableDebt)} à taux variable (impact estimé : -
+              {formatCurrency(rateHike.totalExtraMonthlyCost)}/mois si les taux
+              montent de {roundPercent(oatRateChangePts, 2)} pt)
+            </>
+          )}
+        </p>
+      )}
 
       <div className="flex items-center gap-1.5 border-t border-line pt-3 text-xs text-slate">
         <span>Méthodologie</span>

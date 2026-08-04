@@ -1,15 +1,15 @@
-import type { Property } from "@/generated/prisma/client";
+import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { formatCurrency } from "@/lib/format/currency";
 
 interface PropertyOverviewProps {
-  properties: Property[];
+  properties: PropertyWithLoans[];
 }
 
 export function PropertyOverview({ properties }: PropertyOverviewProps) {
   if (properties.length === 0) return null;
 
   const totalValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
-  const totalDebt = properties.reduce((sum, p) => sum + p.remainingLoanAmount, 0);
+  const totalDebt = properties.reduce((sum, p) => sum + totalRemainingDebt(p), 0);
   const netEquity = totalValue - totalDebt;
   const ltvRatio = totalValue > 0 ? (totalDebt / totalValue) * 100 : 0;
 

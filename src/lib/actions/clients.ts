@@ -14,7 +14,12 @@ export async function getClients() {
 export async function getClient(id: string) {
   return prisma.client.findUnique({
     where: { id },
-    include: { properties: { orderBy: { createdAt: "asc" } } },
+    include: {
+      properties: {
+        orderBy: { createdAt: "asc" },
+        include: { loans: { orderBy: { createdAt: "asc" } } },
+      },
+    },
   });
 }
 

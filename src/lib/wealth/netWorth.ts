@@ -1,4 +1,4 @@
-import type { Property } from "@/generated/prisma/client";
+import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 
 export interface NetWorthSummary {
   /** Financial wealth + gross real estate value, before debt. */
@@ -19,9 +19,9 @@ export interface NetWorthSummary {
 export function computeNetWorth(
   financialWealthTotal: number,
   immobilierValue: number,
-  properties: Property[]
+  properties: PropertyWithLoans[]
 ): NetWorthSummary {
-  const totalDebt = properties.reduce((sum, p) => sum + p.remainingLoanAmount, 0);
+  const totalDebt = properties.reduce((sum, p) => sum + totalRemainingDebt(p), 0);
   const grossWealth = financialWealthTotal + immobilierValue;
 
   return {

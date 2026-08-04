@@ -39,9 +39,6 @@ model Property {
   name                String
   currentValue        Float
   monthlyRent         Float?
-  remainingLoanAmount Float    @default(0)
-  loanRate            Float    @default(0)
-  rateType            String   @default("fixed")
   department          String?
   arrondissement      Int?
   communeCode         String?
@@ -49,4 +46,22 @@ model Property {
   updatedAt           DateTime @updatedAt
   clientId            String
   client              Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  loans               Loan[]
+}
+
+model Loan {
+  id               String    @id @default(cuid())
+  label            String?
+  originalAmount   Float
+  remainingAmount  Float
+  rate             Float
+  rateType         String    @default("fixed")
+  amortizationType String    @default("amortissable")
+  residualAmount   Float?
+  termYears        Int
+  startDate        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  propertyId       String
+  property         Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 }

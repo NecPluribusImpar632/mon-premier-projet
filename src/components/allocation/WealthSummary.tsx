@@ -1,11 +1,11 @@
 import { AlertTriangle } from "lucide-react";
-import type { Property } from "@/generated/prisma/client";
+import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { computeNetWorth } from "@/lib/wealth/netWorth";
 
 interface WealthSummaryProps {
   financialWealthTotal: number;
   immobilierValue: number;
-  properties: Property[];
+  properties: PropertyWithLoans[];
   showConcentrationWarning: boolean;
 }
 

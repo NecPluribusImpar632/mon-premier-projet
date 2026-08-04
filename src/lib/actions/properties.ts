@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isRateType } from "@/lib/property/rateType";
 import { isDepartmentCode } from "@/lib/property/departments";
+import { isAmortizationType } from "@/lib/property/loanTypes";
 import { DEPARTMENT_SENSITIVITY } from "@/lib/scenarios/realEstateSensitivity";
 import { getCommunesForDepartment } from "@/lib/property/communesZonage";
 
@@ -25,11 +26,6 @@ function parsePropertyFormData(formData: FormData) {
   const monthlyRent =
     monthlyRentRaw === "" ? null : parseRequiredNonNegativeNumber(monthlyRentRaw);
 
-  const remainingLoanAmount = parseRequiredNonNegativeNumber(
-    formData.get("remainingLoanAmount") || 0
-  );
-  const loanRate = parseRequiredNonNegativeNumber(formData.get("loanRate") || 0);
-  const rateType = String(formData.get("rateType") ?? "fixed");
   const department = String(formData.get("department") ?? "").trim();
 
   const arrondissementRaw = String(formData.get("arrondissement") ?? "").trim();
@@ -44,9 +40,6 @@ function parsePropertyFormData(formData: FormData) {
 
   if (!name) {
     throw new Error("Le nom / l'adresse du bien est requis.");
-  }
-  if (!isRateType(rateType)) {
-    throw new Error("Le type de taux doit être fixe ou variable.");
   }
   if (!isDepartmentCode(department)) {
     throw new Error("Merci de sélectionner un département valide.");
@@ -71,17 +64,61 @@ function parsePropertyFormData(formData: FormData) {
     name,
     currentValue,
     monthlyRent,
-    remainingLoanAmount,
-    loanRate,
-    rateType,
     department,
     arrondissement,
     communeCode,
   };
 }
 
+function parseLoansFormData(formData: FormData) {
+  const loanKeysRaw = String(formData.get("loanKeys") ?? "").trim();
+  const loanKeys = loanKeysRaw === "" ? [] : loanKeysRaw.split(",");
+
+  return loanKeys.map((key) => {
+    const get = (field: string) => formData.get(`loan.${key}.${field}`);
+
+    const labelRaw = String(get("label") ?? "").trim();
+    const label = labelRaw === "" ? null : labelRaw;
+    const originalAmount = parseRequiredNonNegativeNumber(get("originalAmount"));
+    const remainingAmount = parseRequiredNonNegativeNumber(get("remainingAmount"));
+    const rate = parseRequiredNonNegativeNumber(get("rate") || 0);
+    const rateType = String(get("rateType") ?? "fixed");
+    const amortizationType = String(get("amortizationType") ?? "amortissable");
+    const termYearsRaw = Number(get("termYears"));
+
+    if (!isRateType(rateType)) {
+      throw new Error("Le type de taux d'un prêt doit être fixe ou variable.");
+    }
+    if (!isAmortizationType(amortizationType)) {
+      throw new Error("Type d'amortissement de prêt invalide.");
+    }
+    if (!Number.isInteger(termYearsRaw) || termYearsRaw < 1) {
+      throw new Error("La durée d'un prêt doit être un nombre entier d'années positif.");
+    }
+
+    let residualAmount: number | null = null;
+    if (amortizationType === "partiel") {
+      residualAmount = parseRequiredNonNegativeNumber(get("residualAmount"));
+    }
+
+    return {
+      label,
+      originalAmount,
+      remainingAmount,
+      rate,
+      rateType,
+      amortizationType,
+      residualAmount,
+      termYears: termYearsRaw,
+    };
+  });
+}
+
 export async function getProperty(propertyId: string, clientId: string) {
-  const property = await prisma.property.findUnique({ where: { id: propertyId } });
+  const property = await prisma.property.findUnique({
+    where: { id: propertyId },
+    include: { loans: { orderBy: { createdAt: "asc" } } },
+  });
   if (!property || property.clientId !== clientId) {
     return null;
   }
@@ -90,8 +127,11 @@ export async function getProperty(propertyId: string, clientId: string) {
 
 export async function createProperty(clientId: string, formData: FormData) {
   const data = parsePropertyFormData(formData);
+  const loans = parseLoansFormData(formData);
 
-  await prisma.property.create({ data: { clientId, ...data } });
+  await prisma.property.create({
+    data: { clientId, ...data, loans: { create: loans } },
+  });
 
   revalidatePath(`/clients/${clientId}`);
   redirect(`/clients/${clientId}`);
@@ -108,8 +148,17 @@ export async function updateProperty(
   }
 
   const data = parsePropertyFormData(formData);
+  const loans = parseLoansFormData(formData);
 
-  await prisma.property.update({ where: { id: propertyId }, data });
+  // Simpler and just as correct as diffing: no other model references a
+  // Loan by id, so a full delete-and-recreate of the set is safe.
+  await prisma.$transaction([
+    prisma.loan.deleteMany({ where: { propertyId } }),
+    prisma.property.update({
+      where: { id: propertyId },
+      data: { ...data, loans: { create: loans } },
+    }),
+  ]);
 
   revalidatePath(`/clients/${clientId}`);
   redirect(`/clients/${clientId}`);

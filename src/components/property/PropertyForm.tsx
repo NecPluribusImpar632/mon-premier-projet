@@ -1,13 +1,13 @@
-import type { Property } from "@/generated/prisma/client";
-import { RATE_TYPES, RATE_TYPE_LABELS } from "@/lib/property/rateType";
 import { LocationFields } from "@/components/property/LocationFields";
+import { LoanFields } from "@/components/property/LoanFields";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
-import { FIELD_CLASS, NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
+import { NUMERIC_FIELD_CLASS, FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 
 interface PropertyFormProps {
   action: (formData: FormData) => void | Promise<void>;
-  defaultValues?: Property;
+  defaultValues?: PropertyWithLoans;
   submitLabel: string;
 }
 
@@ -50,40 +50,7 @@ export function PropertyForm({ action, defaultValues, submitLabel }: PropertyFor
           className={NUMERIC_FIELD_CLASS}
         />
       </label>
-      <label className="flex flex-col gap-1.5 text-sm text-slate">
-        Capital restant dû (€)
-        <FormattedNumberInput
-          name="remainingLoanAmount"
-          placeholder="0"
-          value={defaultValues?.remainingLoanAmount}
-          className={NUMERIC_FIELD_CLASS}
-        />
-      </label>
-      <label className="flex flex-col gap-1.5 text-sm text-slate">
-        Taux du crédit (%)
-        <input
-          name="loanRate"
-          type="number"
-          min={0}
-          step="0.01"
-          defaultValue={defaultValues?.loanRate ?? 0}
-          className={NUMERIC_FIELD_CLASS}
-        />
-      </label>
-      <label className="flex flex-col gap-1.5 text-sm text-slate">
-        Type de taux
-        <select
-          name="rateType"
-          defaultValue={defaultValues?.rateType ?? "fixed"}
-          className={FIELD_CLASS}
-        >
-          {RATE_TYPES.map((rateType) => (
-            <option key={rateType} value={rateType}>
-              {RATE_TYPE_LABELS[rateType]}
-            </option>
-          ))}
-        </select>
-      </label>
+      <LoanFields defaultLoans={defaultValues?.loans} />
       <SubmitButton>{submitLabel}</SubmitButton>
     </form>
   );

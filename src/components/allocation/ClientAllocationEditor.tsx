@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import type { Property } from "@/generated/prisma/client";
+import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { AllocationAmountForm } from "@/components/allocation/AllocationAmountForm";
 import { AllocationDonutChart } from "@/components/allocation/AllocationDonutChart";
 import { WealthSummary } from "@/components/allocation/WealthSummary";
@@ -23,7 +23,7 @@ interface ClientAllocationEditorProps {
   initialAmounts: Record<string, number>;
   initialActionsBreakdown: ActionsProfileBreakdown;
   initialProfessionalToolMainIncome: boolean;
-  properties: Property[];
+  properties: PropertyWithLoans[];
 }
 
 type SaveStatus = "saved" | "saving" | "incomplete" | "error";

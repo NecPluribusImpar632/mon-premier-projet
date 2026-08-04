@@ -1,5 +1,6 @@
 import "server-only";
 import type { Property } from "@/generated/prisma/client";
+import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { DEPARTMENT_TO_REGION } from "@/lib/property/departments";
 import { getZoneForCommune } from "@/lib/property/communesZonage";
 import {
@@ -25,10 +26,12 @@ export function resolvePropertySensitivity(property: Property): ZoneSensitivity 
   );
 }
 
-export type PropertyWithSensitivity = Property & { sensitivity: ZoneSensitivity };
+export type PropertyWithSensitivity = PropertyWithLoans & {
+  sensitivity: ZoneSensitivity;
+};
 
 export function withResolvedSensitivity(
-  properties: Property[]
+  properties: PropertyWithLoans[]
 ): PropertyWithSensitivity[] {
   return properties.map((property) => ({
     ...property,

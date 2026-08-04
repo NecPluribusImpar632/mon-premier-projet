@@ -5,6 +5,7 @@ import {
 } from "@/lib/allocation/stockProfiles";
 import type { ZoneSensitivity } from "@/lib/scenarios/realEstateSensitivity";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
+import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 
 export interface StockShockResult {
   weightedBeta: number;
@@ -68,14 +69,15 @@ export function computeRealEstateShockImpact(
     const sensitivity = property.sensitivity;
     const shockPct = sensitivity.coefficient * oatRateChangePts;
     const newValue = property.currentValue * (1 + shockPct / 100);
-    const newEquity = newValue - property.remainingLoanAmount;
+    const remainingLoanAmount = totalRemainingDebt(property);
+    const newEquity = newValue - remainingLoanAmount;
     return {
       propertyId: property.id,
       propertyName: property.name,
       currentValue: property.currentValue,
       newValue,
       deltaValue: newValue - property.currentValue,
-      remainingLoanAmount: property.remainingLoanAmount,
+      remainingLoanAmount,
       newEquity,
       isUnderwater: newEquity < 0,
       shockPct,
@@ -97,7 +99,8 @@ export function computeRealEstateShockImpact(
 export interface RateHikePropertyImpact {
   propertyId: string;
   propertyName: string;
-  isFixed: boolean;
+  fixedDebt: number;
+  variableDebt: number;
   extraAnnualCost: number;
   extraMonthlyCost: number;
   newMonthlyCashflow: number | null;
@@ -108,18 +111,24 @@ export interface RateHikeResult {
   totalExtraMonthlyCost: number;
 }
 
+/**
+ * A bien can now carry several loans with different rate types — the hike
+ * only bites the variable-rate ones, so it's a per-loan sum rather than a
+ * single fixed/variable flag for the whole property.
+ */
 export function computeRateHikeImpact(
-  properties: Property[],
+  properties: PropertyWithLoans[],
   hikePts: number
 ): RateHikeResult {
   const perProperty = properties.map((property) => {
-    const isFixed = property.rateType === "fixed";
-    // Fixed-rate loans are protected from the hike (payment doesn't move),
-    // but their cashflow doesn't improve either. Variable-rate loans absorb
-    // the hike as extra interest on the remaining principal.
-    const extraAnnualCost = isFixed
-      ? 0
-      : property.remainingLoanAmount * (hikePts / 100);
+    const fixedDebt = property.loans
+      .filter((loan) => loan.rateType === "fixed")
+      .reduce((sum, loan) => sum + loan.remainingAmount, 0);
+    const variableDebt = property.loans
+      .filter((loan) => loan.rateType === "variable")
+      .reduce((sum, loan) => sum + loan.remainingAmount, 0);
+
+    const extraAnnualCost = variableDebt * (hikePts / 100);
     const extraMonthlyCost = extraAnnualCost / 12;
     const newMonthlyCashflow =
       property.monthlyRent !== null
@@ -129,7 +138,8 @@ export function computeRateHikeImpact(
     return {
       propertyId: property.id,
       propertyName: property.name,
-      isFixed,
+      fixedDebt,
+      variableDebt,
       extraAnnualCost,
       extraMonthlyCost,
       newMonthlyCashflow,
@@ -151,7 +161,10 @@ export interface InflationPropertyImpact {
   remainingLoanAmount: number;
   realDebtAfterYears: number;
   debtErosion: number;
-  isAdvantaged: boolean;
+  /** Portion of the debt that's fixed-rate — the part that actually benefits
+   * from inflation eroding its real value (variable-rate debt gets repriced
+   * instead, so it doesn't enjoy the same effect). */
+  advantagedAmount: number;
   projectedMonthlyRent: number | null;
 }
 
@@ -160,7 +173,7 @@ export interface InflationResult {
 }
 
 export function computeInflationImpact(
-  properties: Property[],
+  properties: PropertyWithLoans[],
   inflationPct: number,
   years: number
 ): InflationResult {
@@ -170,19 +183,21 @@ export function computeInflationImpact(
     // Nominal debt is unchanged by inflation, but its real value shrinks —
     // a real benefit for fixed-rate borrowers with debt still outstanding.
     // Fully repaid properties have nothing left to erode.
-    const realDebtAfterYears = property.remainingLoanAmount / discount;
-    const isAdvantaged =
-      property.rateType === "fixed" && property.remainingLoanAmount > 0;
+    const remainingLoanAmount = totalRemainingDebt(property);
+    const realDebtAfterYears = remainingLoanAmount / discount;
+    const advantagedAmount = property.loans
+      .filter((loan) => loan.rateType === "fixed")
+      .reduce((sum, loan) => sum + loan.remainingAmount, 0);
     const projectedMonthlyRent =
       property.monthlyRent !== null ? property.monthlyRent * discount : null;
 
     return {
       propertyId: property.id,
       propertyName: property.name,
-      remainingLoanAmount: property.remainingLoanAmount,
+      remainingLoanAmount,
       realDebtAfterYears,
-      debtErosion: property.remainingLoanAmount - realDebtAfterYears,
-      isAdvantaged,
+      debtErosion: remainingLoanAmount - realDebtAfterYears,
+      advantagedAmount,
       projectedMonthlyRent,
     };
   });
@@ -281,7 +296,7 @@ export function computeCombinedNetWorthImpact(params: {
   } = params;
 
   const totalPropertyValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
-  const totalDebt = properties.reduce((sum, p) => sum + p.remainingLoanAmount, 0);
+  const totalDebt = properties.reduce((sum, p) => sum + totalRemainingDebt(p), 0);
   const totalBefore = financialWealthTotal + totalPropertyValue - totalDebt;
 
   const actionsValueBefore = (actionsPctWithinFinancial / 100) * financialWealthTotal;
