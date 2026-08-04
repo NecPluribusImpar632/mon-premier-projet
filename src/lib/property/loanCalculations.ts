@@ -87,3 +87,45 @@ export function computeAmortizationSchedule(loan: Loan): AmortizationYear[] {
 
   return schedule;
 }
+
+const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
+
+/**
+ * Years remaining on a loan, counted from today rather than from its schedule.
+ * Without a `startDate` there's no way to know how much has already elapsed,
+ * so it's assumed (documented to the advisor) that the full `termYears`
+ * remain — the best available fallback given what the app stores.
+ */
+function remainingTermYears(loan: Loan): number {
+  if (!loan.startDate) return loan.termYears;
+  const elapsedYears = (Date.now() - loan.startDate.getTime()) / MS_PER_YEAR;
+  return Math.max(loan.termYears - elapsedYears, 0);
+}
+
+/**
+ * Projects a loan's balance `yearsFromNow` years ahead, anchored on its
+ * CURRENT `remainingAmount` rather than replaying `computeAmortizationSchedule`
+ * from `originalAmount` — `remainingAmount` is the source of truth today (it
+ * may reflect a prepayment the origination-based schedule doesn't know
+ * about), so the projection re-annuitizes from there over the remaining term.
+ */
+export function projectLoanBalance(loan: Loan, yearsFromNow: number): number {
+  const remainingTerm = remainingTermYears(loan);
+
+  if (loan.amortizationType === "in_fine") {
+    return yearsFromNow >= remainingTerm ? 0 : loan.remainingAmount;
+  }
+
+  const P = loan.remainingAmount;
+  const V = loan.amortizationType === "partiel" ? loan.residualAmount ?? 0 : 0;
+  const n = remainingTerm * 12;
+  const r = loan.rate / 100 / 12;
+  const monthsFromNow = yearsFromNow * 12;
+
+  if (n <= 0) return V;
+  if (monthsFromNow >= n) return V;
+
+  const M = r === 0 ? (P - V) / n : ((P - V * Math.pow(1 + r, -n)) * r) / (1 - Math.pow(1 + r, -n));
+  if (r === 0) return P - M * monthsFromNow;
+  return P * Math.pow(1 + r, monthsFromNow) - (M * (Math.pow(1 + r, monthsFromNow) - 1)) / r;
+}

@@ -5,6 +5,7 @@ import {
 } from "@/lib/allocation/stockProfiles";
 import type { ZoneSensitivity } from "@/lib/scenarios/realEstateSensitivity";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
+import type { ScenarioParams } from "@/lib/scenarios/scenarioParams";
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 
 export interface StockShockResult {
@@ -251,53 +252,141 @@ export function computeScpiShockImpact(
   };
 }
 
-export interface CombinedNetWorthResult {
+export interface ObligationsShockResult {
+  currentValue: number;
+  newValue: number;
+  deltaValue: number;
+  shockPct: number;
+}
+
+/**
+ * Approximation de duration modifiée : ΔP/P ≈ -duration × Δtaux. `durationYears`
+ * est une hypothèse manuelle réglée par le conseiller — l'app ne connaît pas les
+ * maturités réelles des titres obligataires détenus par le client.
+ */
+export function computeObligationsShockImpact(
+  obligationsAmount: number,
+  oatRateChangePts: number,
+  durationYears: number
+): ObligationsShockResult {
+  const shockPct = -durationYears * oatRateChangePts;
+  const newValue = obligationsAmount * (1 + shockPct / 100);
+  return {
+    currentValue: obligationsAmount,
+    newValue,
+    deltaValue: newValue - obligationsAmount,
+    shockPct,
+  };
+}
+
+export interface PrivateEquityIlliquidityResult {
+  currentValue: number;
+  newValue: number;
+  deltaValue: number;
+}
+
+/**
+ * Contrairement à un choc de marché, le Private Equity ne se revalorise pas en
+ * continu : en cas de besoin de liquidités, la sortie se fait via une cession
+ * (marché secondaire) à une décote par rapport à la valeur de part, d'où une
+ * simple décote plutôt qu'un pourcentage de marché.
+ */
+export function computePrivateEquityIlliquidityImpact(
+  privateEquityAmount: number,
+  discountPct: number
+): PrivateEquityIlliquidityResult {
+  const newValue = privateEquityAmount * (1 - discountPct / 100);
+  return {
+    currentValue: privateEquityAmount,
+    newValue,
+    deltaValue: newValue - privateEquityAmount,
+  };
+}
+
+export interface ClientScenarioContext {
+  financialWealthTotal: number;
+  actionsPctWithinFinancial: number;
+  actionsBreakdown: ActionsProfileBreakdown;
+  properties: PropertyWithSensitivity[];
+  /** Montant Immobilier effectif (saisi à la main ou somme des biens détaillés) —
+   * utilisé tel quel, non choqué, quand aucun bien n'est détaillé. */
+  immobilierValue: number;
+  scpiAmount: number;
+  obligationsAmount: number;
+  privateEquityAmount: number;
+}
+
+export interface FullScenarioResult {
   totalBefore: number;
   totalAfter: number;
   deltaAmount: number;
   deltaPct: number;
+  breakdown: {
+    realEstateDelta: number;
+    stocksDelta: number;
+    scpiDelta: number;
+    obligationsDelta: number;
+    peDelta: number;
+    debtErosion: number;
+    vacancyCost: number;
+    /** Valeur du patrimoine financier après choc (actions + reste à plat +
+     * SCPI/obligations/PE choqués) — réutilisée telle quelle par la projection
+     * multi-années, qui la fige à l'année 0. */
+    financialWealthAfterShock: number;
+    /** Valeur immobilière totale après choc (biens détaillés + éventuel montant
+     * manuel non détaillé) — idem, figée à l'année 0 par la projection. */
+    realEstateAfterShock: number;
+  };
 }
 
 /**
- * Combines all four shocks into a single before/after net worth figure, by
- * reusing the per-shock functions above unchanged:
- * - Stock shock moves only the Actions slice of financial wealth; the other
- *   5 financial categories have no modeled shock and stay flat.
- * - Real estate shock revalues each property's gross value; debt is nominal
- *   and unaffected.
- * - Inflation's contribution is the real erosion of outstanding debt,
- *   counted as a positive wealth effect (nominal debt unchanged, but worth
- *   less in real terms).
- * - Vacancy is a direct lost-rent deduction for the selected property, if any.
+ * Point d'entrée unique pour "ce qu'un scénario fait au patrimoine net" — combine
+ * tous les chocs modélisés (actions, immobilier, SCPI, obligations, Private Equity,
+ * érosion de la dette par l'inflation, vacance locative) en un seul résultat avant/
+ * après, plus le détail par poste. Réutilisé par le simulateur interactif, la
+ * comparaison de scénarios et la projection multi-années — un seul endroit qui sait
+ * agréger, pour ne pas recoder ce patch à chaque nouvel usage.
+ *
+ * - Le choc actions ne bouge que la poche Actions du patrimoine financier ; les
+ *   autres catégories (obligations, SCPI, Private Equity, liquidités, matières
+ *   premières, outil professionnel, autres) restent à plat sauf choc dédié.
+ * - Le choc immobilier revalorise chaque bien selon le coefficient de sa zone ;
+ *   la dette est nominale et n'est pas affectée par ce choc.
+ * - L'inflation ne choque pas les valeurs : elle érode la valeur réelle de la
+ *   dette nominale, un effet de richesse positif compté à part.
+ * - La vacance est une perte de loyer ponctuelle sur le bien sélectionné, le cas
+ *   échéant.
  */
-export function computeCombinedNetWorthImpact(params: {
-  financialWealthTotal: number;
-  actionsPctWithinFinancial: number;
-  actionsBreakdown: ActionsProfileBreakdown;
-  marketShockPct: number;
-  properties: PropertyWithSensitivity[];
-  oatRateChangePts: number;
-  inflationPct: number;
-  inflationYears: number;
-  vacancyPropertyId: string | null;
-  vacancyMonths: number;
-}): CombinedNetWorthResult {
+export function computeFullScenarioImpact(
+  context: ClientScenarioContext,
+  params: ScenarioParams
+): FullScenarioResult {
   const {
     financialWealthTotal,
     actionsPctWithinFinancial,
     actionsBreakdown,
-    marketShockPct,
     properties,
+    immobilierValue,
+    scpiAmount,
+    obligationsAmount,
+    privateEquityAmount,
+  } = context;
+  const {
+    marketShockPct,
     oatRateChangePts,
+    scpiShockPct,
     inflationPct,
     inflationYears,
     vacancyPropertyId,
     vacancyMonths,
+    obligationsDurationYears,
+    peIlliquidityDiscountPct,
   } = params;
 
   const totalPropertyValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
   const totalDebt = properties.reduce((sum, p) => sum + totalRemainingDebt(p), 0);
-  const totalBefore = financialWealthTotal + totalPropertyValue - totalDebt;
+  const immobilierBaseline = properties.length === 0 ? immobilierValue : 0;
+  const totalBefore = financialWealthTotal + totalPropertyValue - totalDebt + immobilierBaseline;
 
   const actionsValueBefore = (actionsPctWithinFinancial / 100) * financialWealthTotal;
   const stockShock = computeStockShockImpact(
@@ -305,37 +394,56 @@ export function computeCombinedNetWorthImpact(params: {
     actionsPctWithinFinancial,
     marketShockPct
   );
-  const actionsValueAfter =
-    actionsValueBefore * (1 + stockShock.actionsImpactPct / 100);
-  const financialWealthAfter =
-    financialWealthTotal - actionsValueBefore + actionsValueAfter;
+  const actionsValueAfter = actionsValueBefore * (1 + stockShock.actionsImpactPct / 100);
+  const stocksDelta = actionsValueAfter - actionsValueBefore;
+
+  const scpiShock = computeScpiShockImpact(scpiAmount, scpiShockPct);
+  const obligationsShock = computeObligationsShockImpact(
+    obligationsAmount,
+    oatRateChangePts,
+    obligationsDurationYears
+  );
+  const peShock = computePrivateEquityIlliquidityImpact(
+    privateEquityAmount,
+    peIlliquidityDiscountPct
+  );
+
+  const financialWealthAfterShock =
+    financialWealthTotal + stocksDelta + scpiShock.deltaValue + obligationsShock.deltaValue + peShock.deltaValue;
 
   const realEstateShock = computeRealEstateShockImpact(properties, oatRateChangePts);
+  const realEstateAfterShock = realEstateShock.totalNewValue + immobilierBaseline;
+  const realEstateDelta = realEstateShock.totalDelta;
 
-  const inflationResult = computeInflationImpact(
-    properties,
-    inflationPct,
-    inflationYears
-  );
-  const totalDebtErosion = inflationResult.perProperty.reduce(
-    (sum, p) => sum + p.debtErosion,
-    0
-  );
+  const inflationResult = computeInflationImpact(properties, inflationPct, inflationYears);
+  const debtErosion = inflationResult.perProperty.reduce((sum, p) => sum + p.debtErosion, 0);
 
   const vacancyProperty = properties.find((p) => p.id === vacancyPropertyId);
-  const lostRent = vacancyProperty
+  const vacancyCost = vacancyProperty
     ? computeVacancyImpact(vacancyProperty, vacancyMonths).lostRent
     : 0;
 
   const totalAfter =
-    financialWealthAfter +
-    realEstateShock.totalNewValue -
-    totalDebt +
-    totalDebtErosion -
-    lostRent;
+    financialWealthAfterShock + realEstateAfterShock - totalDebt + debtErosion - vacancyCost;
 
   const deltaAmount = totalAfter - totalBefore;
   const deltaPct = totalBefore !== 0 ? (deltaAmount / totalBefore) * 100 : 0;
 
-  return { totalBefore, totalAfter, deltaAmount, deltaPct };
+  return {
+    totalBefore,
+    totalAfter,
+    deltaAmount,
+    deltaPct,
+    breakdown: {
+      realEstateDelta,
+      stocksDelta,
+      scpiDelta: scpiShock.deltaValue,
+      obligationsDelta: obligationsShock.deltaValue,
+      peDelta: peShock.deltaValue,
+      debtErosion,
+      vacancyCost,
+      financialWealthAfterShock,
+      realEstateAfterShock,
+    },
+  };
 }

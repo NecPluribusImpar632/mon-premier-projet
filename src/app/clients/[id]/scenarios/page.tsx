@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
+import { getSavedScenarios } from "@/lib/actions/scenarios";
 import {
   actionsBreakdownFromClient,
   amountsFromClient,
@@ -39,6 +40,7 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
       : 0;
 
   const propertiesWithSensitivity = withResolvedSensitivity(client.properties);
+  const savedScenarios = await getSavedScenarios(id);
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-14 sm:py-20">
@@ -51,13 +53,17 @@ export default async function ScenariosPage({ params }: ScenariosPageProps) {
 
       <div className="mt-10">
         <ScenarioSimulator
+          clientId={id}
           actionsPctOverall={actionsPctOverall}
           actionsPctWithinFinancial={actionsPctWithinFinancial}
           financialWealthTotal={financialWealthTotal}
           scpiAmount={amounts.scpi ?? 0}
+          obligationsAmount={amounts.obligations ?? 0}
+          privateEquityAmount={amounts["private-equity"] ?? 0}
           immobilierValue={immobilierValue}
           actionsBreakdown={actionsBreakdownFromClient(client)}
           properties={propertiesWithSensitivity}
+          initialSavedScenarios={savedScenarios}
         />
       </div>
     </div>

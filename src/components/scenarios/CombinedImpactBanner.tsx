@@ -1,8 +1,8 @@
-import type { CombinedNetWorthResult } from "@/lib/scenarios/calculations";
+import type { FullScenarioResult } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
 
 interface CombinedImpactBannerProps {
-  result: CombinedNetWorthResult;
+  result: FullScenarioResult;
 }
 
 export function CombinedImpactBanner({ result }: CombinedImpactBannerProps) {
