@@ -25,7 +25,7 @@ interface ClientSidebarProps {
 // shrink it.
 export function ClientSidebar({ activeTab, onTabChange }: ClientSidebarProps) {
   return (
-    <nav className="flex w-24 shrink-0 flex-col items-center gap-2 border-r border-line bg-surface py-6">
+    <nav className="flex w-20 shrink-0 flex-col items-center gap-0.5 border-r border-line bg-surface py-3">
       {CLIENT_TABS.map((tab) => {
         const { icon: Icon, label } = TAB_CONFIG[tab];
         const isActive = tab === activeTab;
@@ -35,13 +35,13 @@ export function ClientSidebar({ activeTab, onTabChange }: ClientSidebarProps) {
             type="button"
             onClick={() => onTabChange(tab)}
             aria-current={isActive ? "page" : undefined}
-            className={`flex w-20 flex-col items-center gap-1.5 rounded-xl px-2 py-3 text-center text-[11px] font-medium leading-tight transition-colors ${
+            className={`flex w-16 flex-col items-center gap-1 rounded-lg px-1.5 py-1.5 text-center text-[10.5px] leading-tight transition-colors ${
               isActive
-                ? "bg-emerald-tint text-emerald-strong"
-                : "text-slate hover:bg-paper hover:text-ink"
+                ? "bg-emerald-tint/70 font-medium text-emerald-strong"
+                : "font-normal text-slate/80 hover:bg-paper hover:text-ink"
             }`}
           >
-            <Icon className="h-5 w-5" />
+            <Icon className="h-3.5 w-3.5" />
             {label}
           </button>
         );
