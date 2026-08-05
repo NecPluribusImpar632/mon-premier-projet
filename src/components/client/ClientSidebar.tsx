@@ -25,7 +25,7 @@ interface ClientSidebarProps {
 // shrink it.
 export function ClientSidebar({ activeTab, onTabChange }: ClientSidebarProps) {
   return (
-    <nav className="flex w-20 shrink-0 flex-col items-center gap-0.5 border-r border-line bg-surface py-3">
+    <nav className="flex w-20 shrink-0 flex-col items-center justify-center gap-0.5 border-r border-line bg-surface">
       {CLIENT_TABS.map((tab) => {
         const { icon: Icon, label } = TAB_CONFIG[tab];
         const isActive = tab === activeTab;
