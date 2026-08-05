@@ -15,8 +15,11 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
   if (points.length < 2) return null;
 
   const allValues = points.flatMap((p) => [p.netWorth, p.realNetWorth]);
-  const minValue = Math.min(...allValues, 0);
-  const maxValue = Math.max(...allValues, 0);
+  const rawMin = Math.min(...allValues);
+  const rawMax = Math.max(...allValues);
+  const valuePadding = (rawMax - rawMin) * 0.1 || Math.abs(rawMax) * 0.1 || 1;
+  const minValue = rawMin - valuePadding;
+  const maxValue = rawMax + valuePadding;
   const valueRange = maxValue - minValue || 1;
 
   const xForIndex = (index: number) =>
