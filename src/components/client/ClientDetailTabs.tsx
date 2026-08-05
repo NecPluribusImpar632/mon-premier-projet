@@ -74,7 +74,7 @@ export function ClientDetailTabs({
   const [activeTab, setActiveTab] = useState<ClientTab>(initialTab);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen">
       <ClientSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="flex min-w-0 flex-1 flex-col">
