@@ -2,6 +2,7 @@
 
 import { Landmark } from "lucide-react";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
+import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { computeObligationsShockImpact } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
@@ -39,12 +40,18 @@ export function ObligationsShockCard({
     oatRateChangePts,
     durationYears
   );
+  const isActive = result.deltaValue !== 0;
+  const summaryValue = isActive
+    ? `${result.deltaValue >= 0 ? "+" : ""}${formatCurrency(result.deltaValue)}`
+    : "Aucun choc appliqué";
 
   return (
-    <ScenarioCard
+    <CollapsibleScenarioCard
       icon={Landmark}
       title="Choc obligataire"
       description="Sensibilité du prix des obligations à une variation des taux."
+      summaryValue={summaryValue}
+      isActive={isActive}
     >
       <ShockSlider
         label="Duration (sensibilité)"
@@ -93,6 +100,6 @@ export function ObligationsShockCard({
           diversifié, à ajuster selon le profil réel.
         </InfoTooltip>
       </div>
-    </ScenarioCard>
+    </CollapsibleScenarioCard>
   );
 }

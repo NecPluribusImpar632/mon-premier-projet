@@ -2,6 +2,7 @@
 
 import { Building } from "lucide-react";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
+import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { computeScpiShockImpact } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
@@ -33,12 +34,18 @@ export function ScpiShockCard({
   }
 
   const result = computeScpiShockImpact(scpiAmount, shockPct);
+  const isActive = result.deltaValue !== 0;
+  const summaryValue = isActive
+    ? formatCurrency(result.deltaValue)
+    : "Aucun choc appliqué";
 
   return (
-    <ScenarioCard
+    <CollapsibleScenarioCard
       icon={Building}
       title="Choc SCPI"
       description="Décote de part et risque de suspension des rachats."
+      summaryValue={summaryValue}
+      isActive={isActive}
     >
       <ShockSlider
         label="Décote de part"
@@ -77,6 +84,6 @@ export function ScpiShockCard({
           l&apos;illiquidité d&apos;un bien physique.
         </InfoTooltip>
       </div>
-    </ScenarioCard>
+    </CollapsibleScenarioCard>
   );
 }

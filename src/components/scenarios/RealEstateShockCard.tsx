@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Home } from "lucide-react";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
+import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import {
   computeRealEstateShockImpact,
@@ -80,11 +81,18 @@ export function RealEstateShockCard({
     ).values()
   );
 
+  const isActive = result.totalDelta !== 0;
+  const summaryValue = isActive
+    ? formatCurrency(result.totalDelta)
+    : "Aucun choc appliqué";
+
   return (
-    <ScenarioCard
+    <CollapsibleScenarioCard
       icon={Home}
       title="Choc immobilier"
       description="Baisse du prix des biens, sensibilité aux taux et besoin de liquidité."
+      summaryValue={summaryValue}
+      isActive={isActive}
     >
       <ShockSlider
         label="Variation du taux OAT"
@@ -279,6 +287,6 @@ export function RealEstateShockCard({
           </div>
         )}
       </div>
-    </ScenarioCard>
+    </CollapsibleScenarioCard>
   );
 }

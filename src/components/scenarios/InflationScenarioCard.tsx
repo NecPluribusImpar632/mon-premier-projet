@@ -3,6 +3,7 @@
 import { TrendingUp } from "lucide-react";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
+import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { computeInflationImpact } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
@@ -38,12 +39,19 @@ export function InflationScenarioCard({
   }
 
   const result = computeInflationImpact(properties, inflationPct, years);
+  const totalDebtErosion = result.perProperty.reduce((sum, p) => sum + p.debtErosion, 0);
+  const isActive = totalDebtErosion !== 0;
+  const summaryValue = isActive
+    ? `+${formatCurrency(totalDebtErosion)}`
+    : "Aucun choc appliqué";
 
   return (
-    <ScenarioCard
+    <CollapsibleScenarioCard
       icon={TrendingUp}
       title="Scénario inflation"
       description="Érosion de la dette réelle et progression des loyers."
+      summaryValue={summaryValue}
+      isActive={isActive}
     >
       <ShockSlider
         label="Inflation annuelle"
@@ -110,6 +118,6 @@ export function InflationScenarioCard({
           );
         })}
       </ul>
-    </ScenarioCard>
+    </CollapsibleScenarioCard>
   );
 }

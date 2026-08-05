@@ -1,7 +1,7 @@
 "use client";
 
 import { TrendingDown } from "lucide-react";
-import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
+import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { computeStockShockImpact } from "@/lib/scenarios/calculations";
 import {
@@ -29,12 +29,18 @@ export function StockShockCard({
     actionsPct,
     marketShockPct
   );
+  const isActive = result.portfolioImpactPts !== 0;
+  const summaryValue = isActive
+    ? `${result.portfolioImpactPts >= 0 ? "+" : ""}${result.portfolioImpactPts.toFixed(1)} pts`
+    : "Aucun choc appliqué";
 
   return (
-    <ScenarioCard
+    <CollapsibleScenarioCard
       icon={TrendingDown}
       title="Choc actions"
       description="Un même choc de marché affecte différemment chaque profil actions."
+      summaryValue={summaryValue}
+      isActive={isActive}
     >
       <ShockSlider
         label="Choc de marché"
@@ -89,6 +95,6 @@ export function StockShockCard({
           </div>
         </>
       )}
-    </ScenarioCard>
+    </CollapsibleScenarioCard>
   );
 }

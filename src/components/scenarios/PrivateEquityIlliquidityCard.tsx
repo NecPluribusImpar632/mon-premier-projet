@@ -2,6 +2,7 @@
 
 import { Lock } from "lucide-react";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
+import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { computePrivateEquityIlliquidityImpact } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
@@ -33,12 +34,18 @@ export function PrivateEquityIlliquidityCard({
   }
 
   const result = computePrivateEquityIlliquidityImpact(privateEquityAmount, discountPct);
+  const isActive = result.deltaValue !== 0;
+  const summaryValue = isActive
+    ? formatCurrency(result.deltaValue)
+    : "Aucun choc appliqué";
 
   return (
-    <ScenarioCard
+    <CollapsibleScenarioCard
       icon={Lock}
       title="Décote d'illiquidité Private Equity"
       description="Décote à la revente sur le marché secondaire."
+      summaryValue={summaryValue}
+      isActive={isActive}
     >
       <ShockSlider
         label="Décote de sortie"
@@ -80,6 +87,6 @@ export function PrivateEquityIlliquidityCard({
           marché) — à ajuster selon le fonds réellement détenu.
         </InfoTooltip>
       </div>
-    </ScenarioCard>
+    </CollapsibleScenarioCard>
   );
 }

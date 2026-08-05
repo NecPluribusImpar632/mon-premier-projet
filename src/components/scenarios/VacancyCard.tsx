@@ -3,6 +3,7 @@
 import { CalendarOff } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
+import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { computeVacancyImpact } from "@/lib/scenarios/calculations";
 import { formatCurrency } from "@/lib/format/currency";
 import { FIELD_CLASS, NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
@@ -38,12 +39,18 @@ export function VacancyCard({
 
   const property = properties.find((p) => p.id === propertyId) ?? properties[0];
   const result = computeVacancyImpact(property, months);
+  const isActive = result.lostRent !== 0;
+  const summaryValue = isActive
+    ? `-${formatCurrency(result.lostRent)}`
+    : "Aucun choc appliqué";
 
   return (
-    <ScenarioCard
+    <CollapsibleScenarioCard
       icon={CalendarOff}
       title="Vacance locative prolongée"
       description="Perte de loyer sur un bien donné."
+      summaryValue={summaryValue}
+      isActive={isActive}
     >
       <label className="flex flex-col gap-1.5 text-sm text-ink">
         Bien
@@ -91,6 +98,6 @@ export function VacancyCard({
           </p>
         </div>
       )}
-    </ScenarioCard>
+    </CollapsibleScenarioCard>
   );
 }
