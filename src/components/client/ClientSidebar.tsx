@@ -25,7 +25,7 @@ interface ClientSidebarProps {
 // shrink it.
 export function ClientSidebar({ activeTab, onTabChange }: ClientSidebarProps) {
   return (
-    <nav className="flex w-20 shrink-0 flex-col items-center justify-center gap-0.5 border-r border-line bg-surface">
+    <nav className="flex w-20 shrink-0 flex-col items-center justify-center gap-7 border-r border-line bg-surface">
       {CLIENT_TABS.map((tab) => {
         const { icon: Icon, label } = TAB_CONFIG[tab];
         const isActive = tab === activeTab;
@@ -35,7 +35,7 @@ export function ClientSidebar({ activeTab, onTabChange }: ClientSidebarProps) {
             type="button"
             onClick={() => onTabChange(tab)}
             aria-current={isActive ? "page" : undefined}
-            className={`flex w-16 flex-col items-center gap-1 rounded-lg px-1.5 py-1.5 text-center text-[10.5px] leading-tight transition-colors ${
+            className={`flex w-16 flex-col items-center gap-1 rounded-lg px-1.5 py-2 text-center text-[10.5px] leading-tight transition-colors ${
               isActive
                 ? "bg-emerald-tint/70 font-medium text-emerald-strong"
                 : "font-normal text-slate/80 hover:bg-paper hover:text-ink"
