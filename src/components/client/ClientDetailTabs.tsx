@@ -8,6 +8,7 @@ import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import type { ClientScenarioContext } from "@/lib/scenarios/calculations";
 import { ClientSidebar } from "@/components/client/ClientSidebar";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import type { ClientTab } from "@/lib/client/clientTabs";
 import { ClientProfile } from "@/components/client/ClientProfile";
 import { WealthGoalSection } from "@/components/client/WealthGoalSection";
@@ -85,13 +86,16 @@ export function ClientDetailTabs({
             </h1>
             <p className="mt-0.5 text-sm text-slate">{currentAge} ans</p>
           </div>
-          <a
-            href={`/clients/${clientId}/pdf`}
-            className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
-          >
-            <Download className="h-4 w-4" />
-            Exporter en PDF
-          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href={`/clients/${clientId}/pdf`}
+              className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+            >
+              <Download className="h-4 w-4" />
+              Exporter en PDF
+            </a>
+            <LogoutButton />
+          </div>
         </header>
 
         <main className="min-h-0 flex-1 overflow-y-auto p-8">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getClients } from "@/lib/actions/clients";
 import { computeClientNetWorth } from "@/lib/wealth/netWorth";
 import { ClientsList } from "@/components/client/ClientsList";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
 
@@ -27,10 +28,13 @@ export default async function ClientsPage() {
             {clients.length > 1 ? "s" : ""}
           </p>
         </div>
-        <Link href="/clients/new" className={PRIMARY_BUTTON_CLASS}>
-          Nouveau client
-          <LinkPendingSpinner />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/clients/new" className={PRIMARY_BUTTON_CLASS}>
+            Nouveau client
+            <LinkPendingSpinner />
+          </Link>
+          <LogoutButton />
+        </div>
       </div>
 
       {clients.length === 0 ? (
