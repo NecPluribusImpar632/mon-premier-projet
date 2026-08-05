@@ -26,6 +26,20 @@ function parsePropertyFormData(formData: FormData) {
   const monthlyRent =
     monthlyRentRaw === "" ? null : parseRequiredNonNegativeNumber(monthlyRentRaw);
 
+  const acquisitionPriceRaw = String(formData.get("acquisitionPrice") ?? "").trim();
+  const acquisitionPrice =
+    acquisitionPriceRaw === "" ? null : parseRequiredNonNegativeNumber(acquisitionPriceRaw);
+
+  const acquisitionDateRaw = String(formData.get("acquisitionDate") ?? "").trim();
+  let acquisitionDate: Date | null = null;
+  if (acquisitionDateRaw !== "") {
+    const parsed = new Date(acquisitionDateRaw);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error("La date d'acquisition n'est pas valide.");
+    }
+    acquisitionDate = parsed;
+  }
+
   const department = String(formData.get("department") ?? "").trim();
 
   const arrondissementRaw = String(formData.get("arrondissement") ?? "").trim();
@@ -64,6 +78,8 @@ function parsePropertyFormData(formData: FormData) {
     name,
     currentValue,
     monthlyRent,
+    acquisitionPrice,
+    acquisitionDate,
     department,
     arrondissement,
     communeCode,

@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
-import { Building2, Coins, Key, Landmark, MapPin, TrendingUp } from "lucide-react";
+import { Building2, Calculator, Coins, Key, Landmark, MapPin, TrendingUp } from "lucide-react";
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
 import { AMORTIZATION_TYPE_LABELS, type AmortizationType } from "@/lib/property/loanTypes";
 import { DEPARTMENT_LABEL, arrondissementLabel } from "@/lib/property/departments";
@@ -49,6 +49,13 @@ export function PropertyList({ clientId, properties }: PropertyListProps) {
                 <h3 className="font-serif text-lg text-ink">{property.name}</h3>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href={`/clients/${clientId}/properties/${property.id}/fiscalite`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-xs font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+                >
+                  <Calculator className="h-3 w-3" />
+                  Comparer la fiscalité
+                </Link>
                 <Link
                   href={`/clients/${clientId}/properties/${property.id}/edit`}
                   className="rounded-full border border-line px-3 py-1 text-xs font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"

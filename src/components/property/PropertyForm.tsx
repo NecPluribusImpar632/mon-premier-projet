@@ -50,6 +50,30 @@ export function PropertyForm({ action, defaultValues, submitLabel }: PropertyFor
           className={NUMERIC_FIELD_CLASS}
         />
       </label>
+      <div className="flex gap-4">
+        <label className="flex flex-1 flex-col gap-1.5 text-sm text-slate">
+          Prix d&apos;acquisition (€)
+          <FormattedNumberInput
+            name="acquisitionPrice"
+            placeholder="Optionnel"
+            value={defaultValues?.acquisitionPrice ?? undefined}
+            className={NUMERIC_FIELD_CLASS}
+          />
+        </label>
+        <label className="flex flex-1 flex-col gap-1.5 text-sm text-slate">
+          Date d&apos;acquisition
+          <input
+            name="acquisitionDate"
+            type="date"
+            defaultValue={
+              defaultValues?.acquisitionDate
+                ? defaultValues.acquisitionDate.toISOString().slice(0, 10)
+                : undefined
+            }
+            className={FIELD_CLASS}
+          />
+        </label>
+      </div>
       <LoanFields defaultLoans={defaultValues?.loans} />
       <SubmitButton>{submitLabel}</SubmitButton>
     </form>

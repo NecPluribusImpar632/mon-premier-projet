@@ -45,6 +45,8 @@ model Property {
   name                String
   currentValue        Float
   monthlyRent         Float?
+  acquisitionPrice    Float?
+  acquisitionDate     DateTime?
   department          String?
   arrondissement      Int?
   communeCode         String?
