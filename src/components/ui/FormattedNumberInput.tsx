@@ -76,6 +76,7 @@ export function FormattedNumberInput({
       ref={inputRef}
       type="text"
       inputMode="numeric"
+      autoComplete="off"
       name={name}
       value={display}
       onChange={handleChange}
