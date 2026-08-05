@@ -118,6 +118,25 @@ export async function updateRetirementGoal(
   revalidatePath(`/clients/${clientId}`);
 }
 
+export async function updateWealthGoal(
+  clientId: string,
+  wealthGoalAmount: number,
+  wealthGoalAge: number
+) {
+  if (!Number.isFinite(wealthGoalAmount) || wealthGoalAmount < 0) {
+    throw new Error("L'objectif de patrimoine doit être un nombre positif.");
+  }
+  if (!Number.isInteger(wealthGoalAge) || wealthGoalAge < 0) {
+    throw new Error("L'échéance doit être un âge entier positif.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: { wealthGoalAmount, wealthGoalAge },
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
 export async function updateActionsProfile(
   clientId: string,
   breakdown: ActionsProfileBreakdown

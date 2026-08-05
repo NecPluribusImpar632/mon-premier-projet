@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Download, FlaskConical, PieChart, PiggyBank, User } from "lucide-react";
+import { Building2, Download, FlaskConical, PieChart, PiggyBank, Target, User } from "lucide-react";
 import { getClient } from "@/lib/actions/clients";
 import {
   actionsBreakdownFromClient,
@@ -12,6 +12,7 @@ import {
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
 import { ClientProfile } from "@/components/client/ClientProfile";
 import { RetirementGoalSection } from "@/components/client/RetirementGoalSection";
+import { WealthGoalSection } from "@/components/client/WealthGoalSection";
 import { PropertyList } from "@/components/property/PropertyList";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
@@ -137,6 +138,27 @@ export default async function ClientDetailPage({
               initialRetirementAge={client.retirementAge}
               initialMonthlySavingsAmount={client.monthlySavingsAmount}
               initialExpectedAnnualReturnPct={client.expectedAnnualReturnPct}
+            />
+          </section>
+        </div>
+
+        <div className="mx-auto w-full max-w-3xl">
+          <section className="flex flex-col gap-4">
+            <SectionHeading
+              icon={Target}
+              title="Objectif patrimonial"
+              subtitle="La structure actuelle du portefeuille permet-elle d'atteindre une cible ?"
+            />
+            <WealthGoalSection
+              clientId={client.id}
+              currentAge={client.age}
+              amounts={amounts}
+              actionsBreakdown={actionsBreakdownFromClient(client)}
+              properties={client.properties}
+              immobilierValue={immobilierValue}
+              initialWealthGoalAmount={client.wealthGoalAmount}
+              initialWealthGoalAge={client.wealthGoalAge}
+              retirementAge={client.retirementAge}
             />
           </section>
         </div>

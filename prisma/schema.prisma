@@ -34,6 +34,8 @@ model Client {
   retirementAge                Int?
   monthlySavingsAmount         Float?
   expectedAnnualReturnPct      Float?
+  wealthGoalAmount             Float?
+  wealthGoalAge                Int?
   createdAt                    DateTime   @default(now())
   updatedAt                    DateTime   @updatedAt
   properties                   Property[]
