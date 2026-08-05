@@ -170,7 +170,8 @@ export function RentalTaxComparisonTool({
             prélèvements sociaux à 18,6 % (LFSS 2026). À la revente, réforme Le Meur
             (art. 84, loi de finances 2025, en vigueur depuis le 15/02/2025) : les
             amortissements déduits réduisent le prix d&apos;acquisition retenu pour le
-            calcul de la plus-value. <strong>Point non tranché à ce jour</strong> : aucune
+            calcul de la plus-value. <strong>Point non tranché à ce jour</strong>{" "}
+            : aucune
             doctrine BOFiP ne précise si la part réintégrée bénéficie de l&apos;abattement
             pour durée de détention — ce calcul l&apos;applique à la plus-value totale,
             l&apos;interprétation la plus courante actuellement, à vérifier au moment de
@@ -195,7 +196,8 @@ export function RentalTaxComparisonTool({
             (15 % jusqu&apos;à 42 500 € de bénéfice, 25 % au-delà) — le déficit se
             reporte indéfiniment sur les bénéfices futurs de la SCI, sans plafonnement
             de l&apos;amortissement. Le revenu net affiché s&apos;arrête au résultat
-            après IS, <strong>sans supposer de distribution</strong> aux associés — en
+            après IS, <strong>sans supposer de distribution</strong>{" "}
+            aux associés — en
             cas de distribution effective, une fiscalité personnelle supplémentaire
             s&apos;applique (prélèvement forfaitaire unique de 30 % ou barème), non
             incluse ici. Plus-value = prix de cession − valeur nette comptable, imposée

@@ -195,7 +195,8 @@ export function WealthGoalSection({
       <div className="flex flex-col gap-2 border-t border-line pt-3 text-xs text-slate">
         <p className="font-medium text-ink">Méthodologie</p>
         <p>
-          Hypothèses de rendement <strong>réel</strong> annuel par classe d&apos;actif —
+          Hypothèses de rendement <strong>réel</strong>{" "}
+          annuel par classe d&apos;actif —
           des ordres de grandeur consensuels de long terme, pas calibrés sur données
           historiques françaises comme le stress test immobilier (qui, lui, s&apos;appuie
           sur les indices Notaires-INSEE) : Actions 5 % (indiciel) / 3,5 % (défensif) /
@@ -208,7 +209,8 @@ export function WealthGoalSection({
           comparateur fiscal du bien). Un bien non loué ne reçoit que l&apos;appréciation.
         </p>
         <p>
-          Private Equity : 6,5 % <strong>nominal</strong> (pas réel), avec la même
+          Private Equity : 6,5 % <strong>nominal</strong>{" "}
+          (pas réel), avec la même
           décote d&apos;illiquidité que le stress test (20 % par défaut) appliquée en
           continu sur la valeur projetée — une simplification : en pratique la décote ne
           s&apos;applique qu&apos;au moment d&apos;une cession, pas chaque année.
