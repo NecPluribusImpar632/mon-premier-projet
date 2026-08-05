@@ -37,7 +37,12 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
   return (
     <div className="w-full">
       <div className="w-full overflow-x-auto">
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="w-full" style={{ minWidth: 420 }}>
+        <svg
+          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          preserveAspectRatio="none"
+          className="h-48 w-full"
+          style={{ minWidth: 420 }}
+        >
           {ticks.map((tick) => (
             <g key={tick}>
               <line
