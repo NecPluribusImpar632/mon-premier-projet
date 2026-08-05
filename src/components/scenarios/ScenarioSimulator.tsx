@@ -83,6 +83,8 @@ export function ScenarioSimulator({
   const [vacancyMonths, setVacancyMonths] = useState(3);
   const [obligationsDurationYears, setObligationsDurationYears] = useState(6);
   const [peIlliquidityDiscountPct, setPeIlliquidityDiscountPct] = useState(20);
+  const [addedCardIds, setAddedCardIds] = useState<Set<string>>(new Set());
+  const [isAddCardMenuOpen, setIsAddCardMenuOpen] = useState(false);
 
   function markCustom() {
     setSelectedPresetId(CUSTOM_PRESET_ID);
@@ -190,8 +192,43 @@ export function ScenarioSimulator({
   pdfSearchParams.set("scenarioLabel", activeScenarioLabel);
   const pdfHref = `/clients/${clientId}/scenarios/pdf?${pdfSearchParams.toString()}`;
 
+  // Only cards relevant to this client show by default — no point in a card
+  // that just says "aucune allocation définie" taking up space. Inflation and
+  // the projection stay unconditional (useful regardless of allocation).
+  const cardRelevance = {
+    actions: actionsPctOverall > 0,
+    realEstate: properties.length > 0,
+    scpi: scpiAmount > 0,
+    obligations: obligationsAmount > 0,
+    privateEquity: privateEquityAmount > 0,
+    vacancy: properties.some((property) => property.monthlyRent !== null),
+  };
+  type OptionalCardId = keyof typeof cardRelevance;
+  const CARD_LABELS: Record<OptionalCardId, string> = {
+    actions: "Choc actions",
+    realEstate: "Choc immobilier",
+    scpi: "Choc SCPI",
+    obligations: "Choc obligataire",
+    privateEquity: "Décote d'illiquidité Private Equity",
+    vacancy: "Vacance locative prolongée",
+  };
+
+  function isCardVisible(id: OptionalCardId) {
+    return cardRelevance[id] || addedCardIds.has(id);
+  }
+
+  const hiddenCardIds = (Object.keys(cardRelevance) as OptionalCardId[]).filter(
+    (id) => !isCardVisible(id)
+  );
+
   return (
     <div className="flex flex-col gap-8">
+      <p className="text-sm text-slate">
+        Testez l&apos;impact de différents chocs de marché sur le patrimoine du
+        client, seuls ou combinés, pour anticiper les risques et en discuter en
+        rendez-vous.
+      </p>
+
       <CombinedImpactBanner result={combinedImpact} />
 
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -228,33 +265,43 @@ export function ScenarioSimulator({
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <StockShockCard
-          actionsPct={actionsPctOverall}
-          actionsBreakdown={actionsBreakdown}
-          marketShockPct={marketShockPct}
-          onMarketShockPctChange={handleMarketShockChange}
-        />
-        <RealEstateShockCard
-          properties={properties}
-          oatRateChangePts={oatRateChangePts}
-          onOatRateChangePtsChange={handleOatRateChangePts}
-        />
-        <ScpiShockCard
-          scpiAmount={scpiAmount}
-          shockPct={scpiShockPct}
-          onShockPctChange={handleScpiShockChange}
-        />
-        <ObligationsShockCard
-          obligationsAmount={obligationsAmount}
-          oatRateChangePts={oatRateChangePts}
-          durationYears={obligationsDurationYears}
-          onDurationYearsChange={handleObligationsDurationChange}
-        />
-        <PrivateEquityIlliquidityCard
-          privateEquityAmount={privateEquityAmount}
-          discountPct={peIlliquidityDiscountPct}
-          onDiscountPctChange={handlePeIlliquidityDiscountChange}
-        />
+        {isCardVisible("actions") && (
+          <StockShockCard
+            actionsPct={actionsPctOverall}
+            actionsBreakdown={actionsBreakdown}
+            marketShockPct={marketShockPct}
+            onMarketShockPctChange={handleMarketShockChange}
+          />
+        )}
+        {isCardVisible("realEstate") && (
+          <RealEstateShockCard
+            properties={properties}
+            oatRateChangePts={oatRateChangePts}
+            onOatRateChangePtsChange={handleOatRateChangePts}
+          />
+        )}
+        {isCardVisible("scpi") && (
+          <ScpiShockCard
+            scpiAmount={scpiAmount}
+            shockPct={scpiShockPct}
+            onShockPctChange={handleScpiShockChange}
+          />
+        )}
+        {isCardVisible("obligations") && (
+          <ObligationsShockCard
+            obligationsAmount={obligationsAmount}
+            oatRateChangePts={oatRateChangePts}
+            durationYears={obligationsDurationYears}
+            onDurationYearsChange={handleObligationsDurationChange}
+          />
+        )}
+        {isCardVisible("privateEquity") && (
+          <PrivateEquityIlliquidityCard
+            privateEquityAmount={privateEquityAmount}
+            discountPct={peIlliquidityDiscountPct}
+            onDiscountPctChange={handlePeIlliquidityDiscountChange}
+          />
+        )}
         <InflationScenarioCard
           properties={properties}
           inflationPct={inflationPct}
@@ -262,14 +309,52 @@ export function ScenarioSimulator({
           years={inflationYears}
           onYearsChange={setInflationYears}
         />
-        <VacancyCard
-          properties={properties}
-          propertyId={vacancyPropertyId}
-          onPropertyIdChange={setVacancyPropertyId}
-          months={vacancyMonths}
-          onMonthsChange={setVacancyMonths}
-        />
+        {isCardVisible("vacancy") && (
+          <VacancyCard
+            properties={properties}
+            propertyId={vacancyPropertyId}
+            onPropertyIdChange={setVacancyPropertyId}
+            months={vacancyMonths}
+            onMonthsChange={setVacancyMonths}
+          />
+        )}
       </div>
+
+      {hiddenCardIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {isAddCardMenuOpen ? (
+            <>
+              {hiddenCardIds.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() =>
+                    setAddedCardIds((prev) => new Set(prev).add(id))
+                  }
+                  className="rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+                >
+                  + {CARD_LABELS[id]}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setIsAddCardMenuOpen(false)}
+                className="text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
+              >
+                Fermer
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsAddCardMenuOpen(true)}
+              className="w-fit rounded-full border border-dashed border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+            >
+              + Ajouter un autre choc
+            </button>
+          )}
+        </div>
+      )}
 
       <ProjectionCard context={context} params={currentParams} />
     </div>
