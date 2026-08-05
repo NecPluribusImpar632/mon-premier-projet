@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { AllocationAmountForm } from "@/components/allocation/AllocationAmountForm";
 import { AllocationDonutChart } from "@/components/allocation/AllocationDonutChart";
-import { WealthSummary } from "@/components/allocation/WealthSummary";
 import {
   updateClientAllocation,
   updateActionsProfile,
@@ -148,13 +147,6 @@ export function ClientAllocationEditor({
 
   return (
     <div className="flex flex-col gap-4">
-      <WealthSummary
-        financialWealthTotal={financialTotal}
-        immobilierValue={immobilierValue}
-        properties={properties}
-        showConcentrationWarning={professionalToolMainIncome}
-      />
-
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
         <div
           ref={formColumnRef}

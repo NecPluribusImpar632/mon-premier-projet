@@ -4,7 +4,6 @@ import { Building2, Calculator, Coins, Key, Landmark, MapPin, TrendingUp } from 
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
 import { AMORTIZATION_TYPE_LABELS, type AmortizationType } from "@/lib/property/loanTypes";
 import { DEPARTMENT_LABEL, arrondissementLabel } from "@/lib/property/departments";
-import { getCommuneName } from "@/lib/property/communesZonage";
 import {
   computeAmortizationSchedule,
   type PropertyWithLoans,
@@ -13,10 +12,11 @@ import { computeRentalYield } from "@/lib/property/rentalYield";
 import { roundPercent } from "@/lib/format/percent";
 import { DeletePropertyButton } from "@/components/property/DeletePropertyButton";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 
 interface PropertyListProps {
   clientId: string;
-  properties: PropertyWithLoans[];
+  properties: PropertyWithSensitivity[];
 }
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR", {
@@ -82,9 +82,7 @@ export function PropertyList({ clientId, properties }: PropertyListProps) {
                 hint={
                   property.department === "75" && property.arrondissement
                     ? arrondissementLabel(property.arrondissement)
-                    : property.communeCode
-                      ? (getCommuneName(property.communeCode) ?? undefined)
-                      : undefined
+                    : (property.communeName ?? undefined)
                 }
                 muted={!property.department}
               />

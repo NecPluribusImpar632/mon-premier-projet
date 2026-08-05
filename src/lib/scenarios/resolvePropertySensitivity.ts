@@ -2,7 +2,7 @@ import "server-only";
 import type { Property } from "@/generated/prisma/client";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { DEPARTMENT_TO_REGION } from "@/lib/property/departments";
-import { getZoneForCommune } from "@/lib/property/communesZonage";
+import { getCommuneName, getZoneForCommune } from "@/lib/property/communesZonage";
 import {
   resolveRealEstateSensitivity,
   type ZoneSensitivity,
@@ -28,6 +28,10 @@ export function resolvePropertySensitivity(property: Property): ZoneSensitivity 
 
 export type PropertyWithSensitivity = PropertyWithLoans & {
   sensitivity: ZoneSensitivity;
+  /** Resolved server-side for the same reason as `sensitivity` — the commune
+   * lookup table is server-only, so this is the one place that touches it on
+   * behalf of any client component (e.g. PropertyList) that needs a name. */
+  communeName: string | null;
 };
 
 export function withResolvedSensitivity(
@@ -36,5 +40,6 @@ export function withResolvedSensitivity(
   return properties.map((property) => ({
     ...property,
     sensitivity: resolvePropertySensitivity(property),
+    communeName: property.communeCode ? (getCommuneName(property.communeCode) ?? null) : null,
   }));
 }

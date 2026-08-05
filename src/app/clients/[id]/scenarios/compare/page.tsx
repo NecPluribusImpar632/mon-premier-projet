@@ -27,7 +27,7 @@ export default async function CompareScenariosPage({
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-14 sm:py-20">
       <div>
         <Link
-          href={`/clients/${id}/scenarios`}
+          href={`/clients/${id}?tab=scenarios`}
           className="inline-flex items-center gap-1.5 text-sm text-slate transition-colors hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" />
