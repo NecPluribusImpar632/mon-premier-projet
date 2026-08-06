@@ -6,6 +6,7 @@ import {
   amountsFromClient,
   overallEntriesFromAmounts,
   professionalToolMainIncomeFromClient,
+  wrapperBreakdownsFromClient,
 } from "@/lib/allocation/mapping";
 import { buildClientScenarioContext } from "@/lib/scenarios/clientContext";
 import { ClientDetailTabs } from "@/components/client/ClientDetailTabs";
@@ -46,6 +47,7 @@ export default async function ClientDetailPage({
       amounts={amounts}
       actionsBreakdown={actionsBreakdownFromClient(client)}
       initialProfessionalToolMainIncome={professionalToolMainIncomeFromClient(client)}
+      initialWrapperBreakdowns={wrapperBreakdownsFromClient(client.wrapperAllocations)}
       financialWealthTotal={scenarioContext.financialWealthTotal}
       immobilierValue={scenarioContext.immobilierValue}
       properties={scenarioContext.properties}

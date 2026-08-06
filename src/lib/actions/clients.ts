@@ -3,9 +3,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { allocationFieldsFromAmounts } from "@/lib/allocation/mapping";
-import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
+import {
+  allocationFieldsFromAmounts,
+  wrapperAllocationRowsFromBreakdown,
+} from "@/lib/allocation/mapping";
+import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import { WRAPPERS, type WrapperBreakdown } from "@/lib/allocation/wrappers";
 import { isRiskProfile } from "@/lib/client/riskProfile";
 
 export async function getClients() {
@@ -23,6 +27,7 @@ export async function getClient(id: string) {
         orderBy: { createdAt: "asc" },
         include: { loans: { orderBy: { createdAt: "asc" } } },
       },
+      wrapperAllocations: true,
     },
   });
 }
@@ -156,5 +161,41 @@ export async function updateActionsProfile(
       actionsCroissancePct: breakdown.croissance,
     },
   });
+  revalidatePath(`/clients/${clientId}`);
+}
+
+/**
+ * Replaces one category's wrapper breakdown wholesale (delete then recreate,
+ * same full-replace approach as updateClientAllocation) — simpler than
+ * reconciling individual row diffs, and the write is already scoped to a
+ * single category so it can't clobber the others.
+ *
+ * No sum-vs-category-total constraint: unlike the actions profile (a closed
+ * 100% partition), the wrapper breakdown is intentionally partial — an
+ * advisor may detail only part of a category and leave the rest unclassified
+ * indefinitely.
+ */
+export async function updateWrapperBreakdown(
+  clientId: string,
+  category: string,
+  breakdown: WrapperBreakdown
+) {
+  if (!(FINANCIAL_CATEGORY_IDS as string[]).includes(category)) {
+    throw new Error("Catégorie invalide.");
+  }
+  const hasValidAmounts = WRAPPERS.every((wrapper) => {
+    const amount = breakdown[wrapper];
+    return Number.isFinite(amount) && amount >= 0;
+  });
+  if (!hasValidAmounts) {
+    throw new Error("Chaque montant doit être un nombre positif.");
+  }
+
+  await prisma.$transaction([
+    prisma.wrapperAllocation.deleteMany({ where: { clientId, category } }),
+    prisma.wrapperAllocation.createMany({
+      data: wrapperAllocationRowsFromBreakdown(clientId, category, breakdown),
+    }),
+  ]);
   revalidatePath(`/clients/${clientId}`);
 }

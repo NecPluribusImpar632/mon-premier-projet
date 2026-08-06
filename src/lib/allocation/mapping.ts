@@ -1,7 +1,13 @@
-import type { Client, Property } from "@/generated/prisma/client";
+import type { Client, Property, WrapperAllocation } from "@/generated/prisma/client";
 import type { AllocationEntry } from "@/types/allocation";
 import type { ActionsProfileBreakdown } from "./stockProfiles";
 import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "./categories";
+import {
+  WRAPPERS,
+  emptyWrapperBreakdown,
+  type Wrapper,
+  type WrapperBreakdown,
+} from "./wrappers";
 
 type CategoryFieldName =
   | "actionsAmount"
@@ -116,4 +122,41 @@ export function actionsBreakdownFromClient(
 /** Whether the client draws most of their income from their own/family business. */
 export function professionalToolMainIncomeFromClient(client: Client): boolean {
   return client.professionalToolMainIncome;
+}
+
+/**
+ * Rows from the WrapperAllocation table, grouped by category into a
+ * breakdown-by-wrapper for each financial category. Only nonzero amounts are
+ * ever persisted (no row = "not detailed", not "detailed as 0"), so most
+ * clients will have an empty breakdown for most categories. Unknown
+ * category/wrapper values (stale data from a removed option) are skipped
+ * rather than thrown on.
+ */
+export function wrapperBreakdownsFromClient(
+  wrapperAllocations: WrapperAllocation[]
+): Record<string, WrapperBreakdown> {
+  const result: Record<string, WrapperBreakdown> = Object.fromEntries(
+    FINANCIAL_CATEGORY_IDS.map((id) => [id, emptyWrapperBreakdown()])
+  );
+  const wrapperIds: readonly string[] = WRAPPERS;
+  for (const row of wrapperAllocations) {
+    if (result[row.category] && wrapperIds.includes(row.wrapper)) {
+      result[row.category][row.wrapper as Wrapper] = row.amount;
+    }
+  }
+  return result;
+}
+
+/** Breakdown for one category → the rows to persist (nonzero amounts only). */
+export function wrapperAllocationRowsFromBreakdown(
+  clientId: string,
+  category: string,
+  breakdown: WrapperBreakdown
+): { clientId: string; category: string; wrapper: string; amount: number }[] {
+  return WRAPPERS.filter((wrapper) => breakdown[wrapper] > 0).map((wrapper) => ({
+    clientId,
+    category,
+    wrapper,
+    amount: breakdown[wrapper],
+  }));
 }

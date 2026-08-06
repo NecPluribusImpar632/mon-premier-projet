@@ -8,6 +8,7 @@ import {
   updateClientAllocation,
   updateActionsProfile,
   updateProfessionalToolMainIncome,
+  updateWrapperBreakdown,
 } from "@/lib/actions/clients";
 import {
   effectiveImmobilierAmount,
@@ -16,14 +17,30 @@ import {
 } from "@/lib/allocation/mapping";
 import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import type { Wrapper, WrapperBreakdown } from "@/lib/allocation/wrappers";
 
 interface ClientAllocationEditorProps {
   clientId: string;
   initialAmounts: Record<string, number>;
   initialActionsBreakdown: ActionsProfileBreakdown;
   initialProfessionalToolMainIncome: boolean;
+  initialWrapperBreakdowns: Record<string, WrapperBreakdown>;
   properties: PropertyWithLoans[];
 }
+
+type WrapperSaveStatus = "saved" | "saving" | "error";
+
+const WRAPPER_STATUS_MESSAGE: Record<WrapperSaveStatus, string> = {
+  saved: "Enregistré",
+  saving: "Enregistrement...",
+  error: "Erreur lors de l'enregistrement",
+};
+
+const WRAPPER_STATUS_COLOR: Record<WrapperSaveStatus, string> = {
+  saved: "text-slate",
+  saving: "text-slate",
+  error: "text-bronze",
+};
 
 type SaveStatus = "saved" | "saving" | "incomplete" | "error";
 
@@ -46,6 +63,7 @@ export function ClientAllocationEditor({
   initialAmounts,
   initialActionsBreakdown,
   initialProfessionalToolMainIncome,
+  initialWrapperBreakdowns,
   properties,
 }: ClientAllocationEditorProps) {
   const [amounts, setAmounts] = useState<Record<string, number>>(initialAmounts);
@@ -63,6 +81,13 @@ export function ClientAllocationEditor({
   const [isActionsPending, startActionsTransition] = useTransition();
   const [actionsStatus, setActionsStatus] = useState<SaveStatus>(
     isActionsBreakdownComplete(initialActionsBreakdown) ? "saved" : "incomplete"
+  );
+
+  const [wrapperBreakdowns, setWrapperBreakdowns] = useState<
+    Record<string, WrapperBreakdown>
+  >(initialWrapperBreakdowns);
+  const [wrapperStatus, setWrapperStatus] = useState<Record<string, WrapperSaveStatus>>(
+    {}
   );
 
   const formColumnRef = useRef<HTMLDivElement>(null);
@@ -145,6 +170,29 @@ export function ClientAllocationEditor({
     });
   }
 
+  function handleWrapperChange(categoryId: string, wrapper: Wrapper, amount: number) {
+    const next = { ...wrapperBreakdowns[categoryId], [wrapper]: amount };
+    setWrapperBreakdowns((prev) => ({ ...prev, [categoryId]: next }));
+    setWrapperStatus((prev) => ({ ...prev, [categoryId]: "saving" }));
+
+    updateWrapperBreakdown(clientId, categoryId, next)
+      .then(() => setWrapperStatus((prev) => ({ ...prev, [categoryId]: "saved" })))
+      .catch(() => setWrapperStatus((prev) => ({ ...prev, [categoryId]: "error" })));
+  }
+
+  const wrapperStatusMessages = Object.fromEntries(
+    Object.keys(wrapperBreakdowns).map((categoryId) => [
+      categoryId,
+      WRAPPER_STATUS_MESSAGE[wrapperStatus[categoryId] ?? "saved"],
+    ])
+  );
+  const wrapperStatusColorClasses = Object.fromEntries(
+    Object.keys(wrapperBreakdowns).map((categoryId) => [
+      categoryId,
+      WRAPPER_STATUS_COLOR[wrapperStatus[categoryId] ?? "saved"],
+    ])
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
@@ -168,6 +216,10 @@ export function ClientAllocationEditor({
             }
             professionalToolMainIncome={professionalToolMainIncome}
             onProfessionalToolMainIncomeChange={handleProfessionalToolMainIncomeChange}
+            wrapperBreakdowns={wrapperBreakdowns}
+            onWrapperBreakdownChange={handleWrapperChange}
+            wrapperStatusMessages={wrapperStatusMessages}
+            wrapperStatusColorClasses={wrapperStatusColorClasses}
           />
 
           <p

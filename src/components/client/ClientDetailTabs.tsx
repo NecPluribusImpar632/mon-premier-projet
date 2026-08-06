@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Building2, Download, PieChart, Target } from "lucide-react";
 import type { SavedScenario } from "@/generated/prisma/client";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import type { WrapperBreakdown } from "@/lib/allocation/wrappers";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import type { ClientScenarioContext } from "@/lib/scenarios/calculations";
 import { ClientSidebar } from "@/components/client/ClientSidebar";
@@ -34,6 +35,7 @@ interface ClientDetailTabsProps {
   amounts: Record<string, number>;
   actionsBreakdown: ActionsProfileBreakdown;
   initialProfessionalToolMainIncome: boolean;
+  initialWrapperBreakdowns: Record<string, WrapperBreakdown>;
   financialWealthTotal: number;
   immobilierValue: number;
   properties: PropertyWithSensitivity[];
@@ -60,6 +62,7 @@ export function ClientDetailTabs({
   amounts,
   actionsBreakdown,
   initialProfessionalToolMainIncome,
+  initialWrapperBreakdowns,
   financialWealthTotal,
   immobilierValue,
   properties,
@@ -127,6 +130,7 @@ export function ClientDetailTabs({
                 initialAmounts={amounts}
                 initialActionsBreakdown={actionsBreakdown}
                 initialProfessionalToolMainIncome={initialProfessionalToolMainIncome}
+                initialWrapperBreakdowns={initialWrapperBreakdowns}
                 properties={properties}
               />
             </div>

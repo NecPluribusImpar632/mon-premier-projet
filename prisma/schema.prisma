@@ -47,6 +47,7 @@ model Client {
   updatedAt                    DateTime   @updatedAt
   properties                   Property[]
   savedScenarios               SavedScenario[]
+  wrapperAllocations           WrapperAllocation[]
 }
 
 model Property {
@@ -81,6 +82,19 @@ model Loan {
   updatedAt        DateTime  @updatedAt
   propertyId       String
   property         Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+model WrapperAllocation {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  category  String
+  wrapper   String
+  amount    Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clientId, category, wrapper])
 }
 
 model SavedScenario {

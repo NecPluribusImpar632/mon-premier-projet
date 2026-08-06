@@ -1,12 +1,14 @@
 "use client";
 
-import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
+import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { ActionsProfileBreakdown } from "@/components/allocation/ActionsProfileBreakdown";
+import { WrapperBreakdown } from "@/components/allocation/WrapperBreakdown";
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
 import type { ActionsProfileBreakdown as Breakdown } from "@/lib/allocation/stockProfiles";
+import type { Wrapper, WrapperBreakdown as WrapperBreakdownType } from "@/lib/allocation/wrappers";
 
 interface AllocationAmountFormProps {
   amounts: Record<string, number>;
@@ -20,6 +22,10 @@ interface AllocationAmountFormProps {
   actionsStatusColorClass: string;
   professionalToolMainIncome: boolean;
   onProfessionalToolMainIncomeChange: (value: boolean) => void;
+  wrapperBreakdowns: Record<string, WrapperBreakdownType>;
+  onWrapperBreakdownChange: (categoryId: string, wrapper: Wrapper, amount: number) => void;
+  wrapperStatusMessages: Record<string, string>;
+  wrapperStatusColorClasses: Record<string, string>;
 }
 
 export function AllocationAmountForm({
@@ -34,6 +40,10 @@ export function AllocationAmountForm({
   actionsStatusColorClass,
   professionalToolMainIncome,
   onProfessionalToolMainIncomeChange,
+  wrapperBreakdowns,
+  onWrapperBreakdownChange,
+  wrapperStatusMessages,
+  wrapperStatusColorClasses,
 }: AllocationAmountFormProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -105,6 +115,17 @@ export function AllocationAmountForm({
                   </button>
                 </span>
               </div>
+            )}
+            {(FINANCIAL_CATEGORY_IDS as string[]).includes(category.id) && (
+              <WrapperBreakdown
+                breakdown={wrapperBreakdowns[category.id]}
+                categoryAmount={amounts[category.id] ?? 0}
+                onChange={(wrapper, amount) =>
+                  onWrapperBreakdownChange(category.id, wrapper, amount)
+                }
+                statusMessage={wrapperStatusMessages[category.id] ?? ""}
+                statusColorClass={wrapperStatusColorClasses[category.id] ?? "text-slate"}
+              />
             )}
           </div>
         );
