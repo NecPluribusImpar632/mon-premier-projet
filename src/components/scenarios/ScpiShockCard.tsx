@@ -12,12 +12,14 @@ interface ScpiShockCardProps {
   scpiAmount: number;
   shockPct: number;
   onShockPctChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 export function ScpiShockCard({
   scpiAmount,
   shockPct,
   onShockPctChange,
+  onRemove,
 }: ScpiShockCardProps) {
   if (scpiAmount === 0) {
     return (
@@ -46,6 +48,7 @@ export function ScpiShockCard({
       description="Décote de part et risque de suspension des rachats."
       summaryValue={summaryValue}
       isActive={isActive}
+      onRemove={onRemove}
     >
       <ShockSlider
         label="Décote de part"

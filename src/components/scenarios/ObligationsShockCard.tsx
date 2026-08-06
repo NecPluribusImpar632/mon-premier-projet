@@ -13,6 +13,7 @@ interface ObligationsShockCardProps {
   oatRateChangePts: number;
   durationYears: number;
   onDurationYearsChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 export function ObligationsShockCard({
@@ -20,6 +21,7 @@ export function ObligationsShockCard({
   oatRateChangePts,
   durationYears,
   onDurationYearsChange,
+  onRemove,
 }: ObligationsShockCardProps) {
   if (obligationsAmount === 0) {
     return (
@@ -52,6 +54,7 @@ export function ObligationsShockCard({
       description="Sensibilité du prix des obligations à une variation des taux."
       summaryValue={summaryValue}
       isActive={isActive}
+      onRemove={onRemove}
     >
       <ShockSlider
         label="Duration (sensibilité)"

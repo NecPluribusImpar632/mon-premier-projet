@@ -12,12 +12,14 @@ interface PrivateEquityIlliquidityCardProps {
   privateEquityAmount: number;
   discountPct: number;
   onDiscountPctChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 export function PrivateEquityIlliquidityCard({
   privateEquityAmount,
   discountPct,
   onDiscountPctChange,
+  onRemove,
 }: PrivateEquityIlliquidityCardProps) {
   if (privateEquityAmount === 0) {
     return (
@@ -46,6 +48,7 @@ export function PrivateEquityIlliquidityCard({
       description="Décote à la revente sur le marché secondaire."
       summaryValue={summaryValue}
       isActive={isActive}
+      onRemove={onRemove}
     >
       <ShockSlider
         label="Décote de sortie"

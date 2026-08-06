@@ -14,6 +14,7 @@ interface VacancyCardProps {
   onPropertyIdChange: (value: string) => void;
   months: number;
   onMonthsChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 export function VacancyCard({
@@ -22,6 +23,7 @@ export function VacancyCard({
   onPropertyIdChange,
   months,
   onMonthsChange,
+  onRemove,
 }: VacancyCardProps) {
   if (properties.length === 0) {
     return (
@@ -51,6 +53,7 @@ export function VacancyCard({
       description="Perte de loyer sur un bien donné."
       summaryValue={summaryValue}
       isActive={isActive}
+      onRemove={onRemove}
     >
       <label className="flex flex-col gap-1.5 text-sm text-ink">
         Bien

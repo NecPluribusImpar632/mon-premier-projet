@@ -16,6 +16,7 @@ interface StockShockCardProps {
   actionsBreakdown: ActionsProfileBreakdown;
   marketShockPct: number;
   onMarketShockPctChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 export function StockShockCard({
@@ -23,6 +24,7 @@ export function StockShockCard({
   actionsBreakdown,
   marketShockPct,
   onMarketShockPctChange,
+  onRemove,
 }: StockShockCardProps) {
   const result = computeStockShockImpact(
     actionsBreakdown,
@@ -41,6 +43,7 @@ export function StockShockCard({
       description="Un même choc de marché affecte différemment chaque profil actions."
       summaryValue={summaryValue}
       isActive={isActive}
+      onRemove={onRemove}
     >
       <ShockSlider
         label="Choc de marché"

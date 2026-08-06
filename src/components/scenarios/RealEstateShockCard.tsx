@@ -19,6 +19,7 @@ interface RealEstateShockCardProps {
   properties: PropertyWithSensitivity[];
   oatRateChangePts: number;
   onOatRateChangePtsChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 // R² reliability scale for the calibrated zone coefficients. The app's palette
@@ -40,6 +41,7 @@ export function RealEstateShockCard({
   properties,
   oatRateChangePts,
   onOatRateChangePtsChange,
+  onRemove,
 }: RealEstateShockCardProps) {
   const [needsLiquidity, setNeedsLiquidity] = useState(false);
   const [liquidityPropertyId, setLiquidityPropertyId] = useState(
@@ -93,6 +95,7 @@ export function RealEstateShockCard({
       description="Baisse du prix des biens, sensibilité aux taux et besoin de liquidité."
       summaryValue={summaryValue}
       isActive={isActive}
+      onRemove={onRemove}
     >
       <ShockSlider
         label="Variation du taux OAT"

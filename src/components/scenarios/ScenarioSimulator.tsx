@@ -54,6 +54,25 @@ const CUSTOM_PRESET =
   SCENARIO_PRESETS.find((preset) => preset.id === CUSTOM_PRESET_ID) ??
   SCENARIO_PRESETS[0];
 
+const OPTIONAL_CARD_IDS = [
+  "actions",
+  "realEstate",
+  "scpi",
+  "obligations",
+  "privateEquity",
+  "vacancy",
+] as const;
+type OptionalCardId = (typeof OPTIONAL_CARD_IDS)[number];
+
+const CARD_LABELS: Record<OptionalCardId, string> = {
+  actions: "Choc actions",
+  realEstate: "Choc immobilier",
+  scpi: "Choc SCPI",
+  obligations: "Choc obligataire",
+  privateEquity: "Décote d'illiquidité Private Equity",
+  vacancy: "Vacance locative prolongée",
+};
+
 export function ScenarioSimulator({
   clientId,
   actionsPctOverall,
@@ -80,13 +99,28 @@ export function ScenarioSimulator({
   const [inflationPct, setInflationPct] = useState(CUSTOM_PRESET.inflationPct);
   const [inflationYears, setInflationYears] = useState(5);
   const [vacancyPropertyId, setVacancyPropertyId] = useState(properties[0]?.id ?? "");
-  const [vacancyMonths, setVacancyMonths] = useState(3);
+  // Vacancy and PE illiquidity start neutral (0) rather than a "sensible
+  // default" — those cards are hidden until added, and a nonzero default
+  // would silently feed the combined banner before the user ever opens them.
+  // The sensible starting value (3 months / 20%) is applied at add-time
+  // instead, in addCard() below.
+  const [vacancyMonths, setVacancyMonths] = useState(0);
   const [obligationsDurationYears, setObligationsDurationYears] = useState(6);
-  const [peIlliquidityDiscountPct, setPeIlliquidityDiscountPct] = useState(20);
-  const [addedCardIds, setAddedCardIds] = useState<Set<string>>(new Set());
+  const [peIlliquidityDiscountPct, setPeIlliquidityDiscountPct] = useState(0);
+  const [addedCardIds, setAddedCardIds] = useState<Set<OptionalCardId>>(new Set());
   const [isAddCardMenuOpen, setIsAddCardMenuOpen] = useState(false);
 
   function markCustom() {
+    // Leaving a named preset must not hide the cards it was showing — freeze
+    // them into addedCardIds first, so switching to "Personnalisé" swaps
+    // *why* they're visible without making them disappear mid-edit.
+    setAddedCardIds((prev) => {
+      const next = new Set(prev);
+      OPTIONAL_CARD_IDS.forEach((id) => {
+        if (presetTouchesCard[id]) next.add(id);
+      });
+      return next;
+    });
     setSelectedPresetId(CUSTOM_PRESET_ID);
     setSelectedSavedScenarioId(null);
   }
@@ -127,19 +161,48 @@ export function ScenarioSimulator({
     setSelectedSavedScenarioId((current) => (current === id ? null : current));
   }
 
+  // Adjusting a preset-revealed card's own control is treated as a manual
+  // customization: it keeps the card visible (and removable) even after the
+  // preset selection moves on to "Personnalisé", instead of having it vanish
+  // mid-edit once presetTouchesCard stops covering it.
+  function addCard(id: OptionalCardId) {
+    setAddedCardIds((prev) => new Set(prev).add(id));
+    if (id === "privateEquity") setPeIlliquidityDiscountPct(20);
+    if (id === "vacancy") setVacancyMonths(3);
+  }
+
+  function removeCard(id: OptionalCardId) {
+    setAddedCardIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    if (id === "actions") setMarketShockPct(0);
+    if (id === "scpi") setScpiShockPct(0);
+    if (id === "privateEquity") setPeIlliquidityDiscountPct(0);
+    if (id === "vacancy") setVacancyMonths(0);
+    if (id === "obligations") setObligationsDurationYears(0);
+    // oatRateChangePts is shared with the Obligations card's own shock —
+    // only neutralize it if nothing else currently depends on it.
+    if (id === "realEstate" && !isCardVisible("obligations")) setOatRateChangePts(0);
+  }
+
   function handleMarketShockChange(value: number) {
     setMarketShockPct(value);
     markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("actions"));
   }
 
   function handleOatRateChangePts(value: number) {
     setOatRateChangePts(value);
     markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("realEstate"));
   }
 
   function handleScpiShockChange(value: number) {
     setScpiShockPct(value);
     markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("scpi"));
   }
 
   function handleInflationChange(value: number) {
@@ -150,11 +213,13 @@ export function ScenarioSimulator({
   function handleObligationsDurationChange(value: number) {
     setObligationsDurationYears(value);
     markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("obligations"));
   }
 
   function handlePeIlliquidityDiscountChange(value: number) {
     setPeIlliquidityDiscountPct(value);
     markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("privateEquity"));
   }
 
   const context: ClientScenarioContext = {
@@ -192,10 +257,11 @@ export function ScenarioSimulator({
   pdfSearchParams.set("scenarioLabel", activeScenarioLabel);
   const pdfHref = `/clients/${clientId}/scenarios/pdf?${pdfSearchParams.toString()}`;
 
-  // Only cards relevant to this client show by default — no point in a card
-  // that just says "aucune allocation définie" taking up space. Inflation and
-  // the projection stay unconditional (useful regardless of allocation).
-  const cardRelevance = {
+  // A card is only ever offerable if the client actually holds the
+  // corresponding asset — no point in a card that just says "aucune
+  // allocation définie". Inflation and the projection stay unconditional
+  // (useful regardless of allocation), so they sit outside this system.
+  const cardRelevance: Record<OptionalCardId, boolean> = {
     actions: actionsPctOverall > 0,
     realEstate: properties.length > 0,
     scpi: scpiAmount > 0,
@@ -203,22 +269,28 @@ export function ScenarioSimulator({
     privateEquity: privateEquityAmount > 0,
     vacancy: properties.some((property) => property.monthlyRent !== null),
   };
-  type OptionalCardId = keyof typeof cardRelevance;
-  const CARD_LABELS: Record<OptionalCardId, string> = {
-    actions: "Choc actions",
-    realEstate: "Choc immobilier",
-    scpi: "Choc SCPI",
-    obligations: "Choc obligataire",
-    privateEquity: "Décote d'illiquidité Private Equity",
-    vacancy: "Vacance locative prolongée",
+
+  // Beyond being relevant, a card only shows by default when the currently
+  // selected named preset actually drives it (2008/Choc pétrolier/Remontée
+  // des taux all set marketShockPct and oatRateChangePts). SCPI, PE and
+  // vacancy have no preset field, so they always require a manual add.
+  const activePreset =
+    SCENARIO_PRESETS.find((preset) => preset.id === selectedPresetId) ?? CUSTOM_PRESET;
+  const presetTouchesCard: Record<OptionalCardId, boolean> = {
+    actions: activePreset.id !== CUSTOM_PRESET_ID && activePreset.marketShockPct !== 0,
+    realEstate: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
+    obligations: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
+    scpi: false,
+    privateEquity: false,
+    vacancy: false,
   };
 
   function isCardVisible(id: OptionalCardId) {
-    return cardRelevance[id] || addedCardIds.has(id);
+    return cardRelevance[id] && (addedCardIds.has(id) || presetTouchesCard[id]);
   }
 
-  const hiddenCardIds = (Object.keys(cardRelevance) as OptionalCardId[]).filter(
-    (id) => !isCardVisible(id)
+  const hiddenCardIds = OPTIONAL_CARD_IDS.filter(
+    (id) => cardRelevance[id] && !isCardVisible(id)
   );
 
   return (
@@ -271,6 +343,7 @@ export function ScenarioSimulator({
             actionsBreakdown={actionsBreakdown}
             marketShockPct={marketShockPct}
             onMarketShockPctChange={handleMarketShockChange}
+            onRemove={addedCardIds.has("actions") ? () => removeCard("actions") : undefined}
           />
         )}
         {isCardVisible("realEstate") && (
@@ -278,6 +351,7 @@ export function ScenarioSimulator({
             properties={properties}
             oatRateChangePts={oatRateChangePts}
             onOatRateChangePtsChange={handleOatRateChangePts}
+            onRemove={addedCardIds.has("realEstate") ? () => removeCard("realEstate") : undefined}
           />
         )}
         {isCardVisible("scpi") && (
@@ -285,6 +359,7 @@ export function ScenarioSimulator({
             scpiAmount={scpiAmount}
             shockPct={scpiShockPct}
             onShockPctChange={handleScpiShockChange}
+            onRemove={addedCardIds.has("scpi") ? () => removeCard("scpi") : undefined}
           />
         )}
         {isCardVisible("obligations") && (
@@ -293,6 +368,7 @@ export function ScenarioSimulator({
             oatRateChangePts={oatRateChangePts}
             durationYears={obligationsDurationYears}
             onDurationYearsChange={handleObligationsDurationChange}
+            onRemove={addedCardIds.has("obligations") ? () => removeCard("obligations") : undefined}
           />
         )}
         {isCardVisible("privateEquity") && (
@@ -300,6 +376,9 @@ export function ScenarioSimulator({
             privateEquityAmount={privateEquityAmount}
             discountPct={peIlliquidityDiscountPct}
             onDiscountPctChange={handlePeIlliquidityDiscountChange}
+            onRemove={
+              addedCardIds.has("privateEquity") ? () => removeCard("privateEquity") : undefined
+            }
           />
         )}
         <InflationScenarioCard
@@ -316,6 +395,7 @@ export function ScenarioSimulator({
             onPropertyIdChange={setVacancyPropertyId}
             months={vacancyMonths}
             onMonthsChange={setVacancyMonths}
+            onRemove={addedCardIds.has("vacancy") ? () => removeCard("vacancy") : undefined}
           />
         )}
       </div>
@@ -328,9 +408,7 @@ export function ScenarioSimulator({
                 <button
                   key={id}
                   type="button"
-                  onClick={() =>
-                    setAddedCardIds((prev) => new Set(prev).add(id))
-                  }
+                  onClick={() => addCard(id)}
                   className="rounded-full border border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
                 >
                   + {CARD_LABELS[id]}
@@ -350,7 +428,7 @@ export function ScenarioSimulator({
               onClick={() => setIsAddCardMenuOpen(true)}
               className="w-fit rounded-full border border-dashed border-line px-4 py-2 text-sm font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
             >
-              + Ajouter un autre choc
+              + Ajouter un choc
             </button>
           )}
         </div>
