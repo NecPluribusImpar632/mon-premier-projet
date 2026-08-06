@@ -172,6 +172,7 @@ export function ScenarioSimulator({
     setAddedCardIds((prev) => new Set(prev).add(id));
     if (id === "privateEquity") setPeIlliquidityDiscountPct(20);
     if (id === "vacancy") setVacancyMonths(3);
+    if (id === "scpi") setScpiShockPct(-11);
   }
 
   function removeCard(id: OptionalCardId) {
@@ -277,8 +278,12 @@ export function ScenarioSimulator({
 
   // Beyond being relevant, a card only shows by default when the currently
   // selected named preset actually drives it (2008/Choc pétrolier/Remontée
-  // des taux all set marketShockPct/oatRateChangePts/inflationPct). SCPI, PE
-  // and vacancy have no preset field, so they always require a manual add.
+  // des taux all set marketShockPct/oatRateChangePts/inflationPct). PE and
+  // vacancy have no preset field at all, so they always require a manual add.
+  // SCPI has no rate-derived value either (no reliable coefficient exists —
+  // see ScpiShockCard's methodology note), but it still surfaces as a
+  // reminder under a rate preset so the advisor doesn't forget to set it by
+  // hand — the shock itself stays at 0 until they actually touch the slider.
   const activePreset =
     SCENARIO_PRESETS.find((preset) => preset.id === selectedPresetId) ?? CUSTOM_PRESET;
   const presetTouchesCard: Record<OptionalCardId, boolean> = {
@@ -286,7 +291,7 @@ export function ScenarioSimulator({
     realEstate: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
     obligations: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
     inflation: activePreset.id !== CUSTOM_PRESET_ID && activePreset.inflationPct !== 0,
-    scpi: false,
+    scpi: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
     privateEquity: false,
     vacancy: false,
   };

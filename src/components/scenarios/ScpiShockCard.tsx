@@ -84,7 +84,16 @@ export function ScpiShockCard({
         <InfoTooltip>
           Une SCPI peut subir une décote de son prix de part et un risque de
           suspension des rachats en période de crise, distinct de
-          l&apos;illiquidité d&apos;un bien physique.
+          l&apos;illiquidité d&apos;un bien physique. Contrairement à
+          l&apos;immobilier physique, il n&apos;existe pas de coefficient
+          fiable reliant cette décote au taux OAT : une régression testée sur
+          13 trimestres (Ramify SCPI Index, T2 2023 à T2 2026) donne au mieux
+          un R² de 25 %, non significatif statistiquement. La valeur
+          suggérée de 11 % vient donc d&apos;un seul épisode documenté, pas
+          d&apos;un calcul : lors de la baisse des prix de 2023, une
+          vingtaine de SCPI sur environ 215 ont réévalué leur prix de part,
+          avec une baisse moyenne de 11 % (jusqu&apos;à 17 % pour les plus
+          touchées). À ajuster selon le fonds réellement détenu.
         </InfoTooltip>
       </div>
     </CollapsibleScenarioCard>

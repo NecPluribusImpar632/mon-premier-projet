@@ -500,7 +500,7 @@ export function computeFullScenarioImpact(
       valueBefore: scpiAmount,
       delta: scpiShock.deltaValue,
       deltaPct: pct(scpiShock.deltaValue, scpiAmount),
-      isAssumption: false,
+      isAssumption: true,
     });
   }
   if (obligationsAmount > 0) {
