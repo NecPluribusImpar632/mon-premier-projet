@@ -343,11 +343,11 @@ export function ScenarioSimulator({
       </div>
 
       {visibleCardIds.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-line bg-paper p-6 text-center">
-          <p className="text-base font-medium text-ink">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-line bg-paper p-6">
+          <p className="text-center text-base font-medium text-ink">
             Aucun scénario n&apos;est proposé pour l&apos;instant
           </p>
-          <p className="max-w-xl text-sm text-slate">
+          <p className="max-w-xl text-left text-sm text-slate">
             Un scénario simule l&apos;effet d&apos;un choc de marché ou de taux (baisse
             des actions, hausse des taux, décote immobilière ou SCPI...) sur le
             patrimoine du client — choisissez un scénario prédéfini ci-dessus, ou
