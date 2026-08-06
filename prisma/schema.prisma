@@ -54,6 +54,7 @@ model Property {
   id                  String   @id @default(cuid())
   name                String
   currentValue        Float
+  isPrimaryResidence  Boolean  @default(false)
   monthlyRent         Float?
   acquisitionPrice    Float?
   acquisitionDate     DateTime?

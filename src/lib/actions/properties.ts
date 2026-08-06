@@ -21,6 +21,7 @@ function parseRequiredNonNegativeNumber(value: unknown): number {
 function parsePropertyFormData(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const currentValue = parseRequiredNonNegativeNumber(formData.get("currentValue"));
+  const isPrimaryResidence = formData.get("isPrimaryResidence") != null;
 
   const monthlyRentRaw = String(formData.get("monthlyRent") ?? "").trim();
   const monthlyRent =
@@ -77,6 +78,7 @@ function parsePropertyFormData(formData: FormData) {
   return {
     name,
     currentValue,
+    isPrimaryResidence,
     monthlyRent,
     acquisitionPrice,
     acquisitionDate,

@@ -41,6 +41,16 @@ export function PropertyForm({ action, defaultValues, submitLabel }: PropertyFor
           className={NUMERIC_FIELD_CLASS}
         />
       </label>
+      <label className="flex items-center gap-2 text-sm text-slate">
+        <input
+          name="isPrimaryResidence"
+          type="checkbox"
+          defaultChecked={defaultValues?.isPrimaryResidence}
+          className="h-4 w-4 rounded border-line text-emerald focus:outline-none focus:ring-2 focus:ring-emerald/15"
+        />
+        Résidence principale
+        <span className="text-xs text-slate/70">(abattement de 30 % pour l&apos;IFI)</span>
+      </label>
       <label className="flex flex-col gap-1.5 text-sm text-slate">
         Loyer mensuel perçu (€, si loué)
         <FormattedNumberInput

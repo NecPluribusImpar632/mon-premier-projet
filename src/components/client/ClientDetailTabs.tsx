@@ -15,6 +15,7 @@ import { ClientProfile } from "@/components/client/ClientProfile";
 import { WealthGoalSection } from "@/components/client/WealthGoalSection";
 import { RetirementGoalSection } from "@/components/client/RetirementGoalSection";
 import { WealthSummary } from "@/components/allocation/WealthSummary";
+import { IfiCard } from "@/components/fiscal/IfiCard";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
 import { PropertyList } from "@/components/property/PropertyList";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
@@ -114,6 +115,11 @@ export function ClientDetailTabs({
                 immobilierValue={immobilierValue}
                 properties={properties}
                 showConcentrationWarning={initialProfessionalToolMainIncome}
+              />
+              <IfiCard
+                properties={properties}
+                immobilierAmount={amounts.immobilier ?? 0}
+                scpiAmount={amounts.scpi ?? 0}
               />
             </div>
           )}
