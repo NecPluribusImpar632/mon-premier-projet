@@ -351,7 +351,7 @@ export function ScenarioSimulator({
           <p className="max-w-xl text-left text-sm text-slate">
             Un scénario simule l&apos;effet d&apos;un choc de marché ou de taux (baisse
             des actions, hausse des taux, décote immobilière ou SCPI...) sur le
-            patrimoine du client — choisissez un scénario prédéfini ci-dessus, ou
+            patrimoine du client. Choisissez un scénario prédéfini ci-dessus, ou
             ajoutez un choc précis avec le bouton ci-dessous.
           </p>
         </div>

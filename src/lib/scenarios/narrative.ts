@@ -189,8 +189,8 @@ const INTRO_COMBINED_TEMPLATES: string[] = [
 const CONNECTORS: string[] = ["En revanche,", "À l'inverse,", "De son côté,", "Ce qui compense partiellement,"];
 
 const ASSUMPTION_CAVEATS: string[] = [
-  " — une hypothèse, pas une certitude.",
-  " — une estimation, à ajuster selon le profil réel.",
+  ", une hypothèse plus qu'une certitude.",
+  ", une estimation à affiner selon le profil réel.",
 ];
 
 function upperFirst(text: string): string {
