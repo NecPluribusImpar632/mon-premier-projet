@@ -60,6 +60,7 @@ const OPTIONAL_CARD_IDS = [
   "scpi",
   "obligations",
   "privateEquity",
+  "inflation",
   "vacancy",
 ] as const;
 type OptionalCardId = (typeof OPTIONAL_CARD_IDS)[number];
@@ -70,6 +71,7 @@ const CARD_LABELS: Record<OptionalCardId, string> = {
   scpi: "Choc SCPI",
   obligations: "Choc obligataire",
   privateEquity: "Décote d'illiquidité Private Equity",
+  inflation: "Scénario inflation",
   vacancy: "Vacance locative prolongée",
 };
 
@@ -182,6 +184,7 @@ export function ScenarioSimulator({
     if (id === "privateEquity") setPeIlliquidityDiscountPct(0);
     if (id === "vacancy") setVacancyMonths(0);
     if (id === "obligations") setObligationsDurationYears(0);
+    if (id === "inflation") setInflationPct(0);
     // oatRateChangePts is shared with the Obligations card's own shock —
     // only neutralize it if nothing else currently depends on it.
     if (id === "realEstate" && !isCardVisible("obligations")) setOatRateChangePts(0);
@@ -208,6 +211,7 @@ export function ScenarioSimulator({
   function handleInflationChange(value: number) {
     setInflationPct(value);
     markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("inflation"));
   }
 
   function handleObligationsDurationChange(value: number) {
@@ -259,27 +263,28 @@ export function ScenarioSimulator({
 
   // A card is only ever offerable if the client actually holds the
   // corresponding asset — no point in a card that just says "aucune
-  // allocation définie". Inflation and the projection stay unconditional
-  // (useful regardless of allocation), so they sit outside this system.
+  // allocation définie". Only the projection stays unconditional.
   const cardRelevance: Record<OptionalCardId, boolean> = {
     actions: actionsPctOverall > 0,
     realEstate: properties.length > 0,
     scpi: scpiAmount > 0,
     obligations: obligationsAmount > 0,
     privateEquity: privateEquityAmount > 0,
+    inflation: properties.length > 0,
     vacancy: properties.some((property) => property.monthlyRent !== null),
   };
 
   // Beyond being relevant, a card only shows by default when the currently
   // selected named preset actually drives it (2008/Choc pétrolier/Remontée
-  // des taux all set marketShockPct and oatRateChangePts). SCPI, PE and
-  // vacancy have no preset field, so they always require a manual add.
+  // des taux all set marketShockPct/oatRateChangePts/inflationPct). SCPI, PE
+  // and vacancy have no preset field, so they always require a manual add.
   const activePreset =
     SCENARIO_PRESETS.find((preset) => preset.id === selectedPresetId) ?? CUSTOM_PRESET;
   const presetTouchesCard: Record<OptionalCardId, boolean> = {
     actions: activePreset.id !== CUSTOM_PRESET_ID && activePreset.marketShockPct !== 0,
     realEstate: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
     obligations: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
+    inflation: activePreset.id !== CUSTOM_PRESET_ID && activePreset.inflationPct !== 0,
     scpi: false,
     privateEquity: false,
     vacancy: false,
@@ -292,6 +297,7 @@ export function ScenarioSimulator({
   const hiddenCardIds = OPTIONAL_CARD_IDS.filter(
     (id) => cardRelevance[id] && !isCardVisible(id)
   );
+  const visibleCardIds = OPTIONAL_CARD_IDS.filter((id) => isCardVisible(id));
 
   return (
     <div className="flex flex-col gap-8">
@@ -336,6 +342,15 @@ export function ScenarioSimulator({
         </div>
       </div>
 
+      {visibleCardIds.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-line bg-paper p-6 text-sm text-slate">
+          Aucun scénario n&apos;est proposé pour l&apos;instant. Un scénario simule
+          l&apos;effet d&apos;un choc de marché ou de taux (baisse des actions, hausse
+          des taux, décote immobilière ou SCPI...) sur le patrimoine du client — choisissez
+          un scénario prédéfini ci-dessus, ou ajoutez un choc précis avec le bouton
+          ci-dessous.
+        </p>
+      ) : (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {isCardVisible("actions") && (
           <StockShockCard
@@ -381,13 +396,16 @@ export function ScenarioSimulator({
             }
           />
         )}
-        <InflationScenarioCard
-          properties={properties}
-          inflationPct={inflationPct}
-          onInflationPctChange={handleInflationChange}
-          years={inflationYears}
-          onYearsChange={setInflationYears}
-        />
+        {isCardVisible("inflation") && (
+          <InflationScenarioCard
+            properties={properties}
+            inflationPct={inflationPct}
+            onInflationPctChange={handleInflationChange}
+            years={inflationYears}
+            onYearsChange={setInflationYears}
+            onRemove={addedCardIds.has("inflation") ? () => removeCard("inflation") : undefined}
+          />
+        )}
         {isCardVisible("vacancy") && (
           <VacancyCard
             properties={properties}
@@ -399,6 +417,7 @@ export function ScenarioSimulator({
           />
         )}
       </div>
+      )}
 
       {hiddenCardIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">

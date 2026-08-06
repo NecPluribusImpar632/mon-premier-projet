@@ -15,6 +15,7 @@ interface InflationScenarioCardProps {
   onInflationPctChange: (value: number) => void;
   years: number;
   onYearsChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 export function InflationScenarioCard({
@@ -23,6 +24,7 @@ export function InflationScenarioCard({
   onInflationPctChange,
   years,
   onYearsChange,
+  onRemove,
 }: InflationScenarioCardProps) {
   if (properties.length === 0) {
     return (
@@ -52,6 +54,7 @@ export function InflationScenarioCard({
       description="Érosion de la dette réelle et progression des loyers."
       summaryValue={summaryValue}
       isActive={isActive}
+      onRemove={onRemove}
     >
       <ShockSlider
         label="Inflation annuelle"
