@@ -316,11 +316,43 @@ export interface ClientScenarioContext {
   privateEquityAmount: number;
 }
 
+/**
+ * One line item of a scenario's impact, shaped generically so the narrative
+ * generator (src/lib/scenarios/narrative.ts) and the "En savoir plus" detail
+ * list can both consume it without knowing the specific set of asset classes
+ * in advance — adding a new shocked category later (assurance vie, or...)
+ * only means pushing another entry here, no changes needed downstream.
+ */
+export interface ScenarioImpactPost {
+  id: string;
+  /** Display label for the detail list, e.g. "Immobilier". */
+  label: string;
+  /** Sentence-ready fragment with its article already resolved, e.g.
+   * "l'immobilier", "les obligations" — written once at the source so the
+   * narrative templates never have to guess gender/article. */
+  nounPhrase: string;
+  /** Grammatical number of nounPhrase — the templates need this to conjugate
+   * their verb correctly ("les obligations concentrent", not "concentre"). */
+  isPlural: boolean;
+  /** Amount this delta is measured against (current holding, or the
+   * relevant base for non-holding posts like debt erosion / vacancy). */
+  valueBefore: number;
+  /** Signed € impact on net worth: positive cushions, negative aggravates. */
+  delta: number;
+  /** delta / valueBefore, null when valueBefore is 0 (no meaningful %). */
+  deltaPct: number | null;
+  /** True when this post's whole calculation leans on a manual/simplifying
+   * hypothesis already flagged elsewhere in the app (bond duration, PE exit
+   * discount, real estate zone coefficient reliability). */
+  isAssumption: boolean;
+}
+
 export interface FullScenarioResult {
   totalBefore: number;
   totalAfter: number;
   deltaAmount: number;
   deltaPct: number;
+  posts: ScenarioImpactPost[];
   breakdown: {
     realEstateDelta: number;
     stocksDelta: number;
@@ -429,11 +461,105 @@ export function computeFullScenarioImpact(
   const deltaAmount = totalAfter - totalBefore;
   const deltaPct = totalBefore !== 0 ? (deltaAmount / totalBefore) * 100 : 0;
 
+  const pct = (delta: number, base: number) => (base !== 0 ? (delta / base) * 100 : null);
+
+  // Only a post the client actually holds (or, for debt erosion/vacancy, has
+  // a relevant base for) is worth narrating — mirrors the same relevance
+  // gating already used to decide which shock card shows in the simulator.
+  const posts: ScenarioImpactPost[] = [];
+  if (actionsValueBefore > 0) {
+    posts.push({
+      id: "actions",
+      label: "Actions",
+      nounPhrase: "la poche actions",
+      isPlural: false,
+      valueBefore: actionsValueBefore,
+      delta: stocksDelta,
+      deltaPct: pct(stocksDelta, actionsValueBefore),
+      isAssumption: false,
+    });
+  }
+  if (totalPropertyValue > 0) {
+    posts.push({
+      id: "realEstate",
+      label: "Immobilier",
+      nounPhrase: "l'immobilier",
+      isPlural: false,
+      valueBefore: totalPropertyValue,
+      delta: realEstateDelta,
+      deltaPct: pct(realEstateDelta, totalPropertyValue),
+      isAssumption: true,
+    });
+  }
+  if (scpiAmount > 0) {
+    posts.push({
+      id: "scpi",
+      label: "SCPI",
+      nounPhrase: "la SCPI",
+      isPlural: false,
+      valueBefore: scpiAmount,
+      delta: scpiShock.deltaValue,
+      deltaPct: pct(scpiShock.deltaValue, scpiAmount),
+      isAssumption: false,
+    });
+  }
+  if (obligationsAmount > 0) {
+    posts.push({
+      id: "obligations",
+      label: "Obligations",
+      nounPhrase: "les obligations",
+      isPlural: true,
+      valueBefore: obligationsAmount,
+      delta: obligationsShock.deltaValue,
+      deltaPct: pct(obligationsShock.deltaValue, obligationsAmount),
+      isAssumption: true,
+    });
+  }
+  if (privateEquityAmount > 0) {
+    posts.push({
+      id: "privateEquity",
+      label: "Private Equity",
+      nounPhrase: "le Private Equity",
+      isPlural: false,
+      valueBefore: privateEquityAmount,
+      delta: peShock.deltaValue,
+      deltaPct: pct(peShock.deltaValue, privateEquityAmount),
+      isAssumption: true,
+    });
+  }
+  if (totalDebt > 0) {
+    posts.push({
+      id: "debtErosion",
+      label: "Érosion de la dette",
+      nounPhrase: "l'érosion de la dette",
+      isPlural: false,
+      valueBefore: totalDebt,
+      delta: debtErosion,
+      deltaPct: pct(debtErosion, totalDebt),
+      isAssumption: false,
+    });
+  }
+  const hasRentedProperty = properties.some((property) => property.monthlyRent !== null);
+  if (hasRentedProperty) {
+    const annualRent = (vacancyProperty?.monthlyRent ?? 0) * 12;
+    posts.push({
+      id: "vacancy",
+      label: "Vacance locative",
+      nounPhrase: "la vacance locative",
+      isPlural: false,
+      valueBefore: annualRent,
+      delta: -vacancyCost,
+      deltaPct: pct(-vacancyCost, annualRent),
+      isAssumption: false,
+    });
+  }
+
   return {
     totalBefore,
     totalAfter,
     deltaAmount,
     deltaPct,
+    posts,
     breakdown: {
       realEstateDelta,
       stocksDelta,

@@ -27,6 +27,7 @@ import {
 import { ScenarioPresetTabs } from "@/components/scenarios/ScenarioPresetTabs";
 import { SavedScenarioTabs } from "@/components/scenarios/SavedScenarioTabs";
 import { CombinedImpactBanner } from "@/components/scenarios/CombinedImpactBanner";
+import { ScenarioNarrative } from "@/components/scenarios/ScenarioNarrative";
 import { StockShockCard } from "@/components/scenarios/StockShockCard";
 import { RealEstateShockCard } from "@/components/scenarios/RealEstateShockCard";
 import { ScpiShockCard } from "@/components/scenarios/ScpiShockCard";
@@ -456,6 +457,8 @@ export function ScenarioSimulator({
           )}
         </div>
       )}
+
+      <ScenarioNarrative result={combinedImpact} activeChocCount={visibleCardIds.length} />
 
       <ProjectionCard context={context} params={currentParams} />
     </div>
