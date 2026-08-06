@@ -343,13 +343,17 @@ export function ScenarioSimulator({
       </div>
 
       {visibleCardIds.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-line bg-paper p-6 text-sm text-slate">
-          Aucun scénario n&apos;est proposé pour l&apos;instant. Un scénario simule
-          l&apos;effet d&apos;un choc de marché ou de taux (baisse des actions, hausse
-          des taux, décote immobilière ou SCPI...) sur le patrimoine du client — choisissez
-          un scénario prédéfini ci-dessus, ou ajoutez un choc précis avec le bouton
-          ci-dessous.
-        </p>
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-line bg-paper p-6 text-center">
+          <p className="text-base font-medium text-ink">
+            Aucun scénario n&apos;est proposé pour l&apos;instant
+          </p>
+          <p className="max-w-xl text-sm text-slate">
+            Un scénario simule l&apos;effet d&apos;un choc de marché ou de taux (baisse
+            des actions, hausse des taux, décote immobilière ou SCPI...) sur le
+            patrimoine du client — choisissez un scénario prédéfini ci-dessus, ou
+            ajoutez un choc précis avec le bouton ci-dessous.
+          </p>
+        </div>
       ) : (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {isCardVisible("actions") && (
