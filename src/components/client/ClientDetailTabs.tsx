@@ -203,7 +203,7 @@ export function ClientDetailTabs({
           )}
 
           {activeTab === "goal" && (
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
+            <div className="flex flex-col gap-8">
               <SectionHeading
                 icon={Target}
                 title="Objectif patrimonial"
