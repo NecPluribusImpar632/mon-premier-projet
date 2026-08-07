@@ -11,6 +11,7 @@ import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categ
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import { WRAPPERS, type WrapperBreakdown } from "@/lib/allocation/wrappers";
 import { isRiskProfile } from "@/lib/client/riskProfile";
+import { isMaritalStatus } from "@/lib/client/maritalStatus";
 
 export async function getClients() {
   return prisma.client.findMany({
@@ -138,6 +139,52 @@ export async function updateWealthGoal(
   await prisma.client.update({
     where: { id: clientId },
     data: { wealthGoalAmount, wealthGoalAge },
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
+export interface FoyerFiscalData {
+  maritalStatus: string | null;
+  spouseName: string | null;
+  spouseImmobilierAmount: number | null;
+  spouseScpiAmount: number | null;
+  spouseDebtAmount: number | null;
+  minorChildrenCount: number | null;
+  adultChildrenCount: number | null;
+}
+
+export async function updateFoyerFiscal(clientId: string, data: FoyerFiscalData) {
+  if (data.maritalStatus !== null && !isMaritalStatus(data.maritalStatus)) {
+    throw new Error("Situation familiale invalide.");
+  }
+
+  const amountFields = [
+    data.spouseImmobilierAmount,
+    data.spouseScpiAmount,
+    data.spouseDebtAmount,
+  ];
+  if (amountFields.some((value) => value !== null && (!Number.isFinite(value) || value < 0))) {
+    throw new Error("Les montants du conjoint doivent être des nombres positifs.");
+  }
+
+  const countFields = [data.minorChildrenCount, data.adultChildrenCount];
+  if (
+    countFields.some((value) => value !== null && (!Number.isInteger(value) || value < 0))
+  ) {
+    throw new Error("Le nombre d'enfants doit être un entier positif.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      maritalStatus: data.maritalStatus,
+      spouseName: data.spouseName,
+      spouseImmobilierAmount: data.spouseImmobilierAmount,
+      spouseScpiAmount: data.spouseScpiAmount,
+      spouseDebtAmount: data.spouseDebtAmount,
+      minorChildrenCount: data.minorChildrenCount,
+      adultChildrenCount: data.adultChildrenCount,
+    },
   });
   revalidatePath(`/clients/${clientId}`);
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Landmark, AlertTriangle } from "lucide-react";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { computeIfi } from "@/lib/fiscal/ifi";
+import { isMaritalStatus, impliesJointIfiHousehold } from "@/lib/client/maritalStatus";
 import { formatCurrency } from "@/lib/format/currency";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
@@ -11,11 +12,38 @@ interface IfiCardProps {
   properties: PropertyWithLoans[];
   immobilierAmount: number;
   scpiAmount: number;
+  maritalStatus: string | null;
+  spouseImmobilierAmount: number | null;
+  spouseScpiAmount: number | null;
+  spouseDebtAmount: number | null;
 }
 
-export function IfiCard({ properties, immobilierAmount, scpiAmount }: IfiCardProps) {
+export function IfiCard({
+  properties,
+  immobilierAmount,
+  scpiAmount,
+  maritalStatus,
+  spouseImmobilierAmount,
+  spouseScpiAmount,
+  spouseDebtAmount,
+}: IfiCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const result = computeIfi(properties, immobilierAmount, scpiAmount);
+  const isJointHousehold =
+    maritalStatus !== null &&
+    isMaritalStatus(maritalStatus) &&
+    impliesJointIfiHousehold(maritalStatus);
+  const result = computeIfi(
+    properties,
+    immobilierAmount,
+    scpiAmount,
+    isJointHousehold
+      ? {
+          immobilierAmount: spouseImmobilierAmount ?? 0,
+          scpiAmount: spouseScpiAmount ?? 0,
+          debtAmount: spouseDebtAmount ?? 0,
+        }
+      : undefined
+  );
 
   return (
     <div className="border-b border-line pb-4">
@@ -38,6 +66,11 @@ export function IfiCard({ properties, immobilierAmount, scpiAmount }: IfiCardPro
             cette base n&apos;est déductible qu&apos;à 50 % (art. 973 II CGI).
           </p>
           <p className="mt-2">
+            L&apos;IFI se déclare par foyer fiscal : pour un couple marié, pacsé, ou
+            en concubinage notoire, le patrimoine immobilier du conjoint est ajouté
+            à celui du client pour le calcul du seuil et du barème (art. 964 CGI).
+          </p>
+          <p className="mt-2">
             Limites de ce simulateur : démembrement (usufruit/nue-propriété), biens
             professionnels exonérés, détention via une société autre qu&apos;une
             SCPI, et plafonnement IFI + IR à 75 % des revenus ne sont pas modélisés.
@@ -48,6 +81,12 @@ export function IfiCard({ properties, immobilierAmount, scpiAmount }: IfiCardPro
           </p>
         </InfoTooltip>
       </div>
+
+      {result.isHousehold && (
+        <p className="mt-1 text-xs text-slate">
+          Calcul au niveau du foyer fiscal (avec conjoint).
+        </p>
+      )}
 
       {!result.isTaxable ? (
         <p className="mt-2 text-sm text-slate">

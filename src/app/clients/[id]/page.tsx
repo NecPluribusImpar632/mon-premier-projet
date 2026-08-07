@@ -44,6 +44,13 @@ export default async function ClientDetailPage({
       initialTab={tab && isClientTab(tab) ? tab : "overview"}
       initialRiskProfile={client.riskProfile}
       initialNotes={client.notes}
+      initialMaritalStatus={client.maritalStatus}
+      initialSpouseName={client.spouseName}
+      initialSpouseImmobilierAmount={client.spouseImmobilierAmount}
+      initialSpouseScpiAmount={client.spouseScpiAmount}
+      initialSpouseDebtAmount={client.spouseDebtAmount}
+      initialMinorChildrenCount={client.minorChildrenCount}
+      initialAdultChildrenCount={client.adultChildrenCount}
       amounts={amounts}
       actionsBreakdown={actionsBreakdownFromClient(client)}
       initialProfessionalToolMainIncome={professionalToolMainIncomeFromClient(client)}

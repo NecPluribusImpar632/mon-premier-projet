@@ -12,6 +12,7 @@ import { ClientSidebar } from "@/components/client/ClientSidebar";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import type { ClientTab } from "@/lib/client/clientTabs";
 import { ClientProfile } from "@/components/client/ClientProfile";
+import { FoyerFiscalSection } from "@/components/client/FoyerFiscalSection";
 import { WealthGoalSection } from "@/components/client/WealthGoalSection";
 import { RetirementGoalSection } from "@/components/client/RetirementGoalSection";
 import { WealthSummary } from "@/components/allocation/WealthSummary";
@@ -32,6 +33,14 @@ interface ClientDetailTabsProps {
 
   initialRiskProfile: string | null;
   initialNotes: string | null;
+
+  initialMaritalStatus: string | null;
+  initialSpouseName: string | null;
+  initialSpouseImmobilierAmount: number | null;
+  initialSpouseScpiAmount: number | null;
+  initialSpouseDebtAmount: number | null;
+  initialMinorChildrenCount: number | null;
+  initialAdultChildrenCount: number | null;
 
   amounts: Record<string, number>;
   actionsBreakdown: ActionsProfileBreakdown;
@@ -60,6 +69,13 @@ export function ClientDetailTabs({
   initialTab,
   initialRiskProfile,
   initialNotes,
+  initialMaritalStatus,
+  initialSpouseName,
+  initialSpouseImmobilierAmount,
+  initialSpouseScpiAmount,
+  initialSpouseDebtAmount,
+  initialMinorChildrenCount,
+  initialAdultChildrenCount,
   amounts,
   actionsBreakdown,
   initialProfessionalToolMainIncome,
@@ -110,6 +126,16 @@ export function ClientDetailTabs({
                 initialRiskProfile={initialRiskProfile}
                 initialNotes={initialNotes}
               />
+              <FoyerFiscalSection
+                clientId={clientId}
+                initialMaritalStatus={initialMaritalStatus}
+                initialSpouseName={initialSpouseName}
+                initialSpouseImmobilierAmount={initialSpouseImmobilierAmount}
+                initialSpouseScpiAmount={initialSpouseScpiAmount}
+                initialSpouseDebtAmount={initialSpouseDebtAmount}
+                initialMinorChildrenCount={initialMinorChildrenCount}
+                initialAdultChildrenCount={initialAdultChildrenCount}
+              />
               <WealthSummary
                 financialWealthTotal={financialWealthTotal}
                 immobilierValue={immobilierValue}
@@ -120,6 +146,10 @@ export function ClientDetailTabs({
                 properties={properties}
                 immobilierAmount={amounts.immobilier ?? 0}
                 scpiAmount={amounts.scpi ?? 0}
+                maritalStatus={initialMaritalStatus}
+                spouseImmobilierAmount={initialSpouseImmobilierAmount}
+                spouseScpiAmount={initialSpouseScpiAmount}
+                spouseDebtAmount={initialSpouseDebtAmount}
               />
             </div>
           )}

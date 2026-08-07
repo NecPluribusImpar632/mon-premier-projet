@@ -43,6 +43,13 @@ model Client {
   expectedAnnualReturnPct      Float?
   wealthGoalAmount             Float?
   wealthGoalAge                Int?
+  maritalStatus                String?
+  spouseName                   String?
+  spouseImmobilierAmount       Float?
+  spouseScpiAmount             Float?
+  spouseDebtAmount             Float?
+  minorChildrenCount           Int?
+  adultChildrenCount           Int?
   createdAt                    DateTime   @default(now())
   updatedAt                    DateTime   @updatedAt
   properties                   Property[]

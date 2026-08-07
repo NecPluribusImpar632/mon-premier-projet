@@ -38,8 +38,15 @@ export interface IfiBracketResult {
   taxForBracket: number;
 }
 
+export interface IfiSpouseInput {
+  immobilierAmount: number;
+  scpiAmount: number;
+  debtAmount: number;
+}
+
 export interface IfiResult {
   hasDetailedProperties: boolean;
+  isHousehold: boolean;
   grossBase: number;
   primaryResidenceAbatementAmount: number;
   rawDebt: number;
@@ -59,6 +66,11 @@ export interface IfiResult {
  * montant Immobilier manuel sans abattement ni déduction de dette (aucune donnée de
  * prêt n'existe dans ce cas). Les parts de SCPI sont incluses à leur montant déclaré.
  *
+ * L'IFI se déclare par foyer fiscal (art. 964 CGI) : pour un couple marié, pacsé, ou
+ * en concubinage notoire, `spouse` porte le patrimoine du conjoint (déclaré à la main,
+ * pas de bien détaillé pour lui) — il s'ajoute inconditionnellement à la base et à la
+ * dette du client, indépendamment du fait que celui-ci ait ou non des biens détaillés.
+ *
  * Hors périmètre (non modélisé) : démembrement, biens professionnels exonérés,
  * détention via une société autre qu'une SCPI, plafonnement IFI + IR à 75 % des
  * revenus (art. 979 CGI).
@@ -66,9 +78,11 @@ export interface IfiResult {
 export function computeIfi(
   properties: PropertyWithLoans[],
   manualImmobilierAmount: number,
-  scpiAmount: number
+  scpiAmount: number,
+  spouse?: IfiSpouseInput
 ): IfiResult {
   const hasDetailedProperties = properties.length > 0;
+  const isHousehold = spouse !== undefined;
 
   let realEstateBase = manualImmobilierAmount;
   let primaryResidenceAbatementAmount = 0;
@@ -88,7 +102,9 @@ export function computeIfi(
     rawDebt = properties.reduce((sum, property) => sum + totalRemainingDebt(property), 0);
   }
 
-  const grossBase = realEstateBase + scpiAmount;
+  const grossBase =
+    realEstateBase + scpiAmount + (spouse?.immobilierAmount ?? 0) + (spouse?.scpiAmount ?? 0);
+  rawDebt += spouse?.debtAmount ?? 0;
 
   let deductibleDebt = rawDebt;
   let debtCapApplied = false;
@@ -105,6 +121,7 @@ export function computeIfi(
   if (netTaxableWealth < IFI_THRESHOLD) {
     return {
       hasDetailedProperties,
+      isHousehold,
       grossBase,
       primaryResidenceAbatementAmount,
       rawDebt,
@@ -139,6 +156,7 @@ export function computeIfi(
 
   return {
     hasDetailedProperties,
+    isHousehold,
     grossBase,
     primaryResidenceAbatementAmount,
     rawDebt,
