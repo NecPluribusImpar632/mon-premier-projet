@@ -10,10 +10,9 @@ interface NetWorthProjectionChartProps {
 
 const WIDTH = 600;
 const HEIGHT = 220;
-const PADDING = { top: 12, right: 12, bottom: 24, left: 64 };
+const PADDING = { top: 18, right: 100, bottom: 28, left: 8 };
 const PLOT_WIDTH = WIDTH - PADDING.left - PADDING.right;
 const PLOT_HEIGHT = HEIGHT - PADDING.top - PADDING.bottom;
-const PLOT_BOTTOM_Y = PADDING.top + PLOT_HEIGHT;
 
 interface Point {
   x: number;
@@ -24,23 +23,6 @@ interface Point {
  * validated against `--color-slate` with the dataviz skill's palette checker
  * (CVD ΔE 9.7/10.6, normal-vision ΔE 15.3, all pass). Scoped to this chart only. */
 const CHART_ACCENT = "#0f9d6e";
-
-/** Snaps a value range to ~3 round, human-readable ticks (1/2/2.5/5 x 10^n steps)
- * instead of raw data-derived numbers. */
-function niceTicks(min: number, max: number, count = 3): number[] {
-  const span = max - min || 1;
-  const rawStep = span / (count - 1);
-  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
-  const normalized = rawStep / magnitude;
-  const niceNormalized = normalized < 1.5 ? 1 : normalized < 3.5 ? 2.5 : normalized < 7.5 ? 5 : 10;
-  const step = niceNormalized * magnitude;
-  const niceMin = Math.floor(min / step) * step;
-  const ticks: number[] = [];
-  for (let v = niceMin; v <= max + step * 0.001; v += step) {
-    ticks.push(Math.round(v));
-  }
-  return ticks;
-}
 
 /** Catmull-Rom-to-Bezier smoothing (uniform, 1/6 tension) — turns the polyline
  * into a curve without overshoot on the mostly-monotonic series this chart
@@ -65,6 +47,18 @@ function smoothPath(pts: Point[]): string {
   return d;
 }
 
+/** Body of a smoothed path (no leading M) — for appending a reversed curve to
+ * an already-open path where the cursor is already at the right start point. */
+function smoothPathBody(pts: Point[]): string {
+  return smoothPath(pts).replace(/^M[-\d.]+,[-\d.]+\s*/, "");
+}
+
+function horizonLabel(years: number): string {
+  if (years <= 0) return "Aujourd'hui";
+  if (years === 1) return "Dans 1 an";
+  return `Dans ${years} ans`;
+}
+
 export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps) {
   const gradientId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -75,12 +69,9 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
   const allValues = points.flatMap((p) => [p.netWorth, p.realNetWorth]);
   const rawMin = Math.min(...allValues);
   const rawMax = Math.max(...allValues);
-  const ticks = niceTicks(rawMin, rawMax);
-  const domainMin = Math.min(rawMin, ticks[0]);
-  const domainMax = Math.max(rawMax, ticks[ticks.length - 1]);
-  const breathingRoom = (domainMax - domainMin) * 0.08 || Math.abs(domainMax) * 0.08 || 1;
-  const minValue = domainMin - breathingRoom;
-  const maxValue = domainMax + breathingRoom;
+  const breathingRoom = (rawMax - rawMin) * 0.12 || Math.abs(rawMax) * 0.12 || 1;
+  const minValue = rawMin - breathingRoom;
+  const maxValue = rawMax + breathingRoom;
   const valueRange = maxValue - minValue || 1;
 
   const xForIndex = (index: number) =>
@@ -92,12 +83,27 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
   const realPts = points.map((p, i) => ({ x: xForIndex(i), y: yForValue(p.realNetWorth) }));
   const nominalPath = smoothPath(nominalPts);
   const realPath = smoothPath(realPts);
-  const areaPath =
-    `${nominalPath} L${nominalPts[nominalPts.length - 1].x.toFixed(1)},${PLOT_BOTTOM_Y}` +
-    ` L${nominalPts[0].x.toFixed(1)},${PLOT_BOTTOM_Y} Z`;
 
-  const yearLabelStride = Math.max(1, Math.ceil(points.length / 8));
+  // The band between the two curves, not a fill down to a floor axis: the gap
+  // between nominal and real net worth is the one part of this data that's
+  // genuinely dynamic (it widens with cumulative inflation), so it's what
+  // earns the visual weight instead of a decorative area-under-the-line.
+  const realLast = realPts[realPts.length - 1];
+  const gapAreaPath =
+    `${nominalPath} L${realLast.x.toFixed(1)},${realLast.y.toFixed(1)} ` +
+    `${smoothPathBody([...realPts].reverse())} Z`;
+
   const lastIndex = points.length - 1;
+  const midIndex = Math.round(lastIndex / 2);
+  const xLabelIndices =
+    lastIndex <= 2 ? [0, lastIndex] : Array.from(new Set([0, midIndex, lastIndex]));
+
+  // Single reference hairline: today's starting value, not an arbitrary tick —
+  // it gives the eye a fixed anchor to read growth against, editorial-style,
+  // instead of a full library-default grid.
+  const startY = yForValue(points[0].netWorth);
+
+  const inflationGap = points[lastIndex].netWorth - points[lastIndex].realNetWorth;
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -118,7 +124,7 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
   const hovered = hoveredIndex !== null ? points[hoveredIndex] : null;
   const hoveredXPct = hoveredIndex !== null ? (xForIndex(hoveredIndex) / WIDTH) * 100 : 0;
   // Clamp so the tooltip box never overflows the chart's left/right edge.
-  const tooltipLeftPct = Math.min(Math.max(hoveredXPct, 12), 88);
+  const tooltipLeftPct = Math.min(Math.max(hoveredXPct, 12), 74);
   // Anchor just above whichever line sits higher at this point, clamped to the
   // container's own top — keeps the tooltip near the cursor instead of always
   // jumping to the container's top edge, where it can crowd whatever sits
@@ -126,6 +132,18 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
   const tooltipTopPct = hovered
     ? Math.max(0, (Math.min(yForValue(hovered.netWorth), yForValue(hovered.realNetWorth)) / HEIGHT) * 100 - 4)
     : 0;
+
+  // End labels sit beside their own dot; if the gap between the two final
+  // values is too tight the text collides, so nudge them apart a touch
+  // instead of letting them overlap.
+  const nominalEndY = nominalPts[lastIndex].y;
+  const realEndY = realPts[lastIndex].y;
+  const minLabelGap = 30;
+  const endLabelGap = realEndY - nominalEndY;
+  const endLabelPush =
+    endLabelGap < minLabelGap ? (minLabelGap - endLabelGap) / 2 : 0;
+  const nominalLabelY = nominalEndY - endLabelPush;
+  const realLabelY = realEndY + endLabelPush;
 
   return (
     <div className="w-full">
@@ -143,24 +161,21 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={CHART_ACCENT} stopOpacity={0.1} />
-              <stop offset="100%" stopColor={CHART_ACCENT} stopOpacity={0} />
+              <stop offset="0%" stopColor="var(--color-slate)" stopOpacity={0.16} />
+              <stop offset="100%" stopColor="var(--color-slate)" stopOpacity={0.05} />
             </linearGradient>
           </defs>
 
-          {ticks.map((tick) => (
-            <line
-              key={tick}
-              x1={PADDING.left}
-              y1={yForValue(tick)}
-              x2={WIDTH - PADDING.right}
-              y2={yForValue(tick)}
-              stroke="var(--color-line)"
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
+          <line
+            x1={PADDING.left}
+            y1={startY}
+            x2={WIDTH - PADDING.right}
+            y2={startY}
+            stroke="var(--color-line)"
+            vectorEffect="non-scaling-stroke"
+          />
 
-          <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
+          <path d={gapAreaPath} fill={`url(#${gradientId})`} stroke="none" />
 
           <path
             d={realPath}
@@ -187,7 +202,7 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
               x1={xForIndex(hoveredIndex)}
               y1={PADDING.top}
               x2={xForIndex(hoveredIndex)}
-              y2={PLOT_BOTTOM_Y}
+              y2={PADDING.top + PLOT_HEIGHT}
               stroke="var(--color-slate)"
               strokeWidth={1}
               strokeOpacity={0.35}
@@ -199,43 +214,52 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
         {/* Text and circular markers are rendered as HTML, not inside the SVG:
             preserveAspectRatio="none" scales x/y non-uniformly, which would
             otherwise squash/stretch glyphs and turn circles into ellipses. */}
-        {ticks.map((tick) => (
+        {xLabelIndices.map((i) => (
           <span
-            key={tick}
-            className="pointer-events-none absolute -translate-y-1/2 whitespace-nowrap text-right text-[9px] text-slate"
+            key={points[i].year}
+            className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[10px] text-slate"
             style={{
-              left: 0,
-              width: `${((PADDING.left - 8) / WIDTH) * 100}%`,
-              top: `${(yForValue(tick) / HEIGHT) * 100}%`,
+              left: `${(xForIndex(i) / WIDTH) * 100}%`,
+              top: `${((HEIGHT - 16) / HEIGHT) * 100}%`,
             }}
           >
-            {formatCurrencyCompact(tick)}
+            {horizonLabel(points[i].year)}
           </span>
         ))}
 
-        {points.map((p, i) =>
-          i % yearLabelStride === 0 || i === points.length - 1 ? (
-            <span
-              key={p.year}
-              className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[9px] text-slate"
-              style={{
-                left: `${(xForIndex(i) / WIDTH) * 100}%`,
-                top: `${((HEIGHT - 14) / HEIGHT) * 100}%`,
-              }}
-            >
-              A{p.year}
-            </span>
-          ) : null
-        )}
+        {/* Direct end labels double as the legend: at the right edge the two
+            series have separated enough to read the color + name together,
+            so a distant swatch-and-text legend would only repeat this. */}
+        <div
+          className="pointer-events-none absolute -translate-y-1/2 whitespace-nowrap leading-tight"
+          style={{ left: `${(xForIndex(lastIndex) / WIDTH) * 100}%`, top: `${(nominalLabelY / HEIGHT) * 100}%`, marginLeft: 8 }}
+        >
+          <div className="font-serif text-sm text-ink">
+            {formatCurrencyCompact(points[lastIndex].netWorth)}
+          </div>
+          <div className="text-[10px] text-slate">courants</div>
+        </div>
+        <div
+          className="pointer-events-none absolute -translate-y-1/2 whitespace-nowrap leading-tight"
+          style={{ left: `${(xForIndex(lastIndex) / WIDTH) * 100}%`, top: `${(realLabelY / HEIGHT) * 100}%`, marginLeft: 8 }}
+        >
+          <div className="text-xs text-slate">{formatCurrencyCompact(points[lastIndex].realNetWorth)}</div>
+          <div className="text-[10px] text-slate">constants</div>
+        </div>
 
-        {/* End marker on the primary series — a direct label needs no repeated
-            per-point dots, just the one endpoint the eye lands on. */}
         <span
           className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface"
           style={{
             left: `${(xForIndex(lastIndex) / WIDTH) * 100}%`,
-            top: `${(yForValue(points[lastIndex].netWorth) / HEIGHT) * 100}%`,
+            top: `${(nominalEndY / HEIGHT) * 100}%`,
             backgroundColor: CHART_ACCENT,
+          }}
+        />
+        <span
+          className="pointer-events-none absolute h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate ring-2 ring-surface"
+          style={{
+            left: `${(xForIndex(lastIndex) / WIDTH) * 100}%`,
+            top: `${(realEndY / HEIGHT) * 100}%`,
           }}
         />
 
@@ -286,16 +310,12 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
           </>
         )}
       </div>
-      <div className="mt-2 flex items-center gap-4 text-xs text-slate">
-        <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded-full" style={{ backgroundColor: CHART_ACCENT }} />
-          Patrimoine net (euros courants)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded-full border-t border-dashed border-slate" />
-          En euros constants
-        </span>
-      </div>
+
+      {inflationGap > 1 && (
+        <p className="mt-2 text-xs text-slate">
+          Écart lié à l&apos;inflation à l&apos;échéance : {formatCurrency(inflationGap)}
+        </p>
+      )}
     </div>
   );
 }
