@@ -20,6 +20,28 @@ interface Point {
   y: number;
 }
 
+/** Chart-specific accent — more saturated than the app-wide navy `--color-emerald`,
+ * validated against `--color-slate` with the dataviz skill's palette checker
+ * (CVD ΔE 9.7/10.6, normal-vision ΔE 15.3, all pass). Scoped to this chart only. */
+const CHART_ACCENT = "#0f9d6e";
+
+/** Snaps a value range to ~3 round, human-readable ticks (1/2/2.5/5 x 10^n steps)
+ * instead of raw data-derived numbers. */
+function niceTicks(min: number, max: number, count = 3): number[] {
+  const span = max - min || 1;
+  const rawStep = span / (count - 1);
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const normalized = rawStep / magnitude;
+  const niceNormalized = normalized < 1.5 ? 1 : normalized < 3.5 ? 2.5 : normalized < 7.5 ? 5 : 10;
+  const step = niceNormalized * magnitude;
+  const niceMin = Math.floor(min / step) * step;
+  const ticks: number[] = [];
+  for (let v = niceMin; v <= max + step * 0.001; v += step) {
+    ticks.push(Math.round(v));
+  }
+  return ticks;
+}
+
 /** Catmull-Rom-to-Bezier smoothing (uniform, 1/6 tension) — turns the polyline
  * into a curve without overshoot on the mostly-monotonic series this chart
  * plots, and reads far less "spreadsheet" than straight segments. */
@@ -53,9 +75,12 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
   const allValues = points.flatMap((p) => [p.netWorth, p.realNetWorth]);
   const rawMin = Math.min(...allValues);
   const rawMax = Math.max(...allValues);
-  const valuePadding = (rawMax - rawMin) * 0.1 || Math.abs(rawMax) * 0.1 || 1;
-  const minValue = rawMin - valuePadding;
-  const maxValue = rawMax + valuePadding;
+  const ticks = niceTicks(rawMin, rawMax);
+  const domainMin = Math.min(rawMin, ticks[0]);
+  const domainMax = Math.max(rawMax, ticks[ticks.length - 1]);
+  const breathingRoom = (domainMax - domainMin) * 0.08 || Math.abs(domainMax) * 0.08 || 1;
+  const minValue = domainMin - breathingRoom;
+  const maxValue = domainMax + breathingRoom;
   const valueRange = maxValue - minValue || 1;
 
   const xForIndex = (index: number) =>
@@ -71,7 +96,6 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
     `${nominalPath} L${nominalPts[nominalPts.length - 1].x.toFixed(1)},${PLOT_BOTTOM_Y}` +
     ` L${nominalPts[0].x.toFixed(1)},${PLOT_BOTTOM_Y} Z`;
 
-  const ticks = [minValue, (minValue + maxValue) / 2, maxValue];
   const yearLabelStride = Math.max(1, Math.ceil(points.length / 8));
   const lastIndex = points.length - 1;
 
@@ -119,8 +143,8 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-emerald)" stopOpacity={0.16} />
-              <stop offset="100%" stopColor="var(--color-emerald)" stopOpacity={0} />
+              <stop offset="0%" stopColor={CHART_ACCENT} stopOpacity={0.1} />
+              <stop offset="100%" stopColor={CHART_ACCENT} stopOpacity={0} />
             </linearGradient>
           </defs>
 
@@ -151,7 +175,7 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
           <path
             d={nominalPath}
             fill="none"
-            stroke="var(--color-emerald)"
+            stroke={CHART_ACCENT}
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -207,20 +231,22 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
         {/* End marker on the primary series — a direct label needs no repeated
             per-point dots, just the one endpoint the eye lands on. */}
         <span
-          className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald ring-2 ring-surface"
+          className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface"
           style={{
             left: `${(xForIndex(lastIndex) / WIDTH) * 100}%`,
             top: `${(yForValue(points[lastIndex].netWorth) / HEIGHT) * 100}%`,
+            backgroundColor: CHART_ACCENT,
           }}
         />
 
         {hovered && hoveredIndex !== null && (
           <>
             <span
-              className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald ring-2 ring-surface"
+              className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface"
               style={{
                 left: `${hoveredXPct}%`,
                 top: `${(yForValue(hovered.netWorth) / HEIGHT) * 100}%`,
+                backgroundColor: CHART_ACCENT,
               }}
             />
             <span
@@ -235,14 +261,23 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
               style={{ left: `${tooltipLeftPct}%`, top: `${tooltipTopPct}%` }}
             >
               <p className="font-medium text-ink">Année {hovered.year}</p>
-              <p className="flex items-center justify-between gap-3 text-emerald-strong">
-                <span>Courants</span>
+              <p className="flex items-center justify-between gap-3 text-ink">
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="h-0.5 w-3 rounded-full"
+                    style={{ backgroundColor: CHART_ACCENT }}
+                  />
+                  Courants
+                </span>
                 <span className="font-mono tabular-nums">
                   {formatCurrency(hovered.netWorth)}
                 </span>
               </p>
               <p className="flex items-center justify-between gap-3 text-slate">
-                <span>Constants</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-0.5 w-3 rounded-full border-t border-dashed border-slate" />
+                  Constants
+                </span>
                 <span className="font-mono tabular-nums">
                   {formatCurrency(hovered.realNetWorth)}
                 </span>
@@ -253,7 +288,7 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
       </div>
       <div className="mt-2 flex items-center gap-4 text-xs text-slate">
         <span className="flex items-center gap-1.5">
-          <span className="h-0.5 w-4 rounded-full bg-emerald" />
+          <span className="h-0.5 w-4 rounded-full" style={{ backgroundColor: CHART_ACCENT }} />
           Patrimoine net (euros courants)
         </span>
         <span className="flex items-center gap-1.5">
