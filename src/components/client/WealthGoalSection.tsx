@@ -72,7 +72,7 @@ export function WealthGoalSection({
   );
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-wrap gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-ink">
