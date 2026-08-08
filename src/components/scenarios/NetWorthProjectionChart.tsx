@@ -1,6 +1,12 @@
 "use client";
 
-import { useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { ProjectionYearPoint } from "@/lib/scenarios/projection";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format/currency";
 
@@ -62,7 +68,77 @@ function horizonLabel(years: number): string {
 export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps) {
   const gradientId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const nominalLabelRef = useRef<HTMLDivElement>(null);
+  const realLabelRef = useRef<HTMLDivElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [tooltipOffset, setTooltipOffset] = useState({ x: 0, y: 0 });
+
+  // Percentage-based positioning can't know the tooltip's actual rendered
+  // size (it varies with the values shown) or the exact spot the two
+  // permanent end-labels land at (it varies with the data's shape), so it
+  // can't guarantee no overflow/overlap on its own — measure the real boxes
+  // after each render and nudge the tooltip back in if it clips the
+  // container on either axis, or collides with the end-labels. Runs only
+  // when the hovered point (or the data behind it) changes, not on every
+  // render — it reads back whatever offset is currently applied to recover
+  // the tooltip's natural, unshifted position first, so it can't fight its
+  // own correction.
+  useLayoutEffect(() => {
+    const tooltipEl = tooltipRef.current;
+    const containerEl = containerRef.current;
+    if (!tooltipEl || !containerEl) return;
+    const tooltipRect = tooltipEl.getBoundingClientRect();
+    const containerRect = containerEl.getBoundingClientRect();
+    const margin = 4;
+    setTooltipOffset((prevOffset) => {
+      const natural = {
+        left: tooltipRect.left - prevOffset.x,
+        right: tooltipRect.right - prevOffset.x,
+        top: tooltipRect.top - prevOffset.y,
+        bottom: tooltipRect.bottom - prevOffset.y,
+      };
+
+      let dx = 0;
+      if (natural.right > containerRect.right - margin) {
+        dx = containerRect.right - margin - natural.right;
+      } else if (natural.left < containerRect.left + margin) {
+        dx = containerRect.left + margin - natural.left;
+      }
+
+      let dy = 0;
+      if (natural.top < containerRect.top + margin) {
+        dy = containerRect.top + margin - natural.top;
+      }
+
+      const shiftedTop = natural.top + dy;
+      const shiftedBottom = natural.bottom + dy;
+      const shiftedLeft = natural.left + dx;
+      const shiftedRight = natural.right + dx;
+      const labelRects = [nominalLabelRef.current, realLabelRef.current]
+        .filter((el): el is HTMLDivElement => el !== null)
+        .map((el) => el.getBoundingClientRect());
+      const collidingBottoms = labelRects
+        .filter(
+          (r) =>
+            shiftedLeft < r.right + margin &&
+            shiftedRight > r.left - margin &&
+            shiftedTop < r.bottom + margin &&
+            shiftedBottom > r.top - margin
+        )
+        .map((r) => r.bottom);
+      if (collidingBottoms.length > 0) {
+        // Can't fit above the end-labels without also clipping the
+        // container's top — flip below them instead.
+        dy = Math.max(dy, Math.max(...collidingBottoms) + margin - natural.top);
+      }
+      if (natural.bottom + dy > containerRect.bottom - margin) {
+        dy = containerRect.bottom - margin - natural.bottom;
+      }
+
+      return dx === prevOffset.x && dy === prevOffset.y ? prevOffset : { x: dx, y: dy };
+    });
+  }, [hoveredIndex, points]);
 
   if (points.length < 2) return null;
 
@@ -121,18 +197,6 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
     setHoveredIndex(nearest);
   }
 
-  const hovered = hoveredIndex !== null ? points[hoveredIndex] : null;
-  const hoveredXPct = hoveredIndex !== null ? (xForIndex(hoveredIndex) / WIDTH) * 100 : 0;
-  // Clamp so the tooltip box never overflows the chart's left/right edge.
-  const tooltipLeftPct = Math.min(Math.max(hoveredXPct, 12), 74);
-  // Anchor just above whichever line sits higher at this point, clamped to the
-  // container's own top — keeps the tooltip near the cursor instead of always
-  // jumping to the container's top edge, where it can crowd whatever sits
-  // just above the chart.
-  const tooltipTopPct = hovered
-    ? Math.max(0, (Math.min(yForValue(hovered.netWorth), yForValue(hovered.realNetWorth)) / HEIGHT) * 100 - 4)
-    : 0;
-
   // End labels sit beside their own dot; if the gap between the two final
   // values is too tight the text collides, so nudge them apart a touch
   // instead of letting them overlap.
@@ -144,6 +208,22 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
     endLabelGap < minLabelGap ? (minLabelGap - endLabelGap) / 2 : 0;
   const nominalLabelY = nominalEndY - endLabelPush;
   const realLabelY = realEndY + endLabelPush;
+
+  const hovered = hoveredIndex !== null ? points[hoveredIndex] : null;
+  const hoveredXPct = hoveredIndex !== null ? (xForIndex(hoveredIndex) / WIDTH) * 100 : 0;
+  // A starting hint for which way to grow the box — near either edge it
+  // anchors by that edge instead of centering. The measured effect above is
+  // what actually guarantees no overflow/overlap; this just gets it close
+  // on the first paint so the correction is usually a small nudge.
+  const tooltipEdgeClass =
+    hoveredXPct > 70 ? "-translate-x-full" : hoveredXPct < 15 ? "" : "-translate-x-1/2";
+  // Anchor just above whichever line sits higher at this point — keeps the
+  // tooltip near the cursor instead of always jumping to the container's top
+  // edge. The measured effect nudges it clear of the container edges and the
+  // permanent end-labels if this natural position collides with either.
+  const tooltipTopPct = hovered
+    ? Math.max(0, (Math.min(yForValue(hovered.netWorth), yForValue(hovered.realNetWorth)) / HEIGHT) * 100 - 4)
+    : 0;
 
   return (
     <div className="w-full">
@@ -214,23 +294,31 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
         {/* Text and circular markers are rendered as HTML, not inside the SVG:
             preserveAspectRatio="none" scales x/y non-uniformly, which would
             otherwise squash/stretch glyphs and turn circles into ellipses. */}
-        {xLabelIndices.map((i) => (
-          <span
-            key={points[i].year}
-            className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[10px] text-slate"
-            style={{
-              left: `${(xForIndex(i) / WIDTH) * 100}%`,
-              top: `${((HEIGHT - 16) / HEIGHT) * 100}%`,
-            }}
-          >
-            {horizonLabel(points[i].year)}
-          </span>
-        ))}
+        {/* The first/last labels anchor by their edge, not their center — a
+            centered label on a point that sits at the container's own edge
+            would have half its text clipped off-screen. */}
+        {xLabelIndices.map((i) => {
+          const edgeClass =
+            i === 0 ? "" : i === lastIndex ? "-translate-x-full" : "-translate-x-1/2";
+          return (
+            <span
+              key={points[i].year}
+              className={`pointer-events-none absolute whitespace-nowrap text-[10px] text-slate ${edgeClass}`}
+              style={{
+                left: `${(xForIndex(i) / WIDTH) * 100}%`,
+                top: `${((HEIGHT - 16) / HEIGHT) * 100}%`,
+              }}
+            >
+              {horizonLabel(points[i].year)}
+            </span>
+          );
+        })}
 
         {/* Direct end labels double as the legend: at the right edge the two
             series have separated enough to read the color + name together,
             so a distant swatch-and-text legend would only repeat this. */}
         <div
+          ref={nominalLabelRef}
           className="pointer-events-none absolute -translate-y-1/2 whitespace-nowrap leading-tight"
           style={{ left: `${(xForIndex(lastIndex) / WIDTH) * 100}%`, top: `${(nominalLabelY / HEIGHT) * 100}%`, marginLeft: 8 }}
         >
@@ -240,6 +328,7 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
           <div className="text-[10px] text-slate">courants</div>
         </div>
         <div
+          ref={realLabelRef}
           className="pointer-events-none absolute -translate-y-1/2 whitespace-nowrap leading-tight"
           style={{ left: `${(xForIndex(lastIndex) / WIDTH) * 100}%`, top: `${(realLabelY / HEIGHT) * 100}%`, marginLeft: 8 }}
         >
@@ -281,8 +370,14 @@ export function NetWorthProjectionChart({ points }: NetWorthProjectionChartProps
               }}
             />
             <div
-              className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs shadow-md"
-              style={{ left: `${tooltipLeftPct}%`, top: `${tooltipTopPct}%` }}
+              ref={tooltipRef}
+              className={`pointer-events-none absolute z-10 -translate-y-full whitespace-nowrap rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs shadow-md ${tooltipEdgeClass}`}
+              style={{
+                left: `${hoveredXPct}%`,
+                top: `${tooltipTopPct}%`,
+                marginLeft: tooltipOffset.x,
+                marginTop: tooltipOffset.y,
+              }}
             >
               <p className="font-medium text-ink">Année {hovered.year}</p>
               <p className="flex items-center justify-between gap-3 text-ink">

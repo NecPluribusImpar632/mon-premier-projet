@@ -7,6 +7,7 @@ import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { NetWorthProjectionChart } from "@/components/scenarios/NetWorthProjectionChart";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
@@ -192,38 +193,38 @@ export function WealthGoalSection({
         </>
       )}
 
-      <div className="flex flex-col gap-2 border-t border-line pt-3 text-xs text-slate">
-        <p className="font-medium text-ink">Méthodologie</p>
-        <p>
-          Hypothèses de rendement <strong>réel</strong>{" "}
-          annuel par classe d&apos;actif —
-          des ordres de grandeur consensuels de long terme, pas calibrés sur données
-          historiques françaises comme le stress test immobilier (qui, lui, s&apos;appuie
-          sur les indices Notaires-INSEE) : Actions 5 % (indiciel) / 3,5 % (défensif) /
-          6 % (croissance), pondérés par le profil actions du client ; Obligations
-          1,5 % ; SCPI 4 % ; Liquidités et Matières premières 0 %. Immobilier direct :
-          0,5 % d&apos;appréciation (ordre de grandeur Friggit/IGEDD sur longue période)
-          plus, si le bien est loué, un rendement locatif net calculé à partir du loyer
-          réellement saisi sur ce bien, moins 30 % pour charges/copropriété/entretien —
-          la fiscalité n&apos;est pas incluse ici, elle dépend du régime choisi (voir le
-          comparateur fiscal du bien). Un bien non loué ne reçoit que l&apos;appréciation.
-        </p>
-        <p>
-          Private Equity : 6,5 % <strong>nominal</strong>{" "}
-          (pas réel), avec la même
-          décote d&apos;illiquidité que le stress test (20 % par défaut) appliquée en
-          continu sur la valeur projetée — une simplification : en pratique la décote ne
-          s&apos;applique qu&apos;au moment d&apos;une cession, pas chaque année.
-          Entreprise/outil professionnel et Autres : non projetés, valeur figée.
-        </p>
-        <p>
-          Toutes les hypothèses réelles sont converties en nominal via le taux
-          d&apos;inflation ci-dessus, pour pouvoir les additionner au Private Equity et
-          exprimer l&apos;objectif en euros courants. La dette continue de s&apos;amortir
-          selon les prêts existants ; un éventuel crédit lombard (adossé au portefeuille
-          financier plutôt qu&apos;à un bien) n&apos;est pas modélisé, l&apos;application
-          ne suit que les prêts immobiliers.
-        </p>
+      <div className="flex items-center gap-1.5 border-t border-line pt-3 text-xs text-slate">
+        <span>Méthodologie</span>
+        <InfoTooltip>
+          <p className="mb-2">
+            Hypothèses de rendement <strong>réel</strong> annuel par classe d&apos;actif —
+            des ordres de grandeur consensuels de long terme, pas calibrés sur données
+            historiques françaises comme le stress test immobilier (qui, lui, s&apos;appuie
+            sur les indices Notaires-INSEE) : Actions 5 % (indiciel) / 3,5 % (défensif) /
+            6 % (croissance), pondérés par le profil actions du client ; Obligations
+            1,5 % ; SCPI 4 % ; Liquidités et Matières premières 0 %. Immobilier direct :
+            0,5 % d&apos;appréciation (ordre de grandeur Friggit/IGEDD sur longue période)
+            plus, si le bien est loué, un rendement locatif net calculé à partir du loyer
+            réellement saisi sur ce bien, moins 30 % pour charges/copropriété/entretien —
+            la fiscalité n&apos;est pas incluse ici, elle dépend du régime choisi (voir le
+            comparateur fiscal du bien). Un bien non loué ne reçoit que l&apos;appréciation.
+          </p>
+          <p className="mb-2">
+            Private Equity : 6,5 % <strong>nominal</strong> (pas réel), avec la même
+            décote d&apos;illiquidité que le stress test (20 % par défaut) appliquée en
+            continu sur la valeur projetée — une simplification : en pratique la décote ne
+            s&apos;applique qu&apos;au moment d&apos;une cession, pas chaque année.
+            Entreprise/outil professionnel et Autres : non projetés, valeur figée.
+          </p>
+          <p>
+            Toutes les hypothèses réelles sont converties en nominal via le taux
+            d&apos;inflation ci-dessus, pour pouvoir les additionner au Private Equity et
+            exprimer l&apos;objectif en euros courants. La dette continue de s&apos;amortir
+            selon les prêts existants ; un éventuel crédit lombard (adossé au portefeuille
+            financier plutôt qu&apos;à un bien) n&apos;est pas modélisé, l&apos;application
+            ne suit que les prêts immobiliers.
+          </p>
+        </InfoTooltip>
       </div>
     </div>
   );
