@@ -1,15 +1,13 @@
 "use client";
 
-import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
+import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
-import { ActionsProfileBreakdown } from "@/components/allocation/ActionsProfileBreakdown";
-import { WrapperBreakdown } from "@/components/allocation/WrapperBreakdown";
-import { PreciousMetalsBreakdown } from "@/components/allocation/PreciousMetalsBreakdown";
+import { CategoryDetailsToggle } from "@/components/allocation/CategoryDetailsToggle";
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
 import type { ActionsProfileBreakdown as Breakdown } from "@/lib/allocation/stockProfiles";
-import type { Wrapper, WrapperBreakdown as WrapperBreakdownType } from "@/lib/allocation/wrappers";
+import { emptyWrapperBreakdown, type Wrapper, type WrapperBreakdown as WrapperBreakdownType } from "@/lib/allocation/wrappers";
 import type {
   PreciousMetal,
   PreciousMetalsBreakdown as PreciousMetalsBreakdownType,
@@ -89,14 +87,6 @@ export function AllocationAmountForm({
                 )}
               </span>
             </label>
-            {category.id === "actions" && (
-              <ActionsProfileBreakdown
-                breakdown={actionsBreakdown}
-                onChange={onActionsBreakdownChange}
-                statusMessage={actionsStatusMessage}
-                statusColorClass={actionsStatusColorClass}
-              />
-            )}
             {category.id === "outil-professionnel" && (
               <div className="ml-4 flex items-center justify-between gap-4">
                 <span className="text-xs text-slate">
@@ -129,26 +119,34 @@ export function AllocationAmountForm({
                 </span>
               </div>
             )}
-            {(FINANCIAL_CATEGORY_IDS as string[]).includes(category.id) && (
-              <WrapperBreakdown
-                breakdown={wrapperBreakdowns[category.id]}
-                categoryAmount={amounts[category.id] ?? 0}
-                onChange={(wrapper, amount) =>
-                  onWrapperBreakdownChange(category.id, wrapper, amount)
-                }
-                statusMessage={wrapperStatusMessages[category.id] ?? ""}
-                statusColorClass={wrapperStatusColorClasses[category.id] ?? "text-slate"}
-              />
-            )}
-            {category.id === "matieres-premieres" && (
-              <PreciousMetalsBreakdown
-                breakdown={preciousMetalsBreakdown}
-                categoryAmount={amounts[category.id] ?? 0}
-                onChange={onPreciousMetalsBreakdownChange}
-                statusMessage={preciousMetalsStatusMessage}
-                statusColorClass={preciousMetalsStatusColorClass}
-              />
-            )}
+            <CategoryDetailsToggle
+              categoryId={category.id}
+              categoryAmount={amounts[category.id] ?? 0}
+              wrapperBreakdown={wrapperBreakdowns[category.id] ?? emptyWrapperBreakdown()}
+              onWrapperChange={(wrapper, amount) =>
+                onWrapperBreakdownChange(category.id, wrapper, amount)
+              }
+              wrapperStatusMessage={wrapperStatusMessages[category.id] ?? ""}
+              wrapperStatusColorClass={wrapperStatusColorClasses[category.id] ?? "text-slate"}
+              actionsBreakdown={category.id === "actions" ? actionsBreakdown : undefined}
+              onActionsChange={category.id === "actions" ? onActionsBreakdownChange : undefined}
+              actionsStatusMessage={category.id === "actions" ? actionsStatusMessage : undefined}
+              actionsStatusColorClass={
+                category.id === "actions" ? actionsStatusColorClass : undefined
+              }
+              preciousMetalsBreakdown={
+                category.id === "matieres-premieres" ? preciousMetalsBreakdown : undefined
+              }
+              onPreciousMetalsChange={
+                category.id === "matieres-premieres" ? onPreciousMetalsBreakdownChange : undefined
+              }
+              preciousMetalsStatusMessage={
+                category.id === "matieres-premieres" ? preciousMetalsStatusMessage : undefined
+              }
+              preciousMetalsStatusColorClass={
+                category.id === "matieres-premieres" ? preciousMetalsStatusColorClass : undefined
+              }
+            />
           </div>
         );
       })}

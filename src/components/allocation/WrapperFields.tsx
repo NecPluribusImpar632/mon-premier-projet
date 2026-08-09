@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   WRAPPERS,
   WRAPPER_LABELS,
@@ -12,7 +11,7 @@ import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { formatCurrency } from "@/lib/format/currency";
 
-interface WrapperBreakdownProps {
+interface WrapperFieldsProps {
   breakdown: Breakdown;
   categoryAmount: number;
   onChange: (wrapper: Wrapper, amount: number) => void;
@@ -20,43 +19,21 @@ interface WrapperBreakdownProps {
   statusColorClass: string;
 }
 
-export function WrapperBreakdown({
+/** Field content only — the collapse/expand chrome around this (and its
+ * siblings for the same category) lives in CategoryDetailsToggle now. */
+export function WrapperFields({
   breakdown,
   categoryAmount,
   onChange,
   statusMessage,
   statusColorClass,
-}: WrapperBreakdownProps) {
-  const [expanded, setExpanded] = useState(wrapperBreakdownTotal(breakdown) > 0);
-
+}: WrapperFieldsProps) {
   const total = wrapperBreakdownTotal(breakdown);
-
-  if (!expanded) {
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        className="ml-4 w-fit text-left text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
-      >
-        Détailler les enveloppes
-      </button>
-    );
-  }
-
   const remaining = categoryAmount - total;
 
   return (
-    <div className="ml-4 flex flex-col gap-2.5 rounded-md border border-line bg-paper p-3.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-slate">Enveloppes fiscales</p>
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
-        >
-          Réduire
-        </button>
-      </div>
+    <div className="flex flex-col gap-2.5">
+      <p className="text-xs font-medium text-slate">Enveloppes fiscales</p>
       {WRAPPERS.map((wrapper) => (
         <label key={wrapper} className="flex items-center justify-between gap-4">
           <span className="text-xs text-ink">{WRAPPER_LABELS[wrapper]}</span>

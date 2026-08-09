@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   PRECIOUS_METALS,
   PRECIOUS_METAL_LABELS,
@@ -12,7 +11,7 @@ import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { formatCurrency } from "@/lib/format/currency";
 
-interface PreciousMetalsBreakdownProps {
+interface PreciousMetalsFieldsProps {
   breakdown: Breakdown;
   categoryAmount: number;
   onChange: (metal: PreciousMetal, amount: number) => void;
@@ -20,43 +19,21 @@ interface PreciousMetalsBreakdownProps {
   statusColorClass: string;
 }
 
-export function PreciousMetalsBreakdown({
+/** Field content only — the collapse/expand chrome around this (and its
+ * siblings for the same category) lives in CategoryDetailsToggle now. */
+export function PreciousMetalsFields({
   breakdown,
   categoryAmount,
   onChange,
   statusMessage,
   statusColorClass,
-}: PreciousMetalsBreakdownProps) {
-  const [expanded, setExpanded] = useState(preciousMetalsBreakdownTotal(breakdown) > 0);
-
+}: PreciousMetalsFieldsProps) {
   const total = preciousMetalsBreakdownTotal(breakdown);
-
-  if (!expanded) {
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        className="ml-4 w-fit text-left text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
-      >
-        Détailler or/argent
-      </button>
-    );
-  }
-
   const remaining = categoryAmount - total;
 
   return (
-    <div className="ml-4 flex flex-col gap-2.5 rounded-md border border-line bg-paper p-3.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-slate">Composition or/argent</p>
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
-        >
-          Réduire
-        </button>
-      </div>
+    <div className="flex flex-col gap-2.5">
+      <p className="text-xs font-medium text-slate">Composition or/argent</p>
       {PRECIOUS_METALS.map((metal) => (
         <label key={metal} className="flex items-center justify-between gap-4">
           <span className="text-xs text-ink">{PRECIOUS_METAL_LABELS[metal]}</span>

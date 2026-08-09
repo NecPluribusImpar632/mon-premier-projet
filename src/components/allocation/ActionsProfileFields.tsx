@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   STOCK_PROFILES,
   STOCK_PROFILE_LABELS,
@@ -11,48 +10,26 @@ import { clampPercentage } from "@/lib/allocation/validation";
 import { roundPercent } from "@/lib/format/percent";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 
-interface ActionsProfileBreakdownProps {
+interface ActionsProfileFieldsProps {
   breakdown: Breakdown;
   onChange: (profile: keyof Breakdown, percentage: number) => void;
   statusMessage: string;
   statusColorClass: string;
 }
 
-export function ActionsProfileBreakdown({
+/** Field content only — the collapse/expand chrome around this (and its
+ * siblings for the same category) lives in CategoryDetailsToggle now. */
+export function ActionsProfileFields({
   breakdown,
   onChange,
   statusMessage,
   statusColorClass,
-}: ActionsProfileBreakdownProps) {
-  const isDetailed = breakdown.indiciel !== 100;
-  const [expanded, setExpanded] = useState(isDetailed);
-
+}: ActionsProfileFieldsProps) {
   const total = breakdown.indiciel + breakdown.defensif + breakdown.croissance;
 
-  if (!expanded) {
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        className="ml-4 w-fit text-left text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
-      >
-        Détailler les profils actions
-      </button>
-    );
-  }
-
   return (
-    <div className="ml-4 flex flex-col gap-2.5 rounded-md border border-line bg-paper p-3.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-slate">Profils actions</p>
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          className="text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
-        >
-          Réduire
-        </button>
-      </div>
+    <div className="flex flex-col gap-2.5">
+      <p className="text-xs font-medium text-slate">Profils actions</p>
       {STOCK_PROFILES.map((profile) => (
         <label key={profile} className="flex items-center justify-between gap-4">
           <span className="text-xs text-ink">
