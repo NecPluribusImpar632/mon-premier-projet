@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { MoreHorizontal } from "lucide-react";
-import { FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
-import { wrapperBreakdownTotal, type Wrapper, type WrapperBreakdown } from "@/lib/allocation/wrappers";
 import {
   preciousMetalsBreakdownTotal,
   type PreciousMetal,
@@ -15,16 +13,11 @@ import {
 } from "@/lib/allocation/actionsIndexBreakdown";
 import type { ReferenceIndex } from "@/lib/allocation/referenceIndices";
 import { ActionsIndexFields } from "@/components/allocation/ActionsIndexFields";
-import { WrapperFields } from "@/components/allocation/WrapperFields";
 import { PreciousMetalsFields } from "@/components/allocation/PreciousMetalsFields";
 
 interface CategoryDetailsToggleProps {
   categoryId: string;
   categoryAmount: number;
-  wrapperBreakdown: WrapperBreakdown;
-  onWrapperChange: (wrapper: Wrapper, amount: number) => void;
-  wrapperStatusMessage: string;
-  wrapperStatusColorClass: string;
   actionsIndexBreakdown?: ActionsIndexBreakdown;
   onActionsIndexChange?: (index: ReferenceIndex, percentage: number) => void;
   actionsStatusMessage?: string;
@@ -36,10 +29,13 @@ interface CategoryDetailsToggleProps {
 }
 
 /**
- * One entry point per category instead of up to three stacked "Détailler..."
- * text links (profils actions, enveloppes fiscales, composition or/argent) —
- * a single muted icon that opens a panel grouping whichever of those apply
- * to this category. Collapsed by default unless something's already been
+ * One entry point per category instead of stacked "Détailler..." text links
+ * (profils actions, composition or/argent) — a single muted icon that opens
+ * a panel grouping whichever of those apply to this category. The enveloppe
+ * fiscale breakdown used to live here too; it now has its own tab
+ * (WrapperAllocationSection) since it answers a different question ("où
+ * c'est logé fiscalement") than what this panel covers ("qu'est-ce que le
+ * client possède"). Collapsed by default unless something's already been
  * detailed; the icon itself never disappears (so previously-entered detail
  * stays reachable even if the category amount is later zeroed out), it just
  * reads as quieter when there's nothing behind it yet.
@@ -47,10 +43,6 @@ interface CategoryDetailsToggleProps {
 export function CategoryDetailsToggle({
   categoryId,
   categoryAmount,
-  wrapperBreakdown,
-  onWrapperChange,
-  wrapperStatusMessage,
-  wrapperStatusColorClass,
   actionsIndexBreakdown,
   onActionsIndexChange,
   actionsStatusMessage,
@@ -64,21 +56,19 @@ export function CategoryDetailsToggle({
     categoryId === "actions" && !!actionsIndexBreakdown && !!onActionsIndexChange;
   const hasPreciousMetalsSection =
     categoryId === "matieres-premieres" && !!preciousMetalsBreakdown && !!onPreciousMetalsChange;
-  const hasWrapperSection = (FINANCIAL_CATEGORY_IDS as string[]).includes(categoryId);
 
   const isActionsDetailed =
     hasActionsSection && !isActionsIndexBreakdownDefault(actionsIndexBreakdown!);
-  const wrapperTotal = hasWrapperSection ? wrapperBreakdownTotal(wrapperBreakdown) : 0;
   const metalsTotal = hasPreciousMetalsSection
     ? preciousMetalsBreakdownTotal(preciousMetalsBreakdown!)
     : 0;
-  const hasAnyDetail = isActionsDetailed || wrapperTotal > 0 || metalsTotal > 0;
+  const hasAnyDetail = isActionsDetailed || metalsTotal > 0;
 
   // Hooks must run unconditionally, before the no-detail-at-all early return
-  // below (Immobilier has none of the three sections).
+  // below (most categories now have neither section).
   const [expanded, setExpanded] = useState(hasAnyDetail);
 
-  if (!hasActionsSection && !hasPreciousMetalsSection && !hasWrapperSection) {
+  if (!hasActionsSection && !hasPreciousMetalsSection) {
     return null;
   }
 
@@ -108,16 +98,6 @@ export function CategoryDetailsToggle({
         onChange={onActionsIndexChange!}
         statusMessage={actionsStatusMessage ?? ""}
         statusColorClass={actionsStatusColorClass ?? "text-slate"}
-      />
-    ),
-    hasWrapperSection && (
-      <WrapperFields
-        key="wrapper"
-        breakdown={wrapperBreakdown}
-        categoryAmount={categoryAmount}
-        onChange={onWrapperChange}
-        statusMessage={wrapperStatusMessage}
-        statusColorClass={wrapperStatusColorClass}
       />
     ),
     hasPreciousMetalsSection && (

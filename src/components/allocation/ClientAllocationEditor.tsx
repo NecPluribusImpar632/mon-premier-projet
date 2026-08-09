@@ -8,7 +8,6 @@ import {
   updateClientAllocation,
   updateActionsIndexBreakdown,
   updateProfessionalToolMainIncome,
-  updateWrapperBreakdown,
   updateMatieresPremieresBreakdown,
 } from "@/lib/actions/clients";
 import {
@@ -21,7 +20,6 @@ import {
   type ActionsIndexBreakdown,
 } from "@/lib/allocation/actionsIndexBreakdown";
 import { REFERENCE_INDICES, type ReferenceIndex } from "@/lib/allocation/referenceIndices";
-import type { Wrapper, WrapperBreakdown } from "@/lib/allocation/wrappers";
 import type { PreciousMetal, PreciousMetalsBreakdown } from "@/lib/allocation/preciousMetals";
 
 interface ClientAllocationEditorProps {
@@ -29,7 +27,6 @@ interface ClientAllocationEditorProps {
   initialAmounts: Record<string, number>;
   initialActionsIndexBreakdown: ActionsIndexBreakdown;
   initialProfessionalToolMainIncome: boolean;
-  initialWrapperBreakdowns: Record<string, WrapperBreakdown>;
   initialPreciousMetalsBreakdown: PreciousMetalsBreakdown;
   properties: PropertyWithLoans[];
 }
@@ -69,7 +66,6 @@ export function ClientAllocationEditor({
   initialAmounts,
   initialActionsIndexBreakdown,
   initialProfessionalToolMainIncome,
-  initialWrapperBreakdowns,
   initialPreciousMetalsBreakdown,
   properties,
 }: ClientAllocationEditorProps) {
@@ -88,13 +84,6 @@ export function ClientAllocationEditor({
   const [isActionsPending, startActionsTransition] = useTransition();
   const [actionsStatus, setActionsStatus] = useState<SaveStatus>(
     isActionsIndexBreakdownComplete(initialActionsIndexBreakdown) ? "saved" : "incomplete"
-  );
-
-  const [wrapperBreakdowns, setWrapperBreakdowns] = useState<
-    Record<string, WrapperBreakdown>
-  >(initialWrapperBreakdowns);
-  const [wrapperStatus, setWrapperStatus] = useState<Record<string, WrapperSaveStatus>>(
-    {}
   );
 
   const [preciousMetalsBreakdown, setPreciousMetalsBreakdown] = useState<PreciousMetalsBreakdown>(
@@ -178,16 +167,6 @@ export function ClientAllocationEditor({
     });
   }
 
-  function handleWrapperChange(categoryId: string, wrapper: Wrapper, amount: number) {
-    const next = { ...wrapperBreakdowns[categoryId], [wrapper]: amount };
-    setWrapperBreakdowns((prev) => ({ ...prev, [categoryId]: next }));
-    setWrapperStatus((prev) => ({ ...prev, [categoryId]: "saving" }));
-
-    updateWrapperBreakdown(clientId, categoryId, next)
-      .then(() => setWrapperStatus((prev) => ({ ...prev, [categoryId]: "saved" })))
-      .catch(() => setWrapperStatus((prev) => ({ ...prev, [categoryId]: "error" })));
-  }
-
   function handlePreciousMetalsChange(metal: PreciousMetal, amount: number) {
     const next = { ...preciousMetalsBreakdown, [metal]: amount };
     setPreciousMetalsBreakdown(next);
@@ -197,19 +176,6 @@ export function ClientAllocationEditor({
       .then(() => setPreciousMetalsStatus("saved"))
       .catch(() => setPreciousMetalsStatus("error"));
   }
-
-  const wrapperStatusMessages = Object.fromEntries(
-    Object.keys(wrapperBreakdowns).map((categoryId) => [
-      categoryId,
-      WRAPPER_STATUS_MESSAGE[wrapperStatus[categoryId] ?? "saved"],
-    ])
-  );
-  const wrapperStatusColorClasses = Object.fromEntries(
-    Object.keys(wrapperBreakdowns).map((categoryId) => [
-      categoryId,
-      WRAPPER_STATUS_COLOR[wrapperStatus[categoryId] ?? "saved"],
-    ])
-  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -234,10 +200,6 @@ export function ClientAllocationEditor({
             }
             professionalToolMainIncome={professionalToolMainIncome}
             onProfessionalToolMainIncomeChange={handleProfessionalToolMainIncomeChange}
-            wrapperBreakdowns={wrapperBreakdowns}
-            onWrapperBreakdownChange={handleWrapperChange}
-            wrapperStatusMessages={wrapperStatusMessages}
-            wrapperStatusColorClasses={wrapperStatusColorClasses}
             preciousMetalsBreakdown={preciousMetalsBreakdown}
             onPreciousMetalsBreakdownChange={handlePreciousMetalsChange}
             preciousMetalsStatusMessage={WRAPPER_STATUS_MESSAGE[preciousMetalsStatus]}

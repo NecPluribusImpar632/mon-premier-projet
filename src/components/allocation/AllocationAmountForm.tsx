@@ -9,7 +9,6 @@ import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
 import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { ReferenceIndex } from "@/lib/allocation/referenceIndices";
-import { emptyWrapperBreakdown, type Wrapper, type WrapperBreakdown as WrapperBreakdownType } from "@/lib/allocation/wrappers";
 import type {
   PreciousMetal,
   PreciousMetalsBreakdown as PreciousMetalsBreakdownType,
@@ -27,10 +26,6 @@ interface AllocationAmountFormProps {
   actionsStatusColorClass: string;
   professionalToolMainIncome: boolean;
   onProfessionalToolMainIncomeChange: (value: boolean) => void;
-  wrapperBreakdowns: Record<string, WrapperBreakdownType>;
-  onWrapperBreakdownChange: (categoryId: string, wrapper: Wrapper, amount: number) => void;
-  wrapperStatusMessages: Record<string, string>;
-  wrapperStatusColorClasses: Record<string, string>;
   preciousMetalsBreakdown: PreciousMetalsBreakdownType;
   onPreciousMetalsBreakdownChange: (metal: PreciousMetal, amount: number) => void;
   preciousMetalsStatusMessage: string;
@@ -49,10 +44,6 @@ export function AllocationAmountForm({
   actionsStatusColorClass,
   professionalToolMainIncome,
   onProfessionalToolMainIncomeChange,
-  wrapperBreakdowns,
-  onWrapperBreakdownChange,
-  wrapperStatusMessages,
-  wrapperStatusColorClasses,
   preciousMetalsBreakdown,
   onPreciousMetalsBreakdownChange,
   preciousMetalsStatusMessage,
@@ -140,12 +131,6 @@ export function AllocationAmountForm({
             <CategoryDetailsToggle
               categoryId={category.id}
               categoryAmount={amounts[category.id] ?? 0}
-              wrapperBreakdown={wrapperBreakdowns[category.id] ?? emptyWrapperBreakdown()}
-              onWrapperChange={(wrapper, amount) =>
-                onWrapperBreakdownChange(category.id, wrapper, amount)
-              }
-              wrapperStatusMessage={wrapperStatusMessages[category.id] ?? ""}
-              wrapperStatusColorClass={wrapperStatusColorClasses[category.id] ?? "text-slate"}
               actionsIndexBreakdown={
                 category.id === "actions" ? actionsIndexBreakdown : undefined
               }

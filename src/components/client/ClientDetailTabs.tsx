@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Building2, Download, PieChart, Target } from "lucide-react";
+import { Building2, Download, Layers, PieChart, Target } from "lucide-react";
 import type { SavedScenario } from "@/generated/prisma/client";
 import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { WrapperBreakdown } from "@/lib/allocation/wrappers";
@@ -19,6 +19,7 @@ import { RetirementGoalSection } from "@/components/client/RetirementGoalSection
 import { WealthSummary } from "@/components/allocation/WealthSummary";
 import { IfiCard } from "@/components/fiscal/IfiCard";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
+import { WrapperAllocationSection } from "@/components/allocation/WrapperAllocationSection";
 import { PropertyList } from "@/components/property/PropertyList";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { ScenarioSimulator } from "@/components/scenarios/ScenarioSimulator";
@@ -169,9 +170,23 @@ export function ClientDetailTabs({
                 initialAmounts={amounts}
                 initialActionsIndexBreakdown={actionsIndexBreakdown}
                 initialProfessionalToolMainIncome={initialProfessionalToolMainIncome}
-                initialWrapperBreakdowns={initialWrapperBreakdowns}
                 initialPreciousMetalsBreakdown={initialPreciousMetalsBreakdown}
                 properties={properties}
+              />
+            </div>
+          )}
+
+          {activeTab === "wrappers" && (
+            <div className="flex flex-col gap-4">
+              <SectionHeading
+                icon={Layers}
+                title="Enveloppes fiscales"
+                subtitle="Où les avoirs financiers du client sont logés (assurance-vie, PER, CTO, PEA, détention directe)"
+              />
+              <WrapperAllocationSection
+                clientId={clientId}
+                amounts={amounts}
+                initialWrapperBreakdowns={initialWrapperBreakdowns}
               />
             </div>
           )}

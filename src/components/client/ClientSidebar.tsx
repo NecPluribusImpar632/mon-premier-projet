@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { Building2, FlaskConical, Home, PieChart, Target } from "lucide-react";
+import { Building2, FlaskConical, Home, Layers, PieChart, Target } from "lucide-react";
 import { CLIENT_TABS, type ClientTab } from "@/lib/client/clientTabs";
 
 const TAB_CONFIG: Record<
@@ -10,6 +10,7 @@ const TAB_CONFIG: Record<
 > = {
   overview: { icon: Home, label: "Vue d'ensemble" },
   allocation: { icon: PieChart, label: "Allocation" },
+  wrappers: { icon: Layers, label: "Enveloppes fiscales" },
   properties: { icon: Building2, label: "Biens immobiliers" },
   scenarios: { icon: FlaskConical, label: "Scénarios" },
   goal: { icon: Target, label: "Objectif patrimonial" },
