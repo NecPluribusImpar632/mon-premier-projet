@@ -10,6 +10,7 @@ import {
   computeRealEstateShockImpact,
   computeRateHikeImpact,
 } from "@/lib/scenarios/calculations";
+import { reliabilityTierForR2 } from "@/lib/scenarios/statisticalReliability";
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
 import { FIELD_CLASS } from "@/components/ui/fieldStyles";
@@ -20,21 +21,6 @@ interface RealEstateShockCardProps {
   oatRateChangePts: number;
   onOatRateChangePtsChange: (value: number) => void;
   onRemove?: () => void;
-}
-
-// R² reliability scale for the calibrated zone coefficients. The app's palette
-// only has ink/slate/emerald/bronze (no literal red/green) — bronze doubles as
-// the existing "warning" color, emerald as the existing "accent/highlight"
-// color, and plain ink for the broad middle tier where most zones actually
-// fall (the methodology note already says R² is generally 3-15%).
-function reliabilityTier(r2Pct: number): { className: string; label: string } {
-  if (r2Pct < 5) {
-    return { className: "text-bronze", label: "⚠ peu fiable" };
-  }
-  if (r2Pct >= 15) {
-    return { className: "text-emerald", label: "· plus fiable" };
-  }
-  return { className: "text-ink", label: "· fiabilité modérée" };
 }
 
 export function RealEstateShockCard({
@@ -184,7 +170,7 @@ export function RealEstateShockCard({
           </p>
           <ul className="mt-2 flex flex-col gap-0.5 border-t border-line pt-2">
             {zonesUsed.map((zone) => {
-              const reliability = reliabilityTier(zone.r2Pct);
+              const reliability = reliabilityTierForR2(zone.r2Pct);
               return (
                 <li key={zone.zoneLabel} className="flex items-center justify-between gap-3">
                   <span>{zone.zoneLabel}</span>
