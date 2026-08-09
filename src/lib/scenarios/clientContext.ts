@@ -36,5 +36,8 @@ export function buildClientScenarioContext(
     scpiAmount: amounts.scpi ?? 0,
     obligationsAmount: amounts.obligations ?? 0,
     privateEquityAmount: amounts["private-equity"] ?? 0,
+    matieresPremieresAmount: amounts["matieres-premieres"] ?? 0,
+    goldAmount: client.matieresPremieresGoldAmount,
+    silverAmount: client.matieresPremieresSilverAmount,
   };
 }

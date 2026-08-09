@@ -41,7 +41,15 @@ function paramsForOption(option: ComparisonOption): ScenarioParams {
 
 type BreakdownKey = keyof Pick<
   FullScenarioResult["breakdown"],
-  "realEstateDelta" | "stocksDelta" | "scpiDelta" | "obligationsDelta" | "peDelta" | "debtErosion" | "vacancyCost"
+  | "realEstateDelta"
+  | "stocksDelta"
+  | "scpiDelta"
+  | "obligationsDelta"
+  | "peDelta"
+  | "goldDelta"
+  | "silverDelta"
+  | "debtErosion"
+  | "vacancyCost"
 >;
 
 const BREAKDOWN_ROWS: { key: BreakdownKey; label: string; invert?: boolean }[] = [
@@ -50,6 +58,8 @@ const BREAKDOWN_ROWS: { key: BreakdownKey; label: string; invert?: boolean }[] =
   { key: "scpiDelta", label: "SCPI" },
   { key: "obligationsDelta", label: "Obligations" },
   { key: "peDelta", label: "Private Equity" },
+  { key: "goldDelta", label: "Or" },
+  { key: "silverDelta", label: "Argent" },
   { key: "debtErosion", label: "Érosion de la dette (inflation)" },
   { key: "vacancyCost", label: "Vacance locative", invert: true },
 ];

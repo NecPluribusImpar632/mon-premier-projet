@@ -5,10 +5,15 @@ import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { ActionsProfileBreakdown } from "@/components/allocation/ActionsProfileBreakdown";
 import { WrapperBreakdown } from "@/components/allocation/WrapperBreakdown";
+import { PreciousMetalsBreakdown } from "@/components/allocation/PreciousMetalsBreakdown";
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
 import type { ActionsProfileBreakdown as Breakdown } from "@/lib/allocation/stockProfiles";
 import type { Wrapper, WrapperBreakdown as WrapperBreakdownType } from "@/lib/allocation/wrappers";
+import type {
+  PreciousMetal,
+  PreciousMetalsBreakdown as PreciousMetalsBreakdownType,
+} from "@/lib/allocation/preciousMetals";
 
 interface AllocationAmountFormProps {
   amounts: Record<string, number>;
@@ -26,6 +31,10 @@ interface AllocationAmountFormProps {
   onWrapperBreakdownChange: (categoryId: string, wrapper: Wrapper, amount: number) => void;
   wrapperStatusMessages: Record<string, string>;
   wrapperStatusColorClasses: Record<string, string>;
+  preciousMetalsBreakdown: PreciousMetalsBreakdownType;
+  onPreciousMetalsBreakdownChange: (metal: PreciousMetal, amount: number) => void;
+  preciousMetalsStatusMessage: string;
+  preciousMetalsStatusColorClass: string;
 }
 
 export function AllocationAmountForm({
@@ -44,6 +53,10 @@ export function AllocationAmountForm({
   onWrapperBreakdownChange,
   wrapperStatusMessages,
   wrapperStatusColorClasses,
+  preciousMetalsBreakdown,
+  onPreciousMetalsBreakdownChange,
+  preciousMetalsStatusMessage,
+  preciousMetalsStatusColorClass,
 }: AllocationAmountFormProps) {
   return (
     <div className="flex flex-col gap-3">
@@ -125,6 +138,15 @@ export function AllocationAmountForm({
                 }
                 statusMessage={wrapperStatusMessages[category.id] ?? ""}
                 statusColorClass={wrapperStatusColorClasses[category.id] ?? "text-slate"}
+              />
+            )}
+            {category.id === "matieres-premieres" && (
+              <PreciousMetalsBreakdown
+                breakdown={preciousMetalsBreakdown}
+                categoryAmount={amounts[category.id] ?? 0}
+                onChange={onPreciousMetalsBreakdownChange}
+                statusMessage={preciousMetalsStatusMessage}
+                statusColorClass={preciousMetalsStatusColorClass}
               />
             )}
           </div>

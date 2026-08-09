@@ -108,6 +108,8 @@ export const POST_METHODOLOGY_NOTES: Record<string, string> = {
   scpi: "Décote de part appliquée au montant détenu.",
   obligations: "Approximation de duration : ΔPrix/Prix ≈ -duration × Δtaux.",
   privateEquity: "Décote de sortie anticipée sur le marché secondaire.",
+  or: "Tendance de fond régressée sur l'inflation US (1972+), pas la volatilité de court terme.",
+  argent: "Tendance de fond régressée sur l'inflation US (1972+), pas la volatilité de court terme.",
   debtErosion: "Érosion de la valeur réelle de la dette à taux fixe restante.",
   vacancy: "Perte de loyer sur la durée de vacance simulée.",
 };

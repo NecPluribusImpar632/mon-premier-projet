@@ -8,6 +8,7 @@ import {
   type Wrapper,
   type WrapperBreakdown,
 } from "./wrappers";
+import type { PreciousMetalsBreakdown } from "./preciousMetals";
 
 type CategoryFieldName =
   | "actionsAmount"
@@ -145,6 +146,17 @@ export function wrapperBreakdownsFromClient(
     }
   }
   return result;
+}
+
+/** Or/argent breakdown of the "Matières premières" amount — real client
+ * holdings data (an advisor knows this the way they know the Actions
+ * sub-profile), not a scenario assumption, so it lives directly on Client
+ * rather than as a scenario param. */
+export function preciousMetalsBreakdownFromClient(client: Client): PreciousMetalsBreakdown {
+  return {
+    or: client.matieresPremieresGoldAmount,
+    argent: client.matieresPremieresSilverAmount,
+  };
 }
 
 /** Breakdown for one category → the rows to persist (nonzero amounts only). */

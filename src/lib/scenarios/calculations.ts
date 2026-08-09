@@ -4,6 +4,11 @@ import {
   type ActionsProfileBreakdown,
 } from "@/lib/allocation/stockProfiles";
 import type { ZoneSensitivity } from "@/lib/scenarios/realEstateSensitivity";
+import {
+  GOLD_SENSITIVITY,
+  SILVER_SENSITIVITY,
+  type PreciousMetalSensitivity,
+} from "@/lib/scenarios/preciousMetalsSensitivity";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import type { ScenarioParams } from "@/lib/scenarios/scenarioParams";
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
@@ -303,6 +308,35 @@ export function computePrivateEquityIlliquidityImpact(
   };
 }
 
+export interface PreciousMetalShockResult {
+  currentValue: number;
+  newValue: number;
+  deltaValue: number;
+  shockPct: number;
+}
+
+/**
+ * Choc or/argent = tendance de fond (calibrée sur la régression prix USD /
+ * inflation US, décalage 0 — voir preciousMetalsSensitivity.ts) appliquée au
+ * montant détenu. La volatilité de court terme du métal (eurVolatilityPct)
+ * n'entre pas dans ce calcul déterministe : elle est affichée à part comme
+ * fourchette de contexte, pas comme aléa simulé.
+ */
+export function computePreciousMetalShockImpact(
+  amount: number,
+  inflationPct: number,
+  sensitivity: PreciousMetalSensitivity
+): PreciousMetalShockResult {
+  const shockPct = sensitivity.intercept + sensitivity.slope * inflationPct;
+  const newValue = amount * (1 + shockPct / 100);
+  return {
+    currentValue: amount,
+    newValue,
+    deltaValue: newValue - amount,
+    shockPct,
+  };
+}
+
 export interface ClientScenarioContext {
   financialWealthTotal: number;
   actionsPctWithinFinancial: number;
@@ -314,6 +348,16 @@ export interface ClientScenarioContext {
   scpiAmount: number;
   obligationsAmount: number;
   privateEquityAmount: number;
+  /** Montant "Matières premières" total du client — sert à savoir si le choc
+   * or/argent est pertinent à proposer, et si la répartition ci-dessous est
+   * incomplète. */
+  matieresPremieresAmount: number;
+  /** Répartition or/argent du montant ci-dessus — une donnée réelle du
+   * patrimoine du client (comme le sous-profil Actions), saisie une fois
+   * dans l'onglet Allocation, pas un paramètre de scénario à ressaisir à
+   * chaque simulation. */
+  goldAmount: number;
+  silverAmount: number;
 }
 
 /**
@@ -359,6 +403,8 @@ export interface FullScenarioResult {
     scpiDelta: number;
     obligationsDelta: number;
     peDelta: number;
+    goldDelta: number;
+    silverDelta: number;
     debtErosion: number;
     vacancyCost: number;
     /** Valeur du patrimoine financier après choc (actions + reste à plat +
@@ -402,6 +448,8 @@ export function computeFullScenarioImpact(
     scpiAmount,
     obligationsAmount,
     privateEquityAmount,
+    goldAmount,
+    silverAmount,
   } = context;
   const {
     marketShockPct,
@@ -439,9 +487,25 @@ export function computeFullScenarioImpact(
     privateEquityAmount,
     peIlliquidityDiscountPct
   );
+  const goldShock = computePreciousMetalShockImpact(
+    goldAmount,
+    inflationPct,
+    GOLD_SENSITIVITY
+  );
+  const silverShock = computePreciousMetalShockImpact(
+    silverAmount,
+    inflationPct,
+    SILVER_SENSITIVITY
+  );
 
   const financialWealthAfterShock =
-    financialWealthTotal + stocksDelta + scpiShock.deltaValue + obligationsShock.deltaValue + peShock.deltaValue;
+    financialWealthTotal +
+    stocksDelta +
+    scpiShock.deltaValue +
+    obligationsShock.deltaValue +
+    peShock.deltaValue +
+    goldShock.deltaValue +
+    silverShock.deltaValue;
 
   const realEstateShock = computeRealEstateShockImpact(properties, oatRateChangePts);
   const realEstateAfterShock = realEstateShock.totalNewValue + immobilierBaseline;
@@ -527,6 +591,30 @@ export function computeFullScenarioImpact(
       isAssumption: true,
     });
   }
+  if (goldAmount > 0) {
+    posts.push({
+      id: "or",
+      label: "Or",
+      nounPhrase: "l'or",
+      isPlural: false,
+      valueBefore: goldAmount,
+      delta: goldShock.deltaValue,
+      deltaPct: pct(goldShock.deltaValue, goldAmount),
+      isAssumption: true,
+    });
+  }
+  if (silverAmount > 0) {
+    posts.push({
+      id: "argent",
+      label: "Argent",
+      nounPhrase: "l'argent",
+      isPlural: false,
+      valueBefore: silverAmount,
+      delta: silverShock.deltaValue,
+      deltaPct: pct(silverShock.deltaValue, silverAmount),
+      isAssumption: true,
+    });
+  }
   if (totalDebt > 0) {
     posts.push({
       id: "debtErosion",
@@ -566,6 +654,8 @@ export function computeFullScenarioImpact(
       scpiDelta: scpiShock.deltaValue,
       obligationsDelta: obligationsShock.deltaValue,
       peDelta: peShock.deltaValue,
+      goldDelta: goldShock.deltaValue,
+      silverDelta: silverShock.deltaValue,
       debtErosion,
       vacancyCost,
       financialWealthAfterShock,

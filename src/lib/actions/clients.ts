@@ -10,6 +10,7 @@ import {
 import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import { WRAPPERS, type WrapperBreakdown } from "@/lib/allocation/wrappers";
+import { PRECIOUS_METALS, type PreciousMetalsBreakdown } from "@/lib/allocation/preciousMetals";
 import { isRiskProfile } from "@/lib/client/riskProfile";
 import { isMaritalStatus } from "@/lib/client/maritalStatus";
 
@@ -244,5 +245,35 @@ export async function updateWrapperBreakdown(
       data: wrapperAllocationRowsFromBreakdown(clientId, category, breakdown),
     }),
   ]);
+  revalidatePath(`/clients/${clientId}`);
+}
+
+/**
+ * Or/argent split of the "Matières premières" amount — real holdings data
+ * (the advisor knows this the way they know the Actions sub-profile), so it
+ * lives on Client directly, not as a scenario parameter re-entered per
+ * simulation. No sum-vs-category-total constraint, same reasoning as the
+ * wrapper breakdown: partial detail is allowed, the rest just stays
+ * unclassified (and unshocked) rather than blocking the save.
+ */
+export async function updateMatieresPremieresBreakdown(
+  clientId: string,
+  breakdown: PreciousMetalsBreakdown
+) {
+  const hasValidAmounts = PRECIOUS_METALS.every((metal) => {
+    const amount = breakdown[metal];
+    return Number.isFinite(amount) && amount >= 0;
+  });
+  if (!hasValidAmounts) {
+    throw new Error("Chaque montant doit être un nombre positif.");
+  }
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      matieresPremieresGoldAmount: breakdown.or,
+      matieresPremieresSilverAmount: breakdown.argent,
+    },
+  });
   revalidatePath(`/clients/${clientId}`);
 }

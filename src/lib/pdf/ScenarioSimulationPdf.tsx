@@ -7,6 +7,10 @@ import {
   type ClientScenarioContext,
   type FullScenarioResult,
 } from "@/lib/scenarios/calculations";
+import {
+  GOLD_SENSITIVITY,
+  SILVER_SENSITIVITY,
+} from "@/lib/scenarios/preciousMetalsSensitivity";
 import type { ScenarioParams } from "@/lib/scenarios/scenarioParams";
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR", {
@@ -93,6 +97,8 @@ interface BreakdownRowConfig {
     | "scpiDelta"
     | "obligationsDelta"
     | "peDelta"
+    | "goldDelta"
+    | "silverDelta"
     | "debtErosion"
     | "vacancyCost"
   >;
@@ -106,6 +112,8 @@ const BREAKDOWN_ROWS: BreakdownRowConfig[] = [
   { key: "scpiDelta", label: "SCPI" },
   { key: "obligationsDelta", label: "Obligations" },
   { key: "peDelta", label: "Private Equity" },
+  { key: "goldDelta", label: "Or" },
+  { key: "silverDelta", label: "Argent" },
   { key: "debtErosion", label: "Érosion de la dette (inflation)" },
   { key: "vacancyCost", label: "Vacance locative", invert: true },
 ];
@@ -236,6 +244,26 @@ export function ScenarioSimulationPdf({
                 Décote de sortie de {params.peIlliquidityDiscountPct} % par rapport à la
                 valeur de part (NAV) — hypothèse de marché secondaire, à ajuster selon le
                 fonds réellement détenu.
+              </Text>
+            </View>
+          )}
+
+          {(context.goldAmount > 0 || context.silverAmount > 0) && (
+            <View style={styles.methodologyBlock}>
+              <Text style={styles.methodologyTitle}>Choc or/argent</Text>
+              <Text style={styles.methodologyText}>
+                Tendance de fond régressée sur l&apos;inflation américaine, 1972-2025 (or :
+                pente {GOLD_SENSITIVITY.slope.toFixed(2)}, R² {GOLD_SENSITIVITY.r2Pct.toFixed(1)}
+                % ; argent : pente {SILVER_SENSITIVITY.slope.toFixed(2)}, R²{" "}
+                {SILVER_SENSITIVITY.r2Pct.toFixed(1)} % — fiabilité faible sur les deux, relation
+                statistiquement significative mais minoritaire dans ce qui explique le prix).
+                Testé en euros contre l&apos;inflation française : aucune relation contemporaine
+                — l&apos;or réagit à la conjoncture économique dominante mondiale (USD), pas
+                spécifiquement à l&apos;inflation française. Volatilité de court terme
+                nettement supérieure à l&apos;immobilier (écart-type annuel en euros : ±
+                {GOLD_SENSITIVITY.eurVolatilityPct.toFixed(0)} % pour l&apos;or, ±
+                {SILVER_SENSITIVITY.eurVolatilityPct.toFixed(0)} % pour l&apos;argent), non
+                simulée par ce choc ponctuel.
               </Text>
             </View>
           )}

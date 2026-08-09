@@ -34,6 +34,7 @@ import { ScpiShockCard } from "@/components/scenarios/ScpiShockCard";
 import { ObligationsShockCard } from "@/components/scenarios/ObligationsShockCard";
 import { PrivateEquityIlliquidityCard } from "@/components/scenarios/PrivateEquityIlliquidityCard";
 import { InflationScenarioCard } from "@/components/scenarios/InflationScenarioCard";
+import { PreciousMetalsShockCard } from "@/components/scenarios/PreciousMetalsShockCard";
 import { VacancyCard } from "@/components/scenarios/VacancyCard";
 import { ProjectionCard } from "@/components/scenarios/ProjectionCard";
 
@@ -45,6 +46,9 @@ interface ScenarioSimulatorProps {
   scpiAmount: number;
   obligationsAmount: number;
   privateEquityAmount: number;
+  matieresPremieresAmount: number;
+  goldAmount: number;
+  silverAmount: number;
   immobilierValue: number;
   actionsBreakdown: ActionsProfileBreakdown;
   properties: PropertyWithSensitivity[];
@@ -61,6 +65,7 @@ const OPTIONAL_CARD_IDS = [
   "scpi",
   "obligations",
   "privateEquity",
+  "preciousMetals",
   "inflation",
   "vacancy",
 ] as const;
@@ -72,6 +77,7 @@ const CARD_LABELS: Record<OptionalCardId, string> = {
   scpi: "Choc SCPI",
   obligations: "Choc obligataire",
   privateEquity: "Décote d'illiquidité Private Equity",
+  preciousMetals: "Choc or/argent",
   inflation: "Scénario inflation",
   vacancy: "Vacance locative prolongée",
 };
@@ -84,6 +90,9 @@ export function ScenarioSimulator({
   scpiAmount,
   obligationsAmount,
   privateEquityAmount,
+  matieresPremieresAmount,
+  goldAmount,
+  silverAmount,
   immobilierValue,
   actionsBreakdown,
   properties,
@@ -237,6 +246,9 @@ export function ScenarioSimulator({
     scpiAmount,
     obligationsAmount,
     privateEquityAmount,
+    matieresPremieresAmount,
+    goldAmount,
+    silverAmount,
   };
 
   const currentParams: ScenarioParams = {
@@ -272,6 +284,7 @@ export function ScenarioSimulator({
     scpi: scpiAmount > 0,
     obligations: obligationsAmount > 0,
     privateEquity: privateEquityAmount > 0,
+    preciousMetals: matieresPremieresAmount > 0,
     inflation: properties.length > 0,
     vacancy: properties.some((property) => property.monthlyRent !== null),
   };
@@ -293,6 +306,7 @@ export function ScenarioSimulator({
     inflation: activePreset.id !== CUSTOM_PRESET_ID && activePreset.inflationPct !== 0,
     scpi: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
     privateEquity: false,
+    preciousMetals: false,
     vacancy: false,
   };
 
@@ -403,6 +417,17 @@ export function ScenarioSimulator({
             onDiscountPctChange={handlePeIlliquidityDiscountChange}
             onRemove={
               addedCardIds.has("privateEquity") ? () => removeCard("privateEquity") : undefined
+            }
+          />
+        )}
+        {isCardVisible("preciousMetals") && (
+          <PreciousMetalsShockCard
+            matieresPremieresAmount={matieresPremieresAmount}
+            goldAmount={goldAmount}
+            silverAmount={silverAmount}
+            inflationPct={inflationPct}
+            onRemove={
+              addedCardIds.has("preciousMetals") ? () => removeCard("preciousMetals") : undefined
             }
           />
         )}

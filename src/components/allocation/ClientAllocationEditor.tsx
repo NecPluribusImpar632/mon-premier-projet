@@ -9,6 +9,7 @@ import {
   updateActionsProfile,
   updateProfessionalToolMainIncome,
   updateWrapperBreakdown,
+  updateMatieresPremieresBreakdown,
 } from "@/lib/actions/clients";
 import {
   effectiveImmobilierAmount,
@@ -18,6 +19,7 @@ import {
 import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
 import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import type { Wrapper, WrapperBreakdown } from "@/lib/allocation/wrappers";
+import type { PreciousMetal, PreciousMetalsBreakdown } from "@/lib/allocation/preciousMetals";
 
 interface ClientAllocationEditorProps {
   clientId: string;
@@ -25,6 +27,7 @@ interface ClientAllocationEditorProps {
   initialActionsBreakdown: ActionsProfileBreakdown;
   initialProfessionalToolMainIncome: boolean;
   initialWrapperBreakdowns: Record<string, WrapperBreakdown>;
+  initialPreciousMetalsBreakdown: PreciousMetalsBreakdown;
   properties: PropertyWithLoans[];
 }
 
@@ -64,6 +67,7 @@ export function ClientAllocationEditor({
   initialActionsBreakdown,
   initialProfessionalToolMainIncome,
   initialWrapperBreakdowns,
+  initialPreciousMetalsBreakdown,
   properties,
 }: ClientAllocationEditorProps) {
   const [amounts, setAmounts] = useState<Record<string, number>>(initialAmounts);
@@ -89,6 +93,11 @@ export function ClientAllocationEditor({
   const [wrapperStatus, setWrapperStatus] = useState<Record<string, WrapperSaveStatus>>(
     {}
   );
+
+  const [preciousMetalsBreakdown, setPreciousMetalsBreakdown] = useState<PreciousMetalsBreakdown>(
+    initialPreciousMetalsBreakdown
+  );
+  const [preciousMetalsStatus, setPreciousMetalsStatus] = useState<WrapperSaveStatus>("saved");
 
   const formColumnRef = useRef<HTMLDivElement>(null);
   const [formHeight, setFormHeight] = useState<number | null>(null);
@@ -180,6 +189,16 @@ export function ClientAllocationEditor({
       .catch(() => setWrapperStatus((prev) => ({ ...prev, [categoryId]: "error" })));
   }
 
+  function handlePreciousMetalsChange(metal: PreciousMetal, amount: number) {
+    const next = { ...preciousMetalsBreakdown, [metal]: amount };
+    setPreciousMetalsBreakdown(next);
+    setPreciousMetalsStatus("saving");
+
+    updateMatieresPremieresBreakdown(clientId, next)
+      .then(() => setPreciousMetalsStatus("saved"))
+      .catch(() => setPreciousMetalsStatus("error"));
+  }
+
   const wrapperStatusMessages = Object.fromEntries(
     Object.keys(wrapperBreakdowns).map((categoryId) => [
       categoryId,
@@ -220,6 +239,10 @@ export function ClientAllocationEditor({
             onWrapperBreakdownChange={handleWrapperChange}
             wrapperStatusMessages={wrapperStatusMessages}
             wrapperStatusColorClasses={wrapperStatusColorClasses}
+            preciousMetalsBreakdown={preciousMetalsBreakdown}
+            onPreciousMetalsBreakdownChange={handlePreciousMetalsChange}
+            preciousMetalsStatusMessage={WRAPPER_STATUS_MESSAGE[preciousMetalsStatus]}
+            preciousMetalsStatusColorClass={WRAPPER_STATUS_COLOR[preciousMetalsStatus]}
           />
 
           <p

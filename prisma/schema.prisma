@@ -20,59 +20,61 @@ model User {
 }
 
 model Client {
-  id                           String     @id @default(cuid())
-  name                         String
-  age                          Int
-  actionsAmount                Float      @default(0)
-  obligationsAmount            Float      @default(0)
-  immobilierAmount             Float      @default(0)
-  scpiAmount                   Float      @default(0)
-  liquiditesAmount             Float      @default(0)
-  privateEquityAmount          Float      @default(0)
-  outilProfessionnelAmount     Float      @default(0)
-  professionalToolMainIncome   Boolean    @default(false)
-  matieresPremieresAmount      Float      @default(0)
-  autresAmount                 Float      @default(0)
-  actionsIndicielPct           Float      @default(100)
-  actionsDefensifPct           Float      @default(0)
-  actionsCroissancePct         Float      @default(0)
-  riskProfile                  String?
-  notes                        String?
-  retirementAge                Int?
-  monthlySavingsAmount         Float?
-  expectedAnnualReturnPct      Float?
-  wealthGoalAmount             Float?
-  wealthGoalAge                Int?
-  maritalStatus                String?
-  spouseName                   String?
-  spouseImmobilierAmount       Float?
-  spouseScpiAmount             Float?
-  spouseDebtAmount             Float?
-  minorChildrenCount           Int?
-  adultChildrenCount           Int?
-  createdAt                    DateTime   @default(now())
-  updatedAt                    DateTime   @updatedAt
-  properties                   Property[]
-  savedScenarios               SavedScenario[]
-  wrapperAllocations           WrapperAllocation[]
+  id                            String              @id @default(cuid())
+  name                          String
+  age                           Int
+  actionsAmount                 Float               @default(0)
+  obligationsAmount             Float               @default(0)
+  immobilierAmount              Float               @default(0)
+  scpiAmount                    Float               @default(0)
+  liquiditesAmount              Float               @default(0)
+  privateEquityAmount           Float               @default(0)
+  outilProfessionnelAmount      Float               @default(0)
+  professionalToolMainIncome    Boolean             @default(false)
+  matieresPremieresAmount       Float               @default(0)
+  matieresPremieresGoldAmount   Float               @default(0)
+  matieresPremieresSilverAmount Float               @default(0)
+  autresAmount                  Float               @default(0)
+  actionsIndicielPct            Float               @default(100)
+  actionsDefensifPct            Float               @default(0)
+  actionsCroissancePct          Float               @default(0)
+  riskProfile                   String?
+  notes                         String?
+  retirementAge                 Int?
+  monthlySavingsAmount          Float?
+  expectedAnnualReturnPct       Float?
+  wealthGoalAmount              Float?
+  wealthGoalAge                 Int?
+  maritalStatus                 String?
+  spouseName                    String?
+  spouseImmobilierAmount        Float?
+  spouseScpiAmount              Float?
+  spouseDebtAmount              Float?
+  minorChildrenCount            Int?
+  adultChildrenCount            Int?
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @updatedAt
+  properties                    Property[]
+  savedScenarios                SavedScenario[]
+  wrapperAllocations            WrapperAllocation[]
 }
 
 model Property {
-  id                  String   @id @default(cuid())
-  name                String
-  currentValue        Float
-  isPrimaryResidence  Boolean  @default(false)
-  monthlyRent         Float?
-  acquisitionPrice    Float?
-  acquisitionDate     DateTime?
-  department          String?
-  arrondissement      Int?
-  communeCode         String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  clientId            String
-  client              Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  loans               Loan[]
+  id                 String    @id @default(cuid())
+  name               String
+  currentValue       Float
+  isPrimaryResidence Boolean   @default(false)
+  monthlyRent        Float?
+  acquisitionPrice   Float?
+  acquisitionDate    DateTime?
+  department         String?
+  arrondissement     Int?
+  communeCode        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  clientId           String
+  client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  loans              Loan[]
 }
 
 model Loan {
