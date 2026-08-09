@@ -48,6 +48,7 @@ export function ActionsProfileFields({
               onChange={(e) =>
                 onChange(profile, clampPercentage(Number(e.target.value)))
               }
+              onWheel={(e) => e.currentTarget.blur()}
               className={`w-16 ${NUMERIC_FIELD_CLASS}`}
             />
             <span className="w-3 text-xs text-slate">%</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
@@ -56,6 +57,19 @@ export function AllocationAmountForm({
   preciousMetalsStatusMessage,
   preciousMetalsStatusColorClass,
 }: AllocationAmountFormProps) {
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+
+  // The tab switch that mounts this form is a mouse click on the sidebar —
+  // without this, the next Tab press would go to the next sidebar item, not
+  // into the form, forcing a CGP filling this in under time pressure back
+  // to the mouse. Landing focus on the first field lets Tab alone carry
+  // them through every amount.
+  useEffect(() => {
+    firstFieldRef.current?.focus();
+  }, []);
+
+  const firstCategoryId = ASSET_CATEGORIES[0].id;
+
   return (
     <div className="flex flex-col gap-3">
       {ASSET_CATEGORIES.map((category) => {
@@ -77,6 +91,7 @@ export function AllocationAmountForm({
                 ) : (
                   <span className="flex items-center gap-1.5">
                     <FormattedNumberInput
+                      ref={category.id === firstCategoryId ? firstFieldRef : undefined}
                       value={amounts[category.id] ?? 0}
                       onChange={(amount) => onChange(category.id, amount)}
                       placeholder="0"
@@ -96,6 +111,7 @@ export function AllocationAmountForm({
                 <span className="inline-flex w-fit shrink-0 gap-1 rounded-full border border-line bg-paper p-1">
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={() => onProfessionalToolMainIncomeChange(false)}
                     className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                       !professionalToolMainIncome
@@ -107,6 +123,7 @@ export function AllocationAmountForm({
                   </button>
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={() => onProfessionalToolMainIncomeChange(true)}
                     className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                       professionalToolMainIncome

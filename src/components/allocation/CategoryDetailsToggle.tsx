@@ -82,6 +82,7 @@ export function CategoryDetailsToggle({
     return (
       <button
         type="button"
+        tabIndex={-1}
         onClick={() => setExpanded(true)}
         aria-label="Détailler cette catégorie"
         className={`ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${

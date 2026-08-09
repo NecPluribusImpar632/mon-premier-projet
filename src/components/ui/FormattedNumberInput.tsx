@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState, type ChangeEvent } from "react";
 
 interface FormattedNumberInputProps {
   value?: number;
@@ -26,63 +26,64 @@ function formatDigits(digits: string): string {
  * Plain-text input that live-formats whole numbers with thousands
  * separators (e.g. typing 500000 renders as "500 000"). Submits the
  * formatted string under `name` — server actions should strip
- * non-digit characters before parsing.
+ * non-digit characters before parsing. Forwards its ref to the
+ * underlying `<input>` (e.g. for programmatic focus-on-mount) while
+ * still keeping its own internal ref for cursor-position restoration.
  */
-export function FormattedNumberInput({
-  value,
-  onChange,
-  name,
-  placeholder,
-  required,
-  className,
-}: FormattedNumberInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [display, setDisplay] = useState(() =>
-    value ? formatDigits(String(value)) : ""
-  );
+export const FormattedNumberInput = forwardRef<HTMLInputElement, FormattedNumberInputProps>(
+  function FormattedNumberInput(
+    { value, onChange, name, placeholder, required, className },
+    forwardedRef
+  ) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    useImperativeHandle(forwardedRef, () => inputRef.current as HTMLInputElement);
+    const [display, setDisplay] = useState(() =>
+      value ? formatDigits(String(value)) : ""
+    );
 
-  function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const input = event.target;
-    const cursor = input.selectionStart ?? input.value.length;
-    const digitsBeforeCursor = toDigits(input.value.slice(0, cursor)).length;
+    function handleChange(event: ChangeEvent<HTMLInputElement>) {
+      const input = event.target;
+      const cursor = input.selectionStart ?? input.value.length;
+      const digitsBeforeCursor = toDigits(input.value.slice(0, cursor)).length;
 
-    const digits = toDigits(input.value);
-    const formatted = formatDigits(digits);
+      const digits = toDigits(input.value);
+      const formatted = formatDigits(digits);
 
-    setDisplay(formatted);
-    onChange?.(digits ? Number(digits) : 0);
+      setDisplay(formatted);
+      onChange?.(digits ? Number(digits) : 0);
 
-    requestAnimationFrame(() => {
-      const el = inputRef.current;
-      if (!el) return;
-      let seen = 0;
-      let pos = formatted.length;
-      for (let i = 0; i < formatted.length; i++) {
-        if (/\d/.test(formatted[i])) {
-          seen++;
-          if (seen === digitsBeforeCursor) {
-            pos = i + 1;
-            break;
+      requestAnimationFrame(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        let seen = 0;
+        let pos = formatted.length;
+        for (let i = 0; i < formatted.length; i++) {
+          if (/\d/.test(formatted[i])) {
+            seen++;
+            if (seen === digitsBeforeCursor) {
+              pos = i + 1;
+              break;
+            }
           }
         }
-      }
-      if (digitsBeforeCursor === 0) pos = 0;
-      el.setSelectionRange(pos, pos);
-    });
-  }
+        if (digitsBeforeCursor === 0) pos = 0;
+        el.setSelectionRange(pos, pos);
+      });
+    }
 
-  return (
-    <input
-      ref={inputRef}
-      type="text"
-      inputMode="numeric"
-      autoComplete="off"
-      name={name}
-      value={display}
-      onChange={handleChange}
-      placeholder={placeholder}
-      required={required}
-      className={className}
-    />
-  );
-}
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        name={name}
+        value={display}
+        onChange={handleChange}
+        placeholder={placeholder}
+        required={required}
+        className={className}
+      />
+    );
+  }
+);
