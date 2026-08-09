@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Download, GitCompare } from "lucide-react";
 import type { SavedScenario } from "@/generated/prisma/client";
-import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
+import { resolvedMarketShockPct } from "@/lib/scenarios/indexScenarioShocks";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import {
   computeFullScenarioImpact,
@@ -50,7 +51,7 @@ interface ScenarioSimulatorProps {
   goldAmount: number;
   silverAmount: number;
   immobilierValue: number;
-  actionsBreakdown: ActionsProfileBreakdown;
+  actionsIndexBreakdown: ActionsIndexBreakdown;
   properties: PropertyWithSensitivity[];
   initialSavedScenarios: SavedScenario[];
 }
@@ -94,7 +95,7 @@ export function ScenarioSimulator({
   goldAmount,
   silverAmount,
   immobilierValue,
-  actionsBreakdown,
+  actionsIndexBreakdown,
   properties,
   initialSavedScenarios,
 }: ScenarioSimulatorProps) {
@@ -140,7 +141,7 @@ export function ScenarioSimulator({
   function applyPreset(preset: ScenarioPreset) {
     setSelectedPresetId(preset.id);
     setSelectedSavedScenarioId(null);
-    setMarketShockPct(preset.marketShockPct);
+    setMarketShockPct(resolvedMarketShockPct(preset, actionsIndexBreakdown));
     setOatRateChangePts(preset.oatRateChangePts);
     setInflationPct(preset.inflationPct);
   }
@@ -240,7 +241,7 @@ export function ScenarioSimulator({
   const context: ClientScenarioContext = {
     financialWealthTotal,
     actionsPctWithinFinancial,
-    actionsBreakdown,
+    actionsIndexBreakdown,
     properties,
     immobilierValue,
     scpiAmount,
@@ -379,7 +380,7 @@ export function ScenarioSimulator({
         {isCardVisible("actions") && (
           <StockShockCard
             actionsPct={actionsPctOverall}
-            actionsBreakdown={actionsBreakdown}
+            actionsIndexBreakdown={actionsIndexBreakdown}
             marketShockPct={marketShockPct}
             onMarketShockPctChange={handleMarketShockChange}
             onRemove={addedCardIds.has("actions") ? () => removeCard("actions") : undefined}

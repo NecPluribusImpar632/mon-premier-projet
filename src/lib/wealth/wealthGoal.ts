@@ -1,4 +1,3 @@
-import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import { projectLoanBalance, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { computeRentalYield } from "@/lib/property/rentalYield";
 import { DEFAULT_SCENARIO_PARAMS } from "@/lib/scenarios/scenarioParams";
@@ -22,28 +21,18 @@ const PE_NOMINAL_RETURN_PCT = 6.5;
  * fiscal LMNP/SCI/déficit foncier). */
 const RENTAL_YIELD_CHARGES_HAIRCUT_PCT = 30;
 
-const STOCK_PROFILE_REAL_RETURN_PCT: Record<keyof ActionsProfileBreakdown, number> = {
-  indiciel: 5,
-  defensif: 3.5,
-  croissance: 6,
-};
+/** Flat assumption for the whole Actions bucket regardless of index mix — a
+ * consensus long-run figure (closer to MSCI World's real long-run return
+ * than the US-heavy S&P 500's), not broken down per index since no long-run
+ * real-return research exists per index yet (only the crisis-year shocks in
+ * indexScenarioShocks.ts are calibrated that granularly). */
+const ACTIONS_REAL_RETURN_PCT = 5;
 
 /** (1+réel)×(1+inflation)−1 — nécessaire pour additionner les hypothèses "réelles"
  * ci-dessus au 6,5% nominal du Private Equity, et parce qu'un objectif de
  * patrimoine s'exprime naturellement en euros courants. */
 function toNominal(realPct: number, inflationPct: number): number {
   return ((1 + realPct / 100) * (1 + inflationPct / 100) - 1) * 100;
-}
-
-function weightedActionsRealReturnPct(breakdown: ActionsProfileBreakdown): number {
-  const total = breakdown.indiciel + breakdown.defensif + breakdown.croissance;
-  if (total <= 0) return STOCK_PROFILE_REAL_RETURN_PCT.indiciel;
-  return (
-    (breakdown.indiciel * STOCK_PROFILE_REAL_RETURN_PCT.indiciel +
-      breakdown.defensif * STOCK_PROFILE_REAL_RETURN_PCT.defensif +
-      breakdown.croissance * STOCK_PROFILE_REAL_RETURN_PCT.croissance) /
-    total
-  );
 }
 
 export interface AssetClassGrowthRow {
@@ -56,7 +45,6 @@ export interface AssetClassGrowthRow {
 
 export interface WealthGoalContext {
   amounts: Record<string, number>;
-  actionsBreakdown: ActionsProfileBreakdown;
   properties: PropertyWithLoans[];
   /** Montant Immobilier manuel — utilisé uniquement si `properties` est vide, même
    * convention que `ClientScenarioContext.immobilierValue`. */
@@ -120,7 +108,7 @@ export function computeWealthGoalProjection(
   targetAmount: number,
   inflationPct: number
 ): WealthGoalResult {
-  const { amounts, actionsBreakdown, properties, immobilierValue } = context;
+  const { amounts, properties, immobilierValue } = context;
   const horizonYears = Math.max(targetAge - currentAge, 0);
   const peDiscountFactor = 1 - DEFAULT_SCENARIO_PARAMS.peIlliquidityDiscountPct / 100;
 
@@ -129,7 +117,7 @@ export function computeWealthGoalProjection(
       categoryId: "actions",
       label: "Actions",
       amount: amounts.actions ?? 0,
-      nominalReturnPct: toNominal(weightedActionsRealReturnPct(actionsBreakdown), inflationPct),
+      nominalReturnPct: toNominal(ACTIONS_REAL_RETURN_PCT, inflationPct),
     },
     {
       categoryId: "obligations",

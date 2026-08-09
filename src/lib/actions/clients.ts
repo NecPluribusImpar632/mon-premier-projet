@@ -6,9 +6,11 @@ import { prisma } from "@/lib/prisma";
 import {
   allocationFieldsFromAmounts,
   wrapperAllocationRowsFromBreakdown,
+  actionsIndexAllocationRowsFromBreakdown,
 } from "@/lib/allocation/mapping";
 import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "@/lib/allocation/categories";
-import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
+import { REFERENCE_INDICES } from "@/lib/allocation/referenceIndices";
 import { WRAPPERS, type WrapperBreakdown } from "@/lib/allocation/wrappers";
 import { PRECIOUS_METALS, type PreciousMetalsBreakdown } from "@/lib/allocation/preciousMetals";
 import { isRiskProfile } from "@/lib/client/riskProfile";
@@ -30,6 +32,7 @@ export async function getClient(id: string) {
         include: { loans: { orderBy: { createdAt: "asc" } } },
       },
       wrapperAllocations: true,
+      actionsIndexAllocations: true,
     },
   });
 }
@@ -190,25 +193,33 @@ export async function updateFoyerFiscal(clientId: string, data: FoyerFiscalData)
   revalidatePath(`/clients/${clientId}`);
 }
 
-export async function updateActionsProfile(
+/**
+ * Replaces the Actions bucket's index breakdown wholesale (delete then
+ * recreate, same full-replace approach as the wrapper breakdown). Unlike the
+ * wrapper breakdown, this stays a closed 100% partition (validated client-side
+ * by clamping each field as you type, same UX contract as the old
+ * Indiciel/Défensif/Croissance breakdown) — but the server only checks each
+ * value is a valid percentage, not that they sum to 100, so a mid-edit or
+ * partial state never fails to save.
+ */
+export async function updateActionsIndexBreakdown(
   clientId: string,
-  breakdown: ActionsProfileBreakdown
+  breakdown: ActionsIndexBreakdown
 ) {
-  const hasValidPercentages = Object.values(breakdown).every(
-    (value) => Number.isFinite(value) && value >= 0 && value <= 100
-  );
+  const hasValidPercentages = REFERENCE_INDICES.every((index) => {
+    const value = breakdown[index];
+    return Number.isFinite(value) && value >= 0 && value <= 100;
+  });
   if (!hasValidPercentages) {
     throw new Error("Chaque pourcentage doit être compris entre 0 et 100.");
   }
 
-  await prisma.client.update({
-    where: { id: clientId },
-    data: {
-      actionsIndicielPct: breakdown.indiciel,
-      actionsDefensifPct: breakdown.defensif,
-      actionsCroissancePct: breakdown.croissance,
-    },
-  });
+  await prisma.$transaction([
+    prisma.actionsIndexAllocation.deleteMany({ where: { clientId } }),
+    prisma.actionsIndexAllocation.createMany({
+      data: actionsIndexAllocationRowsFromBreakdown(clientId, breakdown),
+    }),
+  ]);
   revalidatePath(`/clients/${clientId}`);
 }
 

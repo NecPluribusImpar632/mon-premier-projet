@@ -35,9 +35,6 @@ model Client {
   matieresPremieresGoldAmount   Float               @default(0)
   matieresPremieresSilverAmount Float               @default(0)
   autresAmount                  Float               @default(0)
-  actionsIndicielPct            Float               @default(100)
-  actionsDefensifPct            Float               @default(0)
-  actionsCroissancePct          Float               @default(0)
   riskProfile                   String?
   notes                         String?
   retirementAge                 Int?
@@ -57,6 +54,7 @@ model Client {
   properties                    Property[]
   savedScenarios                SavedScenario[]
   wrapperAllocations            WrapperAllocation[]
+  actionsIndexAllocations       ActionsIndexAllocation[]
 }
 
 model Property {
@@ -105,6 +103,25 @@ model WrapperAllocation {
   updatedAt DateTime @updatedAt
 
   @@unique([clientId, category, wrapper])
+}
+
+/** Replaces the old "Indiciel large / Défensif / Croissance" style-based
+ * profile: the Actions bucket's sub-allocation is now directly a % breakdown
+ * across the real indices in referenceIndices.ts (e.g. 40% CAC 40, 60%
+ * Nasdaq), so scenario shocks use each index's own real historical move
+ * instead of a beta-multiplier fiction. No row for a client = 100% MSCI
+ * World (the implicit default), same "no row = not detailed" convention as
+ * WrapperAllocation. */
+model ActionsIndexAllocation {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  index      String
+  percentage Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([clientId, index])
 }
 
 model SavedScenario {

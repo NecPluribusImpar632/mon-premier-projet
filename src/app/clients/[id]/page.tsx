@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import { getSavedScenarios } from "@/lib/actions/scenarios";
 import {
-  actionsBreakdownFromClient,
+  actionsIndexBreakdownFromClient,
   amountsFromClient,
   overallEntriesFromAmounts,
   professionalToolMainIncomeFromClient,
@@ -53,7 +53,7 @@ export default async function ClientDetailPage({
       initialMinorChildrenCount={client.minorChildrenCount}
       initialAdultChildrenCount={client.adultChildrenCount}
       amounts={amounts}
-      actionsBreakdown={actionsBreakdownFromClient(client)}
+      actionsIndexBreakdown={actionsIndexBreakdownFromClient(client.actionsIndexAllocations)}
       initialProfessionalToolMainIncome={professionalToolMainIncomeFromClient(client)}
       initialWrapperBreakdowns={wrapperBreakdownsFromClient(client.wrapperAllocations)}
       initialPreciousMetalsBreakdown={preciousMetalsBreakdownFromClient(client)}

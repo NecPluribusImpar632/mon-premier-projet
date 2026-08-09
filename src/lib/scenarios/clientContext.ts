@@ -1,6 +1,6 @@
-import type { Client } from "@/generated/prisma/client";
+import type { ActionsIndexAllocation, Client } from "@/generated/prisma/client";
 import {
-  actionsBreakdownFromClient,
+  actionsIndexBreakdownFromClient,
   amountsFromClient,
   effectiveImmobilierAmount,
   financialTotalFromAmounts,
@@ -16,7 +16,10 @@ import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
  * export route, so it's centralized here.
  */
 export function buildClientScenarioContext(
-  client: Client & { properties: PropertyWithLoans[] }
+  client: Client & {
+    properties: PropertyWithLoans[];
+    actionsIndexAllocations: ActionsIndexAllocation[];
+  }
 ): ClientScenarioContext {
   const amounts = amountsFromClient(client);
   const financialWealthTotal = financialTotalFromAmounts(amounts);
@@ -30,7 +33,7 @@ export function buildClientScenarioContext(
   return {
     financialWealthTotal,
     actionsPctWithinFinancial,
-    actionsBreakdown: actionsBreakdownFromClient(client),
+    actionsIndexBreakdown: actionsIndexBreakdownFromClient(client.actionsIndexAllocations),
     properties: withResolvedSensitivity(client.properties),
     immobilierValue,
     scpiAmount: amounts.scpi ?? 0,

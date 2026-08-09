@@ -9,8 +9,12 @@ import {
   type PreciousMetal,
   type PreciousMetalsBreakdown,
 } from "@/lib/allocation/preciousMetals";
-import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
-import { ActionsProfileFields } from "@/components/allocation/ActionsProfileFields";
+import {
+  isActionsIndexBreakdownDefault,
+  type ActionsIndexBreakdown,
+} from "@/lib/allocation/actionsIndexBreakdown";
+import type { ReferenceIndex } from "@/lib/allocation/referenceIndices";
+import { ActionsIndexFields } from "@/components/allocation/ActionsIndexFields";
 import { WrapperFields } from "@/components/allocation/WrapperFields";
 import { PreciousMetalsFields } from "@/components/allocation/PreciousMetalsFields";
 
@@ -21,8 +25,8 @@ interface CategoryDetailsToggleProps {
   onWrapperChange: (wrapper: Wrapper, amount: number) => void;
   wrapperStatusMessage: string;
   wrapperStatusColorClass: string;
-  actionsBreakdown?: ActionsProfileBreakdown;
-  onActionsChange?: (profile: keyof ActionsProfileBreakdown, percentage: number) => void;
+  actionsIndexBreakdown?: ActionsIndexBreakdown;
+  onActionsIndexChange?: (index: ReferenceIndex, percentage: number) => void;
   actionsStatusMessage?: string;
   actionsStatusColorClass?: string;
   preciousMetalsBreakdown?: PreciousMetalsBreakdown;
@@ -47,8 +51,8 @@ export function CategoryDetailsToggle({
   onWrapperChange,
   wrapperStatusMessage,
   wrapperStatusColorClass,
-  actionsBreakdown,
-  onActionsChange,
+  actionsIndexBreakdown,
+  onActionsIndexChange,
   actionsStatusMessage,
   actionsStatusColorClass,
   preciousMetalsBreakdown,
@@ -56,12 +60,14 @@ export function CategoryDetailsToggle({
   preciousMetalsStatusMessage,
   preciousMetalsStatusColorClass,
 }: CategoryDetailsToggleProps) {
-  const hasActionsSection = categoryId === "actions" && !!actionsBreakdown && !!onActionsChange;
+  const hasActionsSection =
+    categoryId === "actions" && !!actionsIndexBreakdown && !!onActionsIndexChange;
   const hasPreciousMetalsSection =
     categoryId === "matieres-premieres" && !!preciousMetalsBreakdown && !!onPreciousMetalsChange;
   const hasWrapperSection = (FINANCIAL_CATEGORY_IDS as string[]).includes(categoryId);
 
-  const isActionsDetailed = hasActionsSection && actionsBreakdown!.indiciel !== 100;
+  const isActionsDetailed =
+    hasActionsSection && !isActionsIndexBreakdownDefault(actionsIndexBreakdown!);
   const wrapperTotal = hasWrapperSection ? wrapperBreakdownTotal(wrapperBreakdown) : 0;
   const metalsTotal = hasPreciousMetalsSection
     ? preciousMetalsBreakdownTotal(preciousMetalsBreakdown!)
@@ -96,10 +102,10 @@ export function CategoryDetailsToggle({
 
   const sections = [
     hasActionsSection && (
-      <ActionsProfileFields
+      <ActionsIndexFields
         key="actions"
-        breakdown={actionsBreakdown!}
-        onChange={onActionsChange!}
+        breakdown={actionsIndexBreakdown!}
+        onChange={onActionsIndexChange!}
         statusMessage={actionsStatusMessage ?? ""}
         statusColorClass={actionsStatusColorClass ?? "text-slate"}
       />

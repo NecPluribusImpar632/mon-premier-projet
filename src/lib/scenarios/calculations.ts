@@ -1,8 +1,5 @@
 import type { Property } from "@/generated/prisma/client";
-import {
-  STOCK_PROFILE_BETA,
-  type ActionsProfileBreakdown,
-} from "@/lib/allocation/stockProfiles";
+import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { ZoneSensitivity } from "@/lib/scenarios/realEstateSensitivity";
 import {
   GOLD_SENSITIVITY,
@@ -14,30 +11,26 @@ import type { ScenarioParams } from "@/lib/scenarios/scenarioParams";
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 
 export interface StockShockResult {
-  weightedBeta: number;
   /** Estimated move of the Actions bucket itself, in %. */
   actionsImpactPct: number;
   /** Same move expressed in points of the whole portfolio. */
   portfolioImpactPts: number;
 }
 
+/**
+ * marketShockPct is already the real weighted move for the client's actual
+ * index mix (see indexScenarioShocks.ts's resolvedMarketShockPct, which
+ * blends each held index's real historical shock by its % of the Actions
+ * bucket) — no beta multiplier here, unlike the old Indiciel/Défensif/
+ * Croissance model, since each index's own historical number already
+ * reflects how it actually moved.
+ */
 export function computeStockShockImpact(
-  breakdown: ActionsProfileBreakdown,
   actionsPct: number,
   marketShockPct: number
 ): StockShockResult {
-  const total = breakdown.indiciel + breakdown.defensif + breakdown.croissance;
-  const weightedBeta =
-    total > 0
-      ? (breakdown.indiciel * STOCK_PROFILE_BETA.indiciel +
-          breakdown.defensif * STOCK_PROFILE_BETA.defensif +
-          breakdown.croissance * STOCK_PROFILE_BETA.croissance) /
-        total
-      : STOCK_PROFILE_BETA.indiciel;
-  const actionsImpactPct = marketShockPct * weightedBeta;
-  const portfolioImpactPts = (actionsPct / 100) * actionsImpactPct;
-
-  return { weightedBeta, actionsImpactPct, portfolioImpactPts };
+  const portfolioImpactPts = (actionsPct / 100) * marketShockPct;
+  return { actionsImpactPct: marketShockPct, portfolioImpactPts };
 }
 
 export interface PropertyValueImpact {
@@ -340,7 +333,11 @@ export function computePreciousMetalShockImpact(
 export interface ClientScenarioContext {
   financialWealthTotal: number;
   actionsPctWithinFinancial: number;
-  actionsBreakdown: ActionsProfileBreakdown;
+  /** % of the Actions bucket tracking each real index (e.g. 40% CAC 40, 60%
+   * Nasdaq) — used to resolve the named presets' market shock (see
+   * indexScenarioShocks.ts), not by computeStockShockImpact itself (it stays
+   * a plain scalar shock). */
+  actionsIndexBreakdown: ActionsIndexBreakdown;
   properties: PropertyWithSensitivity[];
   /** Montant Immobilier effectif (saisi à la main ou somme des biens détaillés) —
    * utilisé tel quel, non choqué, quand aucun bien n'est détaillé. */
@@ -442,7 +439,6 @@ export function computeFullScenarioImpact(
   const {
     financialWealthTotal,
     actionsPctWithinFinancial,
-    actionsBreakdown,
     properties,
     immobilierValue,
     scpiAmount,
@@ -469,11 +465,7 @@ export function computeFullScenarioImpact(
   const totalBefore = financialWealthTotal + totalPropertyValue - totalDebt + immobilierBaseline;
 
   const actionsValueBefore = (actionsPctWithinFinancial / 100) * financialWealthTotal;
-  const stockShock = computeStockShockImpact(
-    actionsBreakdown,
-    actionsPctWithinFinancial,
-    marketShockPct
-  );
+  const stockShock = computeStockShockImpact(actionsPctWithinFinancial, marketShockPct);
   const actionsValueAfter = actionsValueBefore * (1 + stockShock.actionsImpactPct / 100);
   const stocksDelta = actionsValueAfter - actionsValueBefore;
 

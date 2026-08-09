@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { updateWealthGoal } from "@/lib/actions/clients";
 import { computeWealthGoalProjection, type WealthGoalContext } from "@/lib/wealth/wealthGoal";
-import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { NetWorthProjectionChart } from "@/components/scenarios/NetWorthProjectionChart";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
@@ -16,7 +15,6 @@ interface WealthGoalSectionProps {
   clientId: string;
   currentAge: number;
   amounts: Record<string, number>;
-  actionsBreakdown: ActionsProfileBreakdown;
   properties: PropertyWithLoans[];
   immobilierValue: number;
   initialWealthGoalAmount: number | null;
@@ -36,7 +34,6 @@ export function WealthGoalSection({
   clientId,
   currentAge,
   amounts,
-  actionsBreakdown,
   properties,
   immobilierValue,
   initialWealthGoalAmount,
@@ -63,7 +60,7 @@ export function WealthGoalSection({
     });
   }
 
-  const context: WealthGoalContext = { amounts, actionsBreakdown, properties, immobilierValue };
+  const context: WealthGoalContext = { amounts, properties, immobilierValue };
   const result = computeWealthGoalProjection(
     context,
     currentAge,
@@ -200,9 +197,10 @@ export function WealthGoalSection({
             Hypothèses de rendement <strong>réel</strong> annuel par classe d&apos;actif —
             des ordres de grandeur consensuels de long terme, pas calibrés sur données
             historiques françaises comme le stress test immobilier (qui, lui, s&apos;appuie
-            sur les indices Notaires-INSEE) : Actions 5 % (indiciel) / 3,5 % (défensif) /
-            6 % (croissance), pondérés par le profil actions du client ; Obligations
-            1,5 % ; SCPI 4 % ; Liquidités et Matières premières 0 %. Immobilier direct :
+            sur les indices Notaires-INSEE) : Actions 5 % (une seule hypothèse pour toute
+            la poche, quel que soit le mix d&apos;indices choisi dans l&apos;onglet
+            Allocation) ; Obligations 1,5 % ; SCPI 4 % ; Liquidités et Matières premières
+            0 %. Immobilier direct :
             0,5 % d&apos;appréciation (ordre de grandeur Friggit/IGEDD sur longue période)
             plus, si le bien est loué, un rendement locatif net calculé à partir du loyer
             réellement saisi sur ce bien, moins 30 % pour charges/copropriété/entretien —

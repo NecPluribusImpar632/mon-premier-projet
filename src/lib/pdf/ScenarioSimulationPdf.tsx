@@ -3,7 +3,6 @@ import {
   computeFullScenarioImpact,
   computeObligationsShockImpact,
   computeRealEstateShockImpact,
-  computeStockShockImpact,
   type ClientScenarioContext,
   type FullScenarioResult,
 } from "@/lib/scenarios/calculations";
@@ -12,6 +11,7 @@ import {
   SILVER_SENSITIVITY,
 } from "@/lib/scenarios/preciousMetalsSensitivity";
 import type { ScenarioParams } from "@/lib/scenarios/scenarioParams";
+import { REFERENCE_INDICES, REFERENCE_INDEX_LABELS } from "@/lib/allocation/referenceIndices";
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -136,10 +136,8 @@ export function ScenarioSimulationPdf({
     context.properties,
     params.oatRateChangePts
   );
-  const stockShock = computeStockShockImpact(
-    context.actionsBreakdown,
-    context.actionsPctWithinFinancial,
-    params.marketShockPct
+  const heldIndices = REFERENCE_INDICES.filter(
+    (index) => context.actionsIndexBreakdown[index] > 0
   );
   const obligationsShock = computeObligationsShockImpact(
     context.obligationsAmount,
@@ -218,9 +216,14 @@ export function ScenarioSimulationPdf({
             <View style={styles.methodologyBlock}>
               <Text style={styles.methodologyTitle}>Choc actions</Text>
               <Text style={styles.methodologyText}>
-                Sensibilité pondérée du profil actions : ×{stockShock.weightedBeta.toFixed(2)}{" "}
-                (moyenne des profils indiciel/défensif/croissance pondérée par leur poids
-                dans la poche Actions).
+                Répartition par indice de référence :{" "}
+                {heldIndices
+                  .map(
+                    (index) =>
+                      `${REFERENCE_INDEX_LABELS[index]} ${context.actionsIndexBreakdown[index]}%`
+                  )
+                  .join(", ")}
+                .
               </Text>
             </View>
           )}

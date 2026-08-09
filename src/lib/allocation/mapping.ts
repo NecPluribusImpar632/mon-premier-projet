@@ -1,6 +1,10 @@
-import type { Client, Property, WrapperAllocation } from "@/generated/prisma/client";
+import type {
+  ActionsIndexAllocation,
+  Client,
+  Property,
+  WrapperAllocation,
+} from "@/generated/prisma/client";
 import type { AllocationEntry } from "@/types/allocation";
-import type { ActionsProfileBreakdown } from "./stockProfiles";
 import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "./categories";
 import {
   WRAPPERS,
@@ -9,6 +13,12 @@ import {
   type WrapperBreakdown,
 } from "./wrappers";
 import type { PreciousMetalsBreakdown } from "./preciousMetals";
+import { REFERENCE_INDICES, isReferenceIndex } from "./referenceIndices";
+import {
+  defaultActionsIndexBreakdown,
+  emptyActionsIndexBreakdown,
+  type ActionsIndexBreakdown,
+} from "./actionsIndexBreakdown";
 
 type CategoryFieldName =
   | "actionsAmount"
@@ -110,14 +120,34 @@ export function overallEntriesFromClient(
   return overallEntriesFromAmounts(amountsFromClient(client), properties);
 }
 
-export function actionsBreakdownFromClient(
-  client: Client
-): ActionsProfileBreakdown {
-  return {
-    indiciel: client.actionsIndicielPct,
-    defensif: client.actionsDefensifPct,
-    croissance: client.actionsCroissancePct,
-  };
+/** Rows from the ActionsIndexAllocation table → a full breakdown across all 7
+ * indices. No rows at all = the implicit default (100% MSCI World), same
+ * "no row = not detailed" convention as wrapperBreakdownsFromClient. Unknown
+ * index values (stale data from a removed option) are skipped. */
+export function actionsIndexBreakdownFromClient(
+  allocations: ActionsIndexAllocation[]
+): ActionsIndexBreakdown {
+  if (allocations.length === 0) return defaultActionsIndexBreakdown();
+
+  const result = emptyActionsIndexBreakdown();
+  for (const row of allocations) {
+    if (isReferenceIndex(row.index)) {
+      result[row.index] = row.percentage;
+    }
+  }
+  return result;
+}
+
+/** Breakdown → the rows to persist (nonzero percentages only). */
+export function actionsIndexAllocationRowsFromBreakdown(
+  clientId: string,
+  breakdown: ActionsIndexBreakdown
+): { clientId: string; index: string; percentage: number }[] {
+  return REFERENCE_INDICES.filter((index) => breakdown[index] > 0).map((index) => ({
+    clientId,
+    index,
+    percentage: breakdown[index],
+  }));
 }
 
 /** Whether the client draws most of their income from their own/family business. */

@@ -103,7 +103,7 @@ export function selectHighlightedFacts(
 // One-line factual note per post, shown only in the "En savoir plus" detail
 // list — never reused inside the narrative paragraph itself.
 export const POST_METHODOLOGY_NOTES: Record<string, string> = {
-  actions: "Choc de marché pondéré selon le profil (indiciel / défensif / croissance).",
+  actions: "Choc de marché pondéré selon la répartition par indice détenue.",
   realEstate: "Revalorisation selon la sensibilité prix/taux calibrée par zone.",
   scpi: "Décote de part appliquée au montant détenu.",
   obligations: "Approximation de duration : ΔPrix/Prix ≈ -duration × Δtaux.",

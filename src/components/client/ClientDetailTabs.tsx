@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Building2, Download, PieChart, Target } from "lucide-react";
 import type { SavedScenario } from "@/generated/prisma/client";
-import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { WrapperBreakdown } from "@/lib/allocation/wrappers";
 import type { PreciousMetalsBreakdown } from "@/lib/allocation/preciousMetals";
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
@@ -44,7 +44,7 @@ interface ClientDetailTabsProps {
   initialAdultChildrenCount: number | null;
 
   amounts: Record<string, number>;
-  actionsBreakdown: ActionsProfileBreakdown;
+  actionsIndexBreakdown: ActionsIndexBreakdown;
   initialProfessionalToolMainIncome: boolean;
   initialWrapperBreakdowns: Record<string, WrapperBreakdown>;
   initialPreciousMetalsBreakdown: PreciousMetalsBreakdown;
@@ -79,7 +79,7 @@ export function ClientDetailTabs({
   initialMinorChildrenCount,
   initialAdultChildrenCount,
   amounts,
-  actionsBreakdown,
+  actionsIndexBreakdown,
   initialProfessionalToolMainIncome,
   initialWrapperBreakdowns,
   initialPreciousMetalsBreakdown,
@@ -167,7 +167,7 @@ export function ClientDetailTabs({
               <ClientAllocationEditor
                 clientId={clientId}
                 initialAmounts={amounts}
-                initialActionsBreakdown={actionsBreakdown}
+                initialActionsIndexBreakdown={actionsIndexBreakdown}
                 initialProfessionalToolMainIncome={initialProfessionalToolMainIncome}
                 initialWrapperBreakdowns={initialWrapperBreakdowns}
                 initialPreciousMetalsBreakdown={initialPreciousMetalsBreakdown}
@@ -217,7 +217,6 @@ export function ClientDetailTabs({
                 clientId={clientId}
                 currentAge={currentAge}
                 amounts={amounts}
-                actionsBreakdown={actionsBreakdown}
                 properties={properties}
                 immobilierValue={immobilierValue}
                 initialWealthGoalAmount={initialWealthGoalAmount}

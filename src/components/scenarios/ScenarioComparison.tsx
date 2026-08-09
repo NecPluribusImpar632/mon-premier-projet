@@ -33,9 +33,12 @@ function optionLabel(option: ComparisonOption): string {
   return option.kind === "preset" ? option.preset.label : option.saved.name;
 }
 
-function paramsForOption(option: ComparisonOption): ScenarioParams {
+function paramsForOption(
+  option: ComparisonOption,
+  actionsIndexBreakdown: ClientScenarioContext["actionsIndexBreakdown"]
+): ScenarioParams {
   return option.kind === "preset"
-    ? scenarioParamsFromPreset(option.preset)
+    ? scenarioParamsFromPreset(option.preset, actionsIndexBreakdown)
     : scenarioParamsFromSavedScenario(option.saved);
 }
 
@@ -118,7 +121,10 @@ function ComparisonColumn({
     (o): o is Extract<ComparisonOption, { kind: "saved" }> => o.kind === "saved"
   );
 
-  const result = computeFullScenarioImpact(context, paramsForOption(option));
+  const result = computeFullScenarioImpact(
+    context,
+    paramsForOption(option, context.actionsIndexBreakdown)
+  );
   const isNegative = result.deltaAmount < 0;
 
   return (

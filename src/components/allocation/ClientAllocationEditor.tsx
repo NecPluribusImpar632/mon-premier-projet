@@ -6,7 +6,7 @@ import { AllocationAmountForm } from "@/components/allocation/AllocationAmountFo
 import { AllocationDonutChart } from "@/components/allocation/AllocationDonutChart";
 import {
   updateClientAllocation,
-  updateActionsProfile,
+  updateActionsIndexBreakdown,
   updateProfessionalToolMainIncome,
   updateWrapperBreakdown,
   updateMatieresPremieresBreakdown,
@@ -16,15 +16,18 @@ import {
   financialTotalFromAmounts,
   overallEntriesFromAmounts,
 } from "@/lib/allocation/mapping";
-import { isActionsBreakdownComplete } from "@/lib/allocation/stockProfiles";
-import type { ActionsProfileBreakdown } from "@/lib/allocation/stockProfiles";
+import {
+  isActionsIndexBreakdownComplete,
+  type ActionsIndexBreakdown,
+} from "@/lib/allocation/actionsIndexBreakdown";
+import { REFERENCE_INDICES, type ReferenceIndex } from "@/lib/allocation/referenceIndices";
 import type { Wrapper, WrapperBreakdown } from "@/lib/allocation/wrappers";
 import type { PreciousMetal, PreciousMetalsBreakdown } from "@/lib/allocation/preciousMetals";
 
 interface ClientAllocationEditorProps {
   clientId: string;
   initialAmounts: Record<string, number>;
-  initialActionsBreakdown: ActionsProfileBreakdown;
+  initialActionsIndexBreakdown: ActionsIndexBreakdown;
   initialProfessionalToolMainIncome: boolean;
   initialWrapperBreakdowns: Record<string, WrapperBreakdown>;
   initialPreciousMetalsBreakdown: PreciousMetalsBreakdown;
@@ -64,7 +67,7 @@ const STATUS_COLOR: Record<SaveStatus, string> = {
 export function ClientAllocationEditor({
   clientId,
   initialAmounts,
-  initialActionsBreakdown,
+  initialActionsIndexBreakdown,
   initialProfessionalToolMainIncome,
   initialWrapperBreakdowns,
   initialPreciousMetalsBreakdown,
@@ -79,12 +82,12 @@ export function ClientAllocationEditor({
   );
   const [, startMainIncomeTransition] = useTransition();
 
-  const [actionsBreakdown, setActionsBreakdown] = useState<ActionsProfileBreakdown>(
-    initialActionsBreakdown
+  const [actionsIndexBreakdown, setActionsIndexBreakdown] = useState<ActionsIndexBreakdown>(
+    initialActionsIndexBreakdown
   );
   const [isActionsPending, startActionsTransition] = useTransition();
   const [actionsStatus, setActionsStatus] = useState<SaveStatus>(
-    isActionsBreakdownComplete(initialActionsBreakdown) ? "saved" : "incomplete"
+    isActionsIndexBreakdownComplete(initialActionsIndexBreakdown) ? "saved" : "incomplete"
   );
 
   const [wrapperBreakdowns, setWrapperBreakdowns] = useState<
@@ -152,26 +155,22 @@ export function ClientAllocationEditor({
     });
   }
 
-  function handleActionsBreakdownChange(
-    profile: keyof ActionsProfileBreakdown,
-    rawPercentage: number
-  ) {
-    const othersTotal = (
-      Object.keys(actionsBreakdown) as (keyof ActionsProfileBreakdown)[]
-    )
-      .filter((key) => key !== profile)
-      .reduce((sum, key) => sum + actionsBreakdown[key], 0);
+  function handleActionsIndexChange(index: ReferenceIndex, rawPercentage: number) {
+    const othersTotal = REFERENCE_INDICES.filter((key) => key !== index).reduce(
+      (sum, key) => sum + actionsIndexBreakdown[key],
+      0
+    );
     const maxAllowed = Math.max(0, 100 - othersTotal);
     const percentage = Math.min(rawPercentage, maxAllowed);
 
-    const next: ActionsProfileBreakdown = { ...actionsBreakdown, [profile]: percentage };
-    setActionsBreakdown(next);
+    const next: ActionsIndexBreakdown = { ...actionsIndexBreakdown, [index]: percentage };
+    setActionsIndexBreakdown(next);
 
-    const complete = isActionsBreakdownComplete(next);
+    const complete = isActionsIndexBreakdownComplete(next);
     setActionsStatus("saving");
     startActionsTransition(async () => {
       try {
-        await updateActionsProfile(clientId, next);
+        await updateActionsIndexBreakdown(clientId, next);
         setActionsStatus(complete ? "saved" : "incomplete");
       } catch {
         setActionsStatus("error");
@@ -225,8 +224,8 @@ export function ClientAllocationEditor({
             onChange={handleAmountChange}
             immobilierValue={immobilierValue}
             hasDetailedProperties={hasDetailedProperties}
-            actionsBreakdown={actionsBreakdown}
-            onActionsBreakdownChange={handleActionsBreakdownChange}
+            actionsIndexBreakdown={actionsIndexBreakdown}
+            onActionsIndexChange={handleActionsIndexChange}
             actionsStatusMessage={
               STATUS_MESSAGE[isActionsPending ? "saving" : actionsStatus]
             }

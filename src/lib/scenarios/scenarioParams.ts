@@ -1,5 +1,7 @@
 import type { SavedScenario } from "@/generated/prisma/client";
 import type { ScenarioPreset } from "@/lib/scenarios/presets";
+import { resolvedMarketShockPct } from "@/lib/scenarios/indexScenarioShocks";
+import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 
 export interface ScenarioParams {
   marketShockPct: number;
@@ -29,10 +31,13 @@ export const DEFAULT_SCENARIO_PARAMS: ScenarioParams = {
   peIlliquidityDiscountPct: 20,
 };
 
-export function scenarioParamsFromPreset(preset: ScenarioPreset): ScenarioParams {
+export function scenarioParamsFromPreset(
+  preset: ScenarioPreset,
+  actionsIndexBreakdown: ActionsIndexBreakdown
+): ScenarioParams {
   return {
     ...DEFAULT_SCENARIO_PARAMS,
-    marketShockPct: preset.marketShockPct,
+    marketShockPct: resolvedMarketShockPct(preset, actionsIndexBreakdown),
     oatRateChangePts: preset.oatRateChangePts,
     inflationPct: preset.inflationPct,
   };

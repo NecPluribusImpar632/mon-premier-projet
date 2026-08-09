@@ -7,7 +7,8 @@ import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { CategoryDetailsToggle } from "@/components/allocation/CategoryDetailsToggle";
 import { formatCurrency } from "@/lib/format/currency";
 import { roundPercent } from "@/lib/format/percent";
-import type { ActionsProfileBreakdown as Breakdown } from "@/lib/allocation/stockProfiles";
+import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
+import type { ReferenceIndex } from "@/lib/allocation/referenceIndices";
 import { emptyWrapperBreakdown, type Wrapper, type WrapperBreakdown as WrapperBreakdownType } from "@/lib/allocation/wrappers";
 import type {
   PreciousMetal,
@@ -20,8 +21,8 @@ interface AllocationAmountFormProps {
   onChange: (categoryId: string, amount: number) => void;
   immobilierValue: number;
   hasDetailedProperties: boolean;
-  actionsBreakdown: Breakdown;
-  onActionsBreakdownChange: (profile: keyof Breakdown, percentage: number) => void;
+  actionsIndexBreakdown: ActionsIndexBreakdown;
+  onActionsIndexChange: (index: ReferenceIndex, percentage: number) => void;
   actionsStatusMessage: string;
   actionsStatusColorClass: string;
   professionalToolMainIncome: boolean;
@@ -42,8 +43,8 @@ export function AllocationAmountForm({
   onChange,
   immobilierValue,
   hasDetailedProperties,
-  actionsBreakdown,
-  onActionsBreakdownChange,
+  actionsIndexBreakdown,
+  onActionsIndexChange,
   actionsStatusMessage,
   actionsStatusColorClass,
   professionalToolMainIncome,
@@ -145,8 +146,12 @@ export function AllocationAmountForm({
               }
               wrapperStatusMessage={wrapperStatusMessages[category.id] ?? ""}
               wrapperStatusColorClass={wrapperStatusColorClasses[category.id] ?? "text-slate"}
-              actionsBreakdown={category.id === "actions" ? actionsBreakdown : undefined}
-              onActionsChange={category.id === "actions" ? onActionsBreakdownChange : undefined}
+              actionsIndexBreakdown={
+                category.id === "actions" ? actionsIndexBreakdown : undefined
+              }
+              onActionsIndexChange={
+                category.id === "actions" ? onActionsIndexChange : undefined
+              }
               actionsStatusMessage={category.id === "actions" ? actionsStatusMessage : undefined}
               actionsStatusColorClass={
                 category.id === "actions" ? actionsStatusColorClass : undefined
