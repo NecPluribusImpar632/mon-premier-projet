@@ -19,6 +19,13 @@ interface SubmitButtonProps {
 // touching the button's `disabled` state directly: mutating `disabled` here
 // interferes with how React dispatches the form action itself and can
 // silently swallow the very first, legitimate submission.
+//
+// The ref must only latch when a submission is actually about to happen —
+// checking form.checkValidity() first is what makes that safe. Without it, a
+// click that the browser's own required-field validation blocks (e.g. no
+// département picked yet) still latches the ref, and every later click,
+// valid or not, gets silently preventDefault()-ed forever: the form looks
+// permanently broken with zero feedback until the page is reloaded.
 export function SubmitButton({
   children,
   pendingLabel,
@@ -32,6 +39,13 @@ export function SubmitButton({
       type="submit"
       disabled={pending}
       onClick={(event) => {
+        const form = event.currentTarget.form;
+        if (form && !form.checkValidity()) {
+          // Native validation is about to block this submit — let the
+          // browser show its own message and leave the ref untouched so a
+          // corrected retry isn't silently swallowed.
+          return;
+        }
         if (submittedRef.current) {
           event.preventDefault();
           return;
