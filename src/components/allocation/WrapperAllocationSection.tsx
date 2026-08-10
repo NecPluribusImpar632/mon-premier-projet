@@ -82,6 +82,7 @@ export function WrapperAllocationSection({
             </span>
           </div>
           <WrapperFields
+            categoryId={category.id}
             breakdown={wrapperBreakdowns[category.id] ?? emptyWrapperBreakdown()}
             categoryAmount={amounts[category.id] ?? 0}
             onChange={(wrapper, amount) => handleWrapperChange(category.id, wrapper, amount)}
