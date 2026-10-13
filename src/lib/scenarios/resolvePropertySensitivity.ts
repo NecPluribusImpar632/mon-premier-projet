@@ -1,12 +1,21 @@
 import "server-only";
 import type { Property } from "@/generated/prisma/client";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
-import { DEPARTMENT_TO_REGION } from "@/lib/property/departments";
+import { PARIS_COMMUNE_CODE, PARIS_DEPARTMENT_CODE } from "@/lib/property/departments";
 import { getCommuneName, getZoneForCommune } from "@/lib/property/communesZonage";
 import {
   resolveRealEstateSensitivity,
   type ZoneSensitivity,
 } from "@/lib/scenarios/realEstateSensitivity";
+
+// Paris properties carry an arrondissement for display and no commune code (the
+// form never asks for one): Paris is a single commune in the zonage dataset, so
+// the lookup goes through that one code.
+function communeCodeForSensitivity(property: Property): string | null {
+  if (property.communeCode) return property.communeCode;
+  if (property.department === PARIS_DEPARTMENT_CODE) return PARIS_COMMUNE_CODE;
+  return null;
+}
 
 // The only place that resolves a property's zone sensitivity from its raw
 // location fields. Kept server-only because it's the one caller that needs
@@ -14,16 +23,8 @@ import {
 // the scenario cards) works with the already-resolved ZoneSensitivity instead,
 // so that data never has to ship to client JS.
 export function resolvePropertySensitivity(property: Property): ZoneSensitivity {
-  const communeZone = property.communeCode
-    ? getZoneForCommune(property.communeCode)
-    : null;
-
-  return resolveRealEstateSensitivity(
-    property.department,
-    property.arrondissement,
-    communeZone,
-    DEPARTMENT_TO_REGION
-  );
+  const communeCode = communeCodeForSensitivity(property);
+  return resolveRealEstateSensitivity(communeCode ? getZoneForCommune(communeCode) : null);
 }
 
 export type PropertyWithSensitivity = PropertyWithLoans & {

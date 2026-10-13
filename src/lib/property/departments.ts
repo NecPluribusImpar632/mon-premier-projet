@@ -1,5 +1,3 @@
-import type { RegionId } from "@/lib/scenarios/realEstateSensitivity";
-
 export interface Department {
   code: string;
   name: string;
@@ -121,37 +119,9 @@ export function isDepartmentCode(value: string): boolean {
   return DEPARTMENTS.some((d) => d.code === value);
 }
 
-// Régions 2016 couvertes par une série Notaires-INSEE dédiée — tout département hors
-// de cette table (et hors des 8 départements franciliens) retombe sur le coefficient
-// national dans `resolveRealEstateSensitivity`.
-export const DEPARTMENT_TO_REGION: Record<string, RegionId> = {
-  // Auvergne-Rhône-Alpes
-  "01": "auvergne-rhone-alpes",
-  "03": "auvergne-rhone-alpes",
-  "07": "auvergne-rhone-alpes",
-  "15": "auvergne-rhone-alpes",
-  "26": "auvergne-rhone-alpes",
-  "38": "auvergne-rhone-alpes",
-  "42": "auvergne-rhone-alpes",
-  "43": "auvergne-rhone-alpes",
-  "63": "auvergne-rhone-alpes",
-  "69": "auvergne-rhone-alpes",
-  "73": "auvergne-rhone-alpes",
-  "74": "auvergne-rhone-alpes",
-  // Hauts-de-France
-  "02": "hauts-de-france",
-  "59": "hauts-de-france",
-  "60": "hauts-de-france",
-  "62": "hauts-de-france",
-  "80": "hauts-de-france",
-  // Provence-Alpes-Côte d'Azur
-  "04": "paca",
-  "05": "paca",
-  "06": "paca",
-  "13": "paca",
-  "83": "paca",
-  "84": "paca",
-};
+export const PARIS_DEPARTMENT_CODE = "75";
+// Code INSEE de la commune de Paris dans le référentiel du zonage A bis/A/B1/B2/C.
+export const PARIS_COMMUNE_CODE = "75056";
 
 export const ARRONDISSEMENTS = Array.from({ length: 20 }, (_, i) => i + 1);
 

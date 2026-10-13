@@ -202,11 +202,12 @@ export function RealEstateShockCard({
             Deux modes. « Choc direct » : le même pourcentage s&apos;applique à tous les
             biens, c&apos;est le mode du scénario Crise 2008 (−8 %, repli des prix
             français en 2008-2009). « Dérivé du taux par zone » : pour chaque bien, le
-            coefficient de sensibilité prix/taux calibré sur sa zone (régression
-            Notaires-INSEE / Notaires du Grand Paris entre variation du taux OAT 10 ans
-            et croissance des prix, décalage de 0 à 8 trimestres), fiabilité modeste à
-            correcte selon les zones (R² de 3 % à 46 %). C&apos;est le mode des
-            scénarios 2022 et 2018 et du mode Personnalisé par défaut.
+            coefficient de sensibilité prix/taux calibré sur sa zone A bis / A / B1 /
+            B2 / C (régression Notaires-INSEE entre variation du taux OAT 10 ans et
+            croissance des prix, décalage de 5 à 6 trimestres), fiabilité modérée
+            (R² de 23 % à 46 %), repli sur le coefficient national quand la commune
+            n&apos;est pas connue. C&apos;est le mode des scénarios 2022 et 2018 et du
+            mode Personnalisé par défaut.
           </p>
           <p>
             Dans les deux modes, le taux OAT pilote le choc obligataire en mode duration

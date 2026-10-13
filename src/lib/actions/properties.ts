@@ -6,8 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { isRateType } from "@/lib/property/rateType";
 import { isDepartmentCode } from "@/lib/property/departments";
 import { isAmortizationType } from "@/lib/property/loanTypes";
-import { DEPARTMENT_SENSITIVITY } from "@/lib/scenarios/realEstateSensitivity";
 import { getCommunesForDepartment } from "@/lib/property/communesZonage";
+import { PARIS_DEPARTMENT_CODE } from "@/lib/property/departments";
 import { assertClientAccess } from "@/lib/auth/clientAccess";
 
 function parseRequiredNonNegativeNumber(value: unknown): number {
@@ -61,11 +61,10 @@ function parsePropertyFormData(formData: FormData) {
     throw new Error("Merci de sélectionner un département valide.");
   }
 
-  // A commune is only meaningful (and only asked for in the form) for
-  // departments without their own dedicated Notaires-INSEE coefficient: Paris
-  // uses its arrondissement instead, and the other 7 IDF departments already
-  // have a department-level coefficient regardless of commune.
-  const needsCommune = department !== "75" && !(department in DEPARTMENT_SENSITIVITY);
+  // The price/rate sensitivity resolves through the commune's A bis/A/B1/B2/C
+  // zoning, so every department needs a commune except Paris, which is one
+  // commune entirely in zone A bis (the arrondissement is kept for display).
+  const needsCommune = department !== PARIS_DEPARTMENT_CODE;
   const communeCodeRaw = String(formData.get("communeCode") ?? "").trim();
   let communeCode: string | null = null;
   if (needsCommune) {

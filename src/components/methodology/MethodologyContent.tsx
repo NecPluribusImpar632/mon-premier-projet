@@ -165,6 +165,13 @@ export function MethodologyContent() {
           surcoût des prêts à taux variable.
         </p>
         <p className={P_CLASS}>
+          La zone d&apos;un bien est celle de sa commune dans le zonage réglementaire A bis,
+          A, B1, B2 ou C. Paris est une seule commune, entièrement en zone A bis. Lorsque la
+          commune n&apos;est pas connue, le coefficient national s&apos;applique. Les niveaux
+          arrondissement, département et région ne sont plus utilisés : leurs régressions
+          expliquaient trop peu de la variation des prix pour fonder une décision.
+        </p>
+        <p className={P_CLASS}>
           Pour l&apos;or et l&apos;argent, le choc dépend de l&apos;inflation du scénario, via
           une régression sur cinquante ans de prix. Les SCPI reçoivent la décote du scénario
           (−3 % en 2008, −12 % en 2022, d&apos;après l&apos;épisode de 2023). Le Private

@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ARRONDISSEMENTS, DEPARTMENTS, arrondissementLabel } from "@/lib/property/departments";
-import { DEPARTMENT_SENSITIVITY } from "@/lib/scenarios/realEstateSensitivity";
+import {
+  ARRONDISSEMENTS,
+  DEPARTMENTS,
+  PARIS_DEPARTMENT_CODE,
+  arrondissementLabel,
+} from "@/lib/property/departments";
 import { getCommunesForDepartment } from "@/lib/actions/geo";
 import { FIELD_CLASS } from "@/components/ui/fieldStyles";
 
-const PARIS_CODE = "75";
+const PARIS_CODE = PARIS_DEPARTMENT_CODE;
 
 interface LocationFieldsProps {
   defaultDepartment?: string;
@@ -29,11 +33,10 @@ export function LocationFields({
     list: { code: string; name: string }[];
   }>({ department: "", list: [] });
 
-  // Only departments without their own dedicated Notaires-INSEE data need a
-  // commune (to resolve a zonage A/B/C coefficient) — Paris uses its
-  // arrondissement data instead, and the other 7 IDF departments already have
-  // their own department-level coefficient regardless of commune.
-  const needsCommune = department !== "" && department !== PARIS_CODE && !(department in DEPARTMENT_SENSITIVITY);
+  // The sensitivity resolves through the commune's A bis/A/B1/B2/C zoning, so
+  // every department needs a commune except Paris, a single commune entirely
+  // in zone A bis (the arrondissement is kept for display).
+  const needsCommune = department !== "" && department !== PARIS_CODE;
   const communesLoading = needsCommune && communes.department !== department;
 
   useEffect(() => {
