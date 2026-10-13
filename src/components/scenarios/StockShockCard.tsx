@@ -97,7 +97,8 @@ export function StockShockCard({
         <span>Méthodologie</span>
         <InfoTooltip>
           <p className="mb-2">
-            Sur les 3 scénarios nommés (2008, inflation durable, remontée des taux), le
+            Sur les 3 scénarios nommés (Crise 2008, Inflation et remontée brutale des
+            taux, Remontée des taux), le
             curseur &quot;Choc de marché&quot; se pré-remplit avec la moyenne pondérée des
             performances réelles des indices détenus (répartition saisie dans
             l&apos;onglet Allocation) sur une année civile représentative : 2008 pour la

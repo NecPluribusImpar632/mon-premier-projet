@@ -21,7 +21,7 @@ export const SCENARIO_PRESETS: ScenarioPreset[] = [
   },
   {
     id: "oil-shock",
-    label: "Choc pétrolier / inflation durable",
+    label: "Inflation et remontée brutale des taux",
     marketShockPct: -15,
     oatRateChangePts: 2.5,
     inflationPct: 6,
