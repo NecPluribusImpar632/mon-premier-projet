@@ -35,6 +35,36 @@ export interface MethodologyRow {
 
 export const METHODOLOGY_ROWS: MethodologyRow[] = [
   {
+    id: "scenario-2008",
+    group: "Scénarios de crise",
+    variant: "Crise 2008",
+    usage: "Stress test",
+    source: "Données de marché de l'année de référence : indices actions, Notaires-INSEE, indices obligataires d'État, prix de parts SCPI, taux OAT 10 ans",
+    period: "2008 à 2009",
+    retained: "Actions −40 % (pondéré par indice) ; immobilier −8 % ; obligations +8 % ; SCPI −3 % ; taux OAT −2 pts (pic à creux) ; inflation 0 %",
+    confidence: { kind: "historical" },
+  },
+  {
+    id: "scenario-2022",
+    group: "Scénarios de crise",
+    variant: "Inflation et remontée brutale des taux (2022)",
+    usage: "Stress test",
+    source: "Données de marché de l'année de référence",
+    period: "2022",
+    retained: "Actions −15 % (pondéré par indice) ; taux OAT +3 pts ; immobilier dérivé du taux par zone ; obligations dérivées de la duration ; SCPI −12 % ; inflation 6 %",
+    confidence: { kind: "historical" },
+  },
+  {
+    id: "scenario-2018",
+    group: "Scénarios de crise",
+    variant: "Remontée des taux (2018)",
+    usage: "Stress test",
+    source: "Données de marché de l'année de référence",
+    period: "2018",
+    retained: "Actions −10 % (pondéré par indice) ; taux OAT +1 pt ; immobilier dérivé du taux par zone ; obligations dérivées de la duration ; inflation 2 %",
+    confidence: { kind: "historical" },
+  },
+  {
     id: "actions-distribution",
     group: "Actions",
     variant: "Rendement par indice",

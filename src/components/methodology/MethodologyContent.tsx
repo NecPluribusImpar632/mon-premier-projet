@@ -148,20 +148,27 @@ export function MethodologyContent() {
         <h2 className={H2_CLASS}>Stress test</h2>
         <p className={P_CLASS}>
           Le stress test applique un choc ponctuel à chaque poste et mesure l&apos;effet sur le
-          patrimoine net. Pour les actions, le choc est la performance annuelle réelle de
-          chaque indice détenu sur une année de référence : 2008 pour la crise financière,
-          2022 pour le choc inflationniste et la remontée brutale des taux, 2018 pour un
-          resserrement monétaire sans choc d&apos;inflation. Pour
-          l&apos;immobilier, le choc dépend du taux OAT 10 ans, via une sensibilité régressée
-          par zone sur les indices Notaires-INSEE. Pour l&apos;or et l&apos;argent, le choc
-          dépend de l&apos;inflation, via une régression sur cinquante ans de prix.
+          patrimoine net. Les trois scénarios nommés fixent directement un choc par poste,
+          calibré sur l&apos;année de référence (lignes « Scénarios de crise » du tableau).
+          Pour les actions, le choc est la performance annuelle réelle de chaque indice
+          détenu cette année-là : 2008 pour la crise financière, 2022 pour le choc
+          inflationniste et la remontée brutale des taux, 2018 pour un resserrement
+          monétaire sans choc d&apos;inflation.
         </p>
         <p className={P_CLASS}>
-          Les SCPI utilisent la décote observée en 2023 comme référence. Une régression sur les
-          13 trimestres disponibles n&apos;a pas donné de résultat significatif et n&apos;a
-          pas été retenue. Les obligations utilisent une approximation de duration, avec une
-          durée par défaut ajustable. Le Private Equity reçoit une décote d&apos;illiquidité par
-          défaut, ajustable.
+          La sensibilité prix/taux par zone (immobilier) et l&apos;approximation de duration
+          (obligations) ne servent que lorsque le scénario ne fixe pas de choc direct : les
+          scénarios 2022 et 2018, et le mode Personnalisé par défaut. En 2008, les prix
+          immobiliers et les obligations d&apos;État reçoivent une valeur fixe, parce que les
+          taux ont baissé cette année-là et que les mécanismes dérivés du taux donneraient le
+          sens inverse de ce qui s&apos;est produit. Le taux OAT pilote dans tous les cas le
+          surcoût des prêts à taux variable.
+        </p>
+        <p className={P_CLASS}>
+          Pour l&apos;or et l&apos;argent, le choc dépend de l&apos;inflation du scénario, via
+          une régression sur cinquante ans de prix. Les SCPI reçoivent la décote du scénario
+          (−3 % en 2008, −12 % en 2022, d&apos;après l&apos;épisode de 2023). Le Private
+          Equity reçoit une décote d&apos;illiquidité par défaut, ajustable.
         </p>
       </section>
 
