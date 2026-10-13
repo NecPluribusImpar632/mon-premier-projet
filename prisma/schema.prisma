@@ -37,11 +37,10 @@ model Client {
   autresAmount                  Float               @default(0)
   riskProfile                   String?
   notes                         String?
-  retirementAge                 Int?
   monthlySavingsAmount          Float?
-  expectedAnnualReturnPct       Float?
   wealthGoalAmount              Float?
   wealthGoalAge                 Int?
+  wealthGoalInflationPct        Float?
   maritalStatus                 String?
   spouseName                    String?
   spouseImmobilierAmount        Float?

@@ -63,11 +63,10 @@ export default async function ClientDetailPage({
       actionsPctOverall={actionsPctOverall}
       scenarioContext={scenarioContext}
       initialSavedScenarios={savedScenarios}
-      initialRetirementAge={client.retirementAge}
       initialMonthlySavingsAmount={client.monthlySavingsAmount}
-      initialExpectedAnnualReturnPct={client.expectedAnnualReturnPct}
       initialWealthGoalAmount={client.wealthGoalAmount}
       initialWealthGoalAge={client.wealthGoalAge}
+      initialWealthGoalInflationPct={client.wealthGoalInflationPct}
     />
   );
 }

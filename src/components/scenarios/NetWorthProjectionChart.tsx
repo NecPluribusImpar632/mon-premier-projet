@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { ProjectionYearPoint } from "@/lib/scenarios/projection";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format/currency";
+import { smoothPath, smoothPathBody } from "@/lib/chart/smoothPath";
 
 interface NetWorthProjectionChartProps {
   points: ProjectionYearPoint[];
@@ -20,44 +21,10 @@ const PADDING = { top: 18, right: 100, bottom: 28, left: 8 };
 const PLOT_WIDTH = WIDTH - PADDING.left - PADDING.right;
 const PLOT_HEIGHT = HEIGHT - PADDING.top - PADDING.bottom;
 
-interface Point {
-  x: number;
-  y: number;
-}
-
 /** Chart-specific accent — more saturated than the app-wide navy `--color-emerald`,
  * validated against `--color-slate` with the dataviz skill's palette checker
  * (CVD ΔE 9.7/10.6, normal-vision ΔE 15.3, all pass). Scoped to this chart only. */
 const CHART_ACCENT = "#0f9d6e";
-
-/** Catmull-Rom-to-Bezier smoothing (uniform, 1/6 tension) — turns the polyline
- * into a curve without overshoot on the mostly-monotonic series this chart
- * plots, and reads far less "spreadsheet" than straight segments. */
-function smoothPath(pts: Point[]): string {
-  if (pts.length < 2) return "";
-  if (pts.length === 2) {
-    return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
-  }
-  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i === 0 ? 0 : i - 1];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
-  }
-  return d;
-}
-
-/** Body of a smoothed path (no leading M) — for appending a reversed curve to
- * an already-open path where the cursor is already at the right start point. */
-function smoothPathBody(pts: Point[]): string {
-  return smoothPath(pts).replace(/^M[-\d.]+,[-\d.]+\s*/, "");
-}
 
 function horizonLabel(years: number): string {
   if (years <= 0) return "Aujourd'hui";

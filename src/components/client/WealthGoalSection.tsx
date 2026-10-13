@@ -2,14 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { updateWealthGoal } from "@/lib/actions/clients";
-import { computeWealthGoalProjection, type WealthGoalContext } from "@/lib/wealth/wealthGoal";
+import {
+  computeWealthGoalMonteCarlo,
+  type AssetClassMonteCarloRow,
+  type WealthGoalContext,
+} from "@/lib/wealth/monteCarloProjection";
+import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
-import { NetWorthProjectionChart } from "@/components/scenarios/NetWorthProjectionChart";
+import { WealthGoalFanChart } from "@/components/wealth/WealthGoalFanChart";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { formatCurrency } from "@/lib/format/currency";
-import { roundPercent } from "@/lib/format/percent";
+import { formatPercent } from "@/lib/format/percent";
 
 interface WealthGoalSectionProps {
   clientId: string;
@@ -17,9 +22,11 @@ interface WealthGoalSectionProps {
   amounts: Record<string, number>;
   properties: PropertyWithLoans[];
   immobilierValue: number;
+  actionsIndexBreakdown: ActionsIndexBreakdown;
   initialWealthGoalAmount: number | null;
   initialWealthGoalAge: number | null;
-  retirementAge: number | null;
+  initialWealthGoalInflationPct: number | null;
+  initialMonthlySavingsAmount: number | null;
 }
 
 type SaveStatus = "saved" | "saving" | "error";
@@ -30,29 +37,75 @@ const STATUS_MESSAGE: Record<SaveStatus, string> = {
   error: "Erreur lors de l'enregistrement",
 };
 
+const ROW_STATUS_LABEL: Record<AssetClassMonteCarloRow["status"], string> = {
+  calibrated: "Calibré",
+  pointMass: "Hypothèse simple",
+  frozen: "Non projeté",
+};
+
+const ROW_STATUS_CLASS: Record<AssetClassMonteCarloRow["status"], string> = {
+  calibrated: "text-emerald",
+  pointMass: "text-ink",
+  frozen: "text-slate",
+};
+
+interface GoalInputs {
+  amount: number;
+  age: number;
+  inflationPct: number;
+  monthlySavings: number;
+}
+
+function yearsLabel(years: number): string {
+  if (years <= 0) return "échéance atteinte";
+  if (years === 1) return "dans 1 an";
+  return `dans ${years} ans`;
+}
+
+/**
+ * The single projection module of the "Objectif patrimonial" tab. It used to
+ * sit above a separate "objectif retraite" section with its own straight-line
+ * engine and a hand-typed expected return; the two disagreed on the same
+ * screen (frozen vs. calibrated real estate, one flat rate vs. per-asset
+ * distributions), so the retirement one was folded in here: the retirement
+ * age is just an échéance, and the monthly savings feed the Monte Carlo.
+ */
 export function WealthGoalSection({
   clientId,
   currentAge,
   amounts,
   properties,
   immobilierValue,
+  actionsIndexBreakdown,
   initialWealthGoalAmount,
   initialWealthGoalAge,
-  retirementAge,
+  initialWealthGoalInflationPct,
+  initialMonthlySavingsAmount,
 }: WealthGoalSectionProps) {
-  const [wealthGoalAmount, setWealthGoalAmount] = useState(initialWealthGoalAmount ?? 0);
-  const [wealthGoalAge, setWealthGoalAge] = useState(
-    initialWealthGoalAge ?? retirementAge ?? currentAge + 20
-  );
-  const [inflationPct, setInflationPct] = useState(2);
+  const [inputs, setInputs] = useState<GoalInputs>({
+    amount: initialWealthGoalAmount ?? 0,
+    age: initialWealthGoalAge ?? currentAge + 20,
+    // Persisted alongside the goal (not local-only): the chosen inflation rate
+    // materially changes the result, so silently resetting it to 2% on every
+    // reload would make the displayed percentage drift from what the advisor
+    // last looked at.
+    inflationPct: initialWealthGoalInflationPct ?? 2,
+    monthlySavings: initialMonthlySavingsAmount ?? 0,
+  });
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [isPending, startTransition] = useTransition();
 
-  function save(amount: number, age: number) {
+  function save(next: GoalInputs) {
     setStatus("saving");
     startTransition(async () => {
       try {
-        await updateWealthGoal(clientId, amount, age);
+        await updateWealthGoal(
+          clientId,
+          next.amount,
+          next.age,
+          next.inflationPct,
+          next.monthlySavings
+        );
         setStatus("saved");
       } catch {
         setStatus("error");
@@ -60,14 +113,31 @@ export function WealthGoalSection({
     });
   }
 
+  function update(patch: Partial<GoalInputs>) {
+    setInputs((prev) => ({ ...prev, ...patch }));
+  }
+
+  function handleInflationChange(value: number) {
+    const next = { ...inputs, inflationPct: value };
+    setInputs(next);
+    save(next);
+  }
+
   const context: WealthGoalContext = { amounts, properties, immobilierValue };
-  const result = computeWealthGoalProjection(
+  const result = computeWealthGoalMonteCarlo(
     context,
     currentAge,
-    wealthGoalAge,
-    wealthGoalAmount,
-    inflationPct
+    inputs.age,
+    inputs.amount,
+    inputs.inflationPct,
+    actionsIndexBreakdown,
+    inputs.monthlySavings
   );
+  const successRounded = Math.round(result.successPct);
+  const medianFinalNominal = result.bands.p50[result.bands.p50.length - 1]?.netWorth ?? 0;
+  const medianFinalReal =
+    medianFinalNominal / Math.pow(1 + inputs.inflationPct / 100, result.horizonYears);
+  const horizonYears = Math.max(inputs.age - currentAge, 0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -79,23 +149,38 @@ export function WealthGoalSection({
               type="number"
               min={0}
               step={10000}
-              value={wealthGoalAmount}
-              onChange={(e) => setWealthGoalAmount(Number(e.target.value))}
-              onBlur={() => save(wealthGoalAmount, wealthGoalAge)}
+              value={inputs.amount}
+              onChange={(e) => update({ amount: Number(e.target.value) })}
+              onBlur={() => save(inputs)}
               className={`w-40 ${NUMERIC_FIELD_CLASS}`}
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-ink">
-            Échéance (âge)
+            <span>
+              Échéance (âge){" "}
+              <span className="font-mono text-xs text-slate">{yearsLabel(horizonYears)}</span>
+            </span>
             <input
               type="number"
               min={currentAge}
               max={100}
               step={1}
-              value={wealthGoalAge}
-              onChange={(e) => setWealthGoalAge(Number(e.target.value))}
-              onBlur={() => save(wealthGoalAmount, wealthGoalAge)}
+              value={inputs.age}
+              onChange={(e) => update({ age: Number(e.target.value) })}
+              onBlur={() => save(inputs)}
               className={`w-20 ${NUMERIC_FIELD_CLASS}`}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm text-ink">
+            Épargne mensuelle (€ / mois)
+            <input
+              type="number"
+              min={0}
+              step={50}
+              value={inputs.monthlySavings}
+              onChange={(e) => update({ monthlySavings: Number(e.target.value) })}
+              onBlur={() => save(inputs)}
+              className={`w-28 ${NUMERIC_FIELD_CLASS}`}
             />
           </label>
         </div>
@@ -110,28 +195,12 @@ export function WealthGoalSection({
 
       <ShockSlider
         label="Inflation (convertit les hypothèses réelles en euros courants)"
-        value={inflationPct}
+        value={inputs.inflationPct}
         min={0}
         max={6}
         step={0.5}
-        onChange={setInflationPct}
+        onChange={handleInflationChange}
       />
-
-      <div
-        className={`flex items-center justify-between rounded-md border p-4 ${
-          result.isGoalReached
-            ? "border-emerald/30 bg-emerald-tint text-emerald-strong"
-            : "border-bronze/30 bg-bronze/5 text-bronze"
-        }`}
-      >
-        <span className="font-medium">
-          {result.isGoalReached ? "Objectif atteint" : "Objectif non atteint"}
-        </span>
-        <span className="font-mono tabular-nums">
-          {result.gapAmount >= 0 ? "+" : ""}
-          {formatCurrency(result.gapAmount)}
-        </span>
-      </div>
 
       {result.horizonYears === 0 ? (
         <p className="border-t border-line pt-3 text-sm text-slate">
@@ -139,37 +208,62 @@ export function WealthGoalSection({
         </p>
       ) : (
         <>
-          <NetWorthProjectionChart points={result.points} />
+          {result.targetAmount > 0 ? (
+            <div>
+              <p className="text-xs text-slate">
+                Sur 2000 trajectoires simulées à partir de la composition réelle du
+                portefeuille
+                {inputs.monthlySavings > 0 &&
+                  `, avec ${formatCurrency(inputs.monthlySavings)} d'épargne par mois`}
+              </p>
+              <p className="mt-1 font-serif text-5xl font-semibold tabular-nums text-ink">
+                {successRounded}%
+              </p>
+              <p className="text-sm text-slate">
+                des scénarios testés atteignent ou dépassent l&apos;objectif de{" "}
+                {formatCurrency(result.targetAmount)} dans {result.horizonYears} ans.
+              </p>
+            </div>
+          ) : (
+            <p className="rounded-md border border-line bg-paper px-4 py-3 text-sm text-slate">
+              Saisis un objectif de patrimoine net pour obtenir la probabilité de
+              l&apos;atteindre. Les trajectoires simulées ci-dessous restent valables
+              sans objectif.
+            </p>
+          )}
+
+          <WealthGoalFanChart bands={result.bands} />
 
           <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
             <p className="flex items-center justify-between text-ink">
-              <span>Taux de croissance global (pondéré, nominal)</span>
-              <span className="font-mono tabular-nums">
-                {roundPercent(result.blendedNominalReturnPct, 2)}%
-              </span>
-            </p>
-            <p className="flex items-center justify-between text-ink">
-              <span>Patrimoine net à l&apos;échéance (dans {result.horizonYears} ans)</span>
-              <span className="font-mono tabular-nums">
-                {formatCurrency(result.finalNetWorth)}
-              </span>
+              <span>Patrimoine net médian à l&apos;échéance (dans {result.horizonYears} ans)</span>
+              <span className="font-mono tabular-nums">{formatCurrency(medianFinalNominal)}</span>
             </p>
             <p className="flex items-center justify-between text-ink">
               <span>...en euros constants</span>
               <span className="font-mono tabular-nums text-slate">
-                {formatCurrency(result.points[result.points.length - 1].realNetWorth)}
+                {formatCurrency(medianFinalReal)}
               </span>
             </p>
+            {inputs.monthlySavings > 0 && (
+              <p className="flex items-center justify-between text-ink">
+                <span>Épargne versée sur la période</span>
+                <span className="font-mono tabular-nums text-slate">
+                  {formatCurrency(inputs.monthlySavings * 12 * result.horizonYears)}
+                </span>
+              </p>
+            )}
           </div>
 
           <div className="border-t border-line pt-3">
-            <p className="mb-2 text-sm text-ink">Détail du calcul</p>
+            <p className="mb-2 text-sm text-ink">Détail par poste</p>
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-slate">
-                  <th className="pb-1 font-normal">Poche</th>
+                  <th className="pb-1 font-normal">Poste</th>
                   <th className="pb-1 text-right font-normal">Montant</th>
-                  <th className="pb-1 text-right font-normal">Taux appliqué</th>
+                  <th className="pb-1 text-right font-normal">Rendement réel</th>
+                  <th className="pb-1 text-right font-normal">Statut</th>
                 </tr>
               </thead>
               <tbody className="font-mono tabular-nums text-ink">
@@ -178,9 +272,14 @@ export function WealthGoalSection({
                     <td className="py-1 font-sans">{row.label}</td>
                     <td className="py-1 text-right">{formatCurrency(row.amount)}</td>
                     <td className="py-1 text-right text-slate">
-                      {row.nominalReturnPct === null
+                      {row.meanPct === null
                         ? "non projeté"
-                        : `${roundPercent(row.nominalReturnPct, 2)}%`}
+                        : row.stdPct > 0
+                          ? `${formatPercent(row.meanPct, 2)} ± ${formatPercent(row.stdPct, 1)}`
+                          : formatPercent(row.meanPct, 2)}
+                    </td>
+                    <td className={`py-1 text-right font-sans text-[11px] ${ROW_STATUS_CLASS[row.status]}`}>
+                      {ROW_STATUS_LABEL[row.status]}
                     </td>
                   </tr>
                 ))}
@@ -194,33 +293,40 @@ export function WealthGoalSection({
         <span>Méthodologie</span>
         <InfoTooltip>
           <p className="mb-2">
-            Hypothèses de rendement <strong>réel</strong> annuel par classe d&apos;actif —
-            des ordres de grandeur consensuels de long terme, pas calibrés sur données
-            historiques françaises comme le stress test immobilier (qui, lui, s&apos;appuie
-            sur les indices Notaires-INSEE) : Actions 5 % (une seule hypothèse pour toute
-            la poche, quel que soit le mix d&apos;indices choisi dans l&apos;onglet
-            Allocation) ; Obligations 1,5 % ; SCPI 4 % ; Liquidités et Matières premières
-            0 %. Immobilier direct :
-            0,5 % d&apos;appréciation (ordre de grandeur Friggit/IGEDD sur longue période)
-            plus, si le bien est loué, un rendement locatif net calculé à partir du loyer
-            réellement saisi sur ce bien, moins 30 % pour charges/copropriété/entretien —
-            la fiscalité n&apos;est pas incluse ici, elle dépend du régime choisi (voir le
-            comparateur fiscal du bien). Un bien non loué ne reçoit que l&apos;appréciation.
+            Simulation de Monte Carlo : 2000 trajectoires sont tirées au hasard, une
+            par poste chaque année, dans les vraies distributions historiques de
+            rendement (moyenne et volatilité) calibrées pour chaque classe d&apos;actif
+            réellement détenue — voir l&apos;onglet Méthodologie pour le détail des
+            sources et des périodes couvertes. Le pourcentage affiché est la part des
+            trajectoires où le patrimoine final (en euros courants) atteint ou dépasse
+            l&apos;objectif — même convention que le montant saisi, pas déflatée.
           </p>
           <p className="mb-2">
-            Private Equity : 6,5 % <strong>nominal</strong> (pas réel), avec la même
-            décote d&apos;illiquidité que le stress test (20 % par défaut) appliquée en
-            continu sur la valeur projetée — une simplification : en pratique la décote ne
-            s&apos;applique qu&apos;au moment d&apos;une cession, pas chaque année.
-            Entreprise/outil professionnel et Autres : non projetés, valeur figée.
+            <strong>Épargne mensuelle</strong> : versée en fin de chaque année simulée
+            (12 mois d&apos;un coup, sans rendement l&apos;année du versement, hypothèse
+            prudente) dans les poches financières, au prorata de l&apos;allocation
+            actuelle — jamais dans l&apos;immobilier ni dans les poches non projetées.
+            Elle suit donc les mêmes rendements et la même volatilité que le reste du
+            portefeuille, il n&apos;y a plus de « rendement attendu » saisi à la main.
+          </p>
+          <p className="mb-2">
+            <strong>Simplification assumée sur les Actions</strong> : quand plusieurs
+            indices sont détenus (ex. CAC 40 + Nasdaq), un seul tirage aléatoire par
+            année représente le marché actions global, appliqué à chaque indice via sa
+            propre moyenne et volatilité. La corrélation entre indices est donc traitée
+            comme parfaite, pas mesurée — cohérent avec le stress test (2008, 2022 et
+            2018 font chuter tous les indices simultanément), mais une vraie
+            simplification, pas une corrélation calculée sur donnée réelle. Même
+            principe pour l&apos;Immobilier : une seule distribution nationale
+            s&apos;applique à tous les biens du client, un seul tirage par année.
           </p>
           <p>
-            Toutes les hypothèses réelles sont converties en nominal via le taux
-            d&apos;inflation ci-dessus, pour pouvoir les additionner au Private Equity et
-            exprimer l&apos;objectif en euros courants. La dette continue de s&apos;amortir
-            selon les prêts existants ; un éventuel crédit lombard (adossé au portefeuille
-            financier plutôt qu&apos;à un bien) n&apos;est pas modélisé, l&apos;application
-            ne suit que les prêts immobiliers.
+            Postes sans distribution fiable (Obligations, SCPI, Private Equity,
+            Liquidités, Matières premières) : hypothèse de rendement simple, volatilité
+            non modélisée — signalé comme tel dans le tableau ci-dessus, pas présenté
+            comme une mesure. Entreprise/outil professionnel et Autres restent gelés
+            (non projetés). La dette continue de s&apos;amortir selon les prêts
+            existants ; un éventuel crédit lombard n&apos;est pas modélisé.
           </p>
         </InfoTooltip>
       </div>

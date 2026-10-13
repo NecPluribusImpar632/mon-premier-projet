@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Building2, Download, Layers, PieChart, Target } from "lucide-react";
+import { BookOpen, Building2, Download, Layers, PieChart, Target } from "lucide-react";
 import type { SavedScenario } from "@/generated/prisma/client";
 import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { WrapperBreakdown } from "@/lib/allocation/wrappers";
@@ -15,7 +15,6 @@ import type { ClientTab } from "@/lib/client/clientTabs";
 import { ClientProfile } from "@/components/client/ClientProfile";
 import { FoyerFiscalSection } from "@/components/client/FoyerFiscalSection";
 import { WealthGoalSection } from "@/components/client/WealthGoalSection";
-import { RetirementGoalSection } from "@/components/client/RetirementGoalSection";
 import { WealthSummary } from "@/components/allocation/WealthSummary";
 import { IfiCard } from "@/components/fiscal/IfiCard";
 import { ClientAllocationEditor } from "@/components/allocation/ClientAllocationEditor";
@@ -23,6 +22,7 @@ import { WrapperAllocationSection } from "@/components/allocation/WrapperAllocat
 import { PropertyList } from "@/components/property/PropertyList";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { ScenarioSimulator } from "@/components/scenarios/ScenarioSimulator";
+import { MethodologyContent } from "@/components/methodology/MethodologyContent";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
@@ -57,12 +57,11 @@ interface ClientDetailTabsProps {
   scenarioContext: ClientScenarioContext;
   initialSavedScenarios: SavedScenario[];
 
-  initialRetirementAge: number | null;
   initialMonthlySavingsAmount: number | null;
-  initialExpectedAnnualReturnPct: number | null;
 
   initialWealthGoalAmount: number | null;
   initialWealthGoalAge: number | null;
+  initialWealthGoalInflationPct: number | null;
 }
 
 export function ClientDetailTabs({
@@ -90,11 +89,10 @@ export function ClientDetailTabs({
   actionsPctOverall,
   scenarioContext,
   initialSavedScenarios,
-  initialRetirementAge,
   initialMonthlySavingsAmount,
-  initialExpectedAnnualReturnPct,
   initialWealthGoalAmount,
   initialWealthGoalAge,
+  initialWealthGoalInflationPct,
 }: ClientDetailTabsProps) {
   const [activeTab, setActiveTab] = useState<ClientTab>(initialTab);
 
@@ -234,20 +232,23 @@ export function ClientDetailTabs({
                 amounts={amounts}
                 properties={properties}
                 immobilierValue={immobilierValue}
+                actionsIndexBreakdown={actionsIndexBreakdown}
                 initialWealthGoalAmount={initialWealthGoalAmount}
                 initialWealthGoalAge={initialWealthGoalAge}
-                retirementAge={initialRetirementAge}
-              />
-              <RetirementGoalSection
-                clientId={clientId}
-                currentAge={currentAge}
-                financialWealthTotal={financialWealthTotal}
-                immobilierValue={immobilierValue}
-                properties={properties}
-                initialRetirementAge={initialRetirementAge}
+                initialWealthGoalInflationPct={initialWealthGoalInflationPct}
                 initialMonthlySavingsAmount={initialMonthlySavingsAmount}
-                initialExpectedAnnualReturnPct={initialExpectedAnnualReturnPct}
               />
+            </div>
+          )}
+
+          {activeTab === "methodology" && (
+            <div className="flex flex-col gap-4">
+              <SectionHeading
+                icon={BookOpen}
+                title="Méthodologie"
+                subtitle="Comment chaque poste est calibré, et où sont ses limites"
+              />
+              <MethodologyContent />
             </div>
           )}
         </main>
