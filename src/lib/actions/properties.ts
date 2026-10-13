@@ -8,6 +8,7 @@ import { isDepartmentCode } from "@/lib/property/departments";
 import { isAmortizationType } from "@/lib/property/loanTypes";
 import { DEPARTMENT_SENSITIVITY } from "@/lib/scenarios/realEstateSensitivity";
 import { getCommunesForDepartment } from "@/lib/property/communesZonage";
+import { assertClientAccess } from "@/lib/auth/clientAccess";
 
 function parseRequiredNonNegativeNumber(value: unknown): number {
   const sanitized = String(value ?? "").replace(/[^\d.]/g, "");
@@ -132,7 +133,10 @@ function parseLoansFormData(formData: FormData) {
   });
 }
 
+// Each entry point checks the caller may see `clientId` (own client, or
+// admin) before the property-belongs-to-client check that was already here.
 export async function getProperty(propertyId: string, clientId: string) {
+  await assertClientAccess(clientId);
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
     include: { loans: { orderBy: { createdAt: "asc" } } },
@@ -144,6 +148,7 @@ export async function getProperty(propertyId: string, clientId: string) {
 }
 
 export async function createProperty(clientId: string, formData: FormData) {
+  await assertClientAccess(clientId);
   const data = parsePropertyFormData(formData);
   const loans = parseLoansFormData(formData);
 

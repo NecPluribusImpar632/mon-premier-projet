@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { ScenarioParams } from "@/lib/scenarios/scenarioParams";
+import { assertClientAccess } from "@/lib/auth/clientAccess";
 
 function validateScenarioParams(name: string, params: ScenarioParams) {
   if (!name.trim()) {
@@ -24,6 +25,7 @@ function validateScenarioParams(name: string, params: ScenarioParams) {
 }
 
 export async function getSavedScenarios(clientId: string) {
+  await assertClientAccess(clientId);
   return prisma.savedScenario.findMany({
     where: { clientId },
     orderBy: { name: "asc" },
@@ -31,6 +33,7 @@ export async function getSavedScenarios(clientId: string) {
 }
 
 async function getSavedScenario(id: string, clientId: string) {
+  await assertClientAccess(clientId);
   const scenario = await prisma.savedScenario.findUnique({ where: { id } });
   if (!scenario || scenario.clientId !== clientId) {
     return null;
@@ -43,6 +46,7 @@ export async function createSavedScenario(
   name: string,
   params: ScenarioParams
 ) {
+  await assertClientAccess(clientId);
   validateScenarioParams(name, params);
   const created = await prisma.savedScenario.create({
     data: { clientId, name: name.trim(), ...params },

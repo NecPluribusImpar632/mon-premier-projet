@@ -15,17 +15,30 @@ import { WRAPPERS, type WrapperBreakdown } from "@/lib/allocation/wrappers";
 import { PRECIOUS_METALS, type PreciousMetalsBreakdown } from "@/lib/allocation/preciousMetals";
 import { isRiskProfile } from "@/lib/client/riskProfile";
 import { isMaritalStatus } from "@/lib/client/maritalStatus";
+import { clientScope, requireUser } from "@/lib/auth/currentUser";
+import { assertClientAccess } from "@/lib/auth/clientAccess";
+
+// Every read is scoped to the signed-in user (an admin sees everything, an
+// advisor only their own clients), and every write starts with
+// assertClientAccess: server actions are public POST endpoints, the proxy's
+// cookie check alone would let any logged-in account edit any clientId.
 
 export async function getClients() {
+  const user = await requireUser();
   return prisma.client.findMany({
+    where: clientScope(user),
     orderBy: { name: "asc" },
-    include: { properties: { include: { loans: true } } },
+    include: {
+      properties: { include: { loans: true } },
+      owner: { select: { email: true } },
+    },
   });
 }
 
 export async function getClient(id: string) {
-  return prisma.client.findUnique({
-    where: { id },
+  const user = await requireUser();
+  return prisma.client.findFirst({
+    where: { id, ...clientScope(user) },
     include: {
       properties: {
         orderBy: { createdAt: "asc" },
@@ -38,6 +51,7 @@ export async function getClient(id: string) {
 }
 
 export async function createClient(formData: FormData) {
+  const user = await requireUser();
   const name = String(formData.get("name") ?? "").trim();
   const age = Number(formData.get("age"));
 
@@ -46,7 +60,7 @@ export async function createClient(formData: FormData) {
   }
 
   const client = await prisma.client.create({
-    data: { name, age },
+    data: { name, age, ownerId: user.id },
   });
 
   revalidatePath("/clients");
@@ -54,6 +68,7 @@ export async function createClient(formData: FormData) {
 }
 
 export async function deleteClient(clientId: string) {
+  await assertClientAccess(clientId);
   await prisma.client.delete({ where: { id: clientId } });
   revalidatePath("/clients");
 }
@@ -70,6 +85,7 @@ export async function updateClientAllocation(
     throw new Error("Chaque montant doit être un nombre positif.");
   }
 
+  await assertClientAccess(clientId);
   await prisma.client.update({
     where: { id: clientId },
     data: allocationFieldsFromAmounts(amounts),
@@ -81,6 +97,7 @@ export async function updateProfessionalToolMainIncome(
   clientId: string,
   mainIncome: boolean
 ) {
+  await assertClientAccess(clientId);
   await prisma.client.update({
     where: { id: clientId },
     data: { professionalToolMainIncome: mainIncome },
@@ -97,6 +114,7 @@ export async function updateClientProfile(
     throw new Error("Profil de risque invalide.");
   }
 
+  await assertClientAccess(clientId);
   await prisma.client.update({
     where: { id: clientId },
     data: { riskProfile, notes },
@@ -129,6 +147,7 @@ export async function updateWealthGoal(
     throw new Error("L'épargne mensuelle doit être un nombre positif.");
   }
 
+  await assertClientAccess(clientId);
   await prisma.client.update({
     where: { id: clientId },
     data: { wealthGoalAmount, wealthGoalAge, wealthGoalInflationPct, monthlySavingsAmount },
@@ -167,6 +186,7 @@ export async function updateFoyerFiscal(clientId: string, data: FoyerFiscalData)
     throw new Error("Le nombre d'enfants doit être un entier positif.");
   }
 
+  await assertClientAccess(clientId);
   await prisma.client.update({
     where: { id: clientId },
     data: {
@@ -203,6 +223,7 @@ export async function updateActionsIndexBreakdown(
     throw new Error("Chaque pourcentage doit être compris entre 0 et 100.");
   }
 
+  await assertClientAccess(clientId);
   await prisma.$transaction([
     prisma.actionsIndexAllocation.deleteMany({ where: { clientId } }),
     prisma.actionsIndexAllocation.createMany({
@@ -239,6 +260,7 @@ export async function updateWrapperBreakdown(
     throw new Error("Chaque montant doit être un nombre positif.");
   }
 
+  await assertClientAccess(clientId);
   await prisma.$transaction([
     prisma.wrapperAllocation.deleteMany({ where: { clientId, category } }),
     prisma.wrapperAllocation.createMany({
@@ -268,6 +290,7 @@ export async function updateMatieresPremieresBreakdown(
     throw new Error("Chaque montant doit être un nombre positif.");
   }
 
+  await assertClientAccess(clientId);
   await prisma.client.update({
     where: { id: clientId },
     data: {

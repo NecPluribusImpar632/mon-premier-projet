@@ -16,7 +16,10 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String
+  /** "admin" | "advisor", validated app-side (src/lib/auth/roles.ts). */
+  role         String   @default("advisor")
   createdAt    DateTime @default(now())
+  clients      Client[]
 }
 
 model Client {
@@ -50,10 +53,16 @@ model Client {
   adultChildrenCount            Int?
   createdAt                     DateTime            @default(now())
   updatedAt                     DateTime            @updatedAt
+  /** Nullable at the schema level only so the migration stays additive;
+   * the app always sets it, and an orphan is visible to admins alone. */
+  ownerId                       String?
+  owner                         User?               @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   properties                    Property[]
   savedScenarios                SavedScenario[]
   wrapperAllocations            WrapperAllocation[]
   actionsIndexAllocations       ActionsIndexAllocation[]
+
+  @@index([ownerId])
 }
 
 model Property {
