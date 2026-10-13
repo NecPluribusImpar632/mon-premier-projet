@@ -9,9 +9,9 @@
  *   (scrypt, sel hexa 16 octets, clé 64 octets, format "sel:empreinte"), qui
  *   est réimplémenté ici parce que ce module importe "server-only" et ne peut
  *   pas être chargé hors de Next.
- * - Les clients créés par le compte de démo ne sont pas encore effaçables ici :
- *   il n'y a pas de notion de propriétaire sur Client tant que le rôle
- *   administrateur n'est pas en place. À compléter à ce moment-là.
+ * - Efface tous les clients dont le compte de démo est propriétaire (les biens,
+ *   prêts, scénarios et répartitions suivent par cascade) et force le rôle
+ *   "advisor" : la démo ne doit jamais être administratrice.
  *
  * Ce script écrit dans la base pointée par DATABASE_URL, donc en production
  * si c'est la base partagée : à ne lancer qu'avec l'accord explicite de Johan.
@@ -51,13 +51,15 @@ async function main() {
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.upsert({
     where: { email },
-    update: { passwordHash },
-    create: { email, passwordHash },
+    update: { passwordHash, role: "advisor" },
+    create: { email, passwordHash, role: "advisor" },
   });
+  const deleted = await prisma.client.deleteMany({ where: { ownerId: user.id } });
 
   const ok = await verifyPassword(password, user.passwordHash);
   const wrong = await verifyPassword(`${password}x`, user.passwordHash);
-  console.log(`compte ${email} prêt (id ${user.id})`);
+  console.log(`compte ${email} prêt (id ${user.id}, rôle conseiller)`);
+  console.log(`clients de démo effacés : ${deleted.count}`);
   console.log(`vérification mot de passe : ${ok ? "OK" : "ECHEC"}`);
   console.log(`mauvais mot de passe : ${wrong ? "ACCEPTE (anormal)" : "refusé (normal)"}`);
 

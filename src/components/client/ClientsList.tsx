@@ -10,10 +10,15 @@ export interface ClientSummary {
   name: string;
   age: number;
   netWealth: number;
+  /** Email of the advisor who owns the client; null for an orphan. */
+  ownerEmail: string | null;
 }
 
 interface ClientsListProps {
   clients: ClientSummary[];
+  /** Admins see every advisor's clients, so they get an owner column; an
+   * advisor only ever sees their own and doesn't need it. */
+  showOwner?: boolean;
 }
 
 type SortKey = "name" | "age" | "netWealth";
@@ -30,7 +35,7 @@ const currencyFormatter = new Intl.NumberFormat("fr-FR", {
   maximumFractionDigits: 0,
 });
 
-export function ClientsList({ clients }: ClientsListProps) {
+export function ClientsList({ clients, showOwner = false }: ClientsListProps) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
 
@@ -82,7 +87,14 @@ export function ClientsList({ clients }: ClientsListProps) {
                 href={`/clients/${client.id}`}
                 className="flex flex-1 items-center justify-between px-1 py-4 transition-colors hover:bg-emerald-tint/40"
               >
-                <span className="font-medium text-ink">{client.name}</span>
+                <span className="flex flex-col">
+                  <span className="font-medium text-ink">{client.name}</span>
+                  {showOwner && (
+                    <span className="text-xs text-slate">
+                      {client.ownerEmail ?? "sans propriétaire"}
+                    </span>
+                  )}
+                </span>
                 <span className="flex items-center gap-4">
                   <span className="font-mono text-sm tabular-nums text-slate">
                     {client.age} ans
