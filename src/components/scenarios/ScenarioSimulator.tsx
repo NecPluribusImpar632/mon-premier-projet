@@ -170,6 +170,21 @@ export function ScenarioSimulator({
     setPeIlliquidityDiscountPct(p.peIlliquidityDiscountPct);
     setSelectedPresetId(CUSTOM_PRESET_ID);
     setSelectedSavedScenarioId(scenario.id);
+    // A saved scenario is "custom" as far as presets go, so presetTouchesCard
+    // shows nothing; the cards it drives must be opened explicitly, otherwise
+    // the banner applies a shock the page claims not to have.
+    const opened = new Set<OptionalCardId>();
+    if (p.marketShockPct !== 0) opened.add("actions");
+    if (p.realEstateShockPct !== null || p.oatRateChangePts !== 0) opened.add("realEstate");
+    if (p.obligationsShockPct !== null || p.oatRateChangePts !== 0) opened.add("obligations");
+    if (p.scpiShockPct !== 0) opened.add("scpi");
+    if (p.inflationPct !== 0) {
+      opened.add("inflation");
+      opened.add("preciousMetals");
+    }
+    if (p.peIlliquidityDiscountPct !== 0) opened.add("privateEquity");
+    if (p.vacancyPropertyId && p.vacancyMonths > 0) opened.add("vacancy");
+    setAddedCardIds(opened);
   }
 
   async function handleSaveScenario(name: string) {
