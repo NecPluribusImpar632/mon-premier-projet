@@ -13,6 +13,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // The only other public route — readable by a prospect who has no account
+  // yet, unlike everything else here. Exact match, not a prefix, so nothing
+  // under it (there's nothing under it today) becomes public by accident.
+  if (pathname === "/methodologie") {
+    return NextResponse.next();
+  }
+
   if (!session) {
     return NextResponse.redirect(new URL("/login", request.url));
   }

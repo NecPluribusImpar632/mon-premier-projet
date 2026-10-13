@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
@@ -13,6 +14,13 @@ export default function LoginPage() {
       <div className="w-full max-w-sm rounded-2xl border border-line bg-surface p-6">
         <LoginForm />
       </div>
+
+      <Link
+        href="/methodologie"
+        className="text-sm text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
+      >
+        Découvrir notre méthodologie
+      </Link>
     </div>
   );
 }

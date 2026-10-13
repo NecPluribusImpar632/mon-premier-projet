@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { Building2, FlaskConical, Home, Layers, PieChart, Target } from "lucide-react";
+import { BookOpen, Building2, FlaskConical, Home, Layers, PieChart, Target } from "lucide-react";
 import { CLIENT_TABS, type ClientTab } from "@/lib/client/clientTabs";
 
 const TAB_CONFIG: Record<
@@ -14,6 +14,7 @@ const TAB_CONFIG: Record<
   properties: { icon: Building2, label: "Biens immobiliers" },
   scenarios: { icon: FlaskConical, label: "Scénarios" },
   goal: { icon: Target, label: "Objectif patrimonial" },
+  methodology: { icon: BookOpen, label: "Méthodologie" },
 };
 
 interface ClientSidebarProps {

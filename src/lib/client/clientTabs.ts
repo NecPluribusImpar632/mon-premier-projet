@@ -3,7 +3,15 @@
 // validate the ?tab= search param), and functions exported from a "use
 // client" file can only be rendered as components or passed as props, never
 // invoked from the server.
-export const CLIENT_TABS = ["overview", "allocation", "properties", "wrappers", "scenarios", "goal"] as const;
+export const CLIENT_TABS = [
+  "overview",
+  "allocation",
+  "properties",
+  "wrappers",
+  "scenarios",
+  "goal",
+  "methodology",
+] as const;
 
 export type ClientTab = (typeof CLIENT_TABS)[number];
 
