@@ -97,15 +97,15 @@ export function StockShockCard({
         <span>Méthodologie</span>
         <InfoTooltip>
           <p className="mb-2">
-            Sur les 3 scénarios nommés (2008, choc pétrolier, remontée des taux), le
+            Sur les 3 scénarios nommés (2008, inflation durable, remontée des taux), le
             curseur &quot;Choc de marché&quot; se pré-remplit avec la moyenne pondérée des
             performances réelles des indices détenus (répartition saisie dans
             l&apos;onglet Allocation) sur une année civile représentative : 2008 pour la
-            crise financière, 2022 pour le choc pétrolier/inflation durable (guerre en
-            Ukraine, plus proche de l&apos;hypothèse d&apos;inflation du scénario que
+            crise financière, 2022 pour le choc inflationniste et la remontée brutale des
+            taux (année plus proche de l&apos;hypothèse d&apos;inflation du scénario que
             1973-74, dont les données n&apos;existent pas pour tous les indices), 2018
-            pour la remontée des taux (resserrement Fed/BCE sans choc pétrolier ni
-            bancaire). En mode &quot;Personnalisé&quot;, le curseur est un chiffre libre,
+            pour un resserrement monétaire Fed/BCE sans choc d&apos;inflation ni crise
+            bancaire. En mode &quot;Personnalisé&quot;, le curseur est un chiffre libre,
             non rattaché à un indice.
           </p>
           {hasEm && (

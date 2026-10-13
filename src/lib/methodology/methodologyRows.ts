@@ -122,7 +122,7 @@ export const METHODOLOGY_ROWS: MethodologyRow[] = [
     usage: "Stress test et objectif",
     source: "Fourchette usuelle des décotes de marché secondaire (10 à 40 %)",
     period: "Sans objet",
-    retained: "Décote d'illiquidité de 20 % par défaut ; rendement fixe de 6,5 % nominal par an",
+    retained: "Décote d'illiquidité de 20 % par défaut ; rendement fixe de 4,5 % réel par an",
     confidence: { kind: "assumption" },
   },
   {

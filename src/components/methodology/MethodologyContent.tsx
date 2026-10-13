@@ -150,7 +150,8 @@ export function MethodologyContent() {
           Le stress test applique un choc ponctuel à chaque poste et mesure l&apos;effet sur le
           patrimoine net. Pour les actions, le choc est la performance annuelle réelle de
           chaque indice détenu sur une année de référence : 2008 pour la crise financière,
-          2022 pour le choc pétrolier et inflationniste, 2018 pour la remontée des taux. Pour
+          2022 pour le choc inflationniste et la remontée brutale des taux, 2018 pour un
+          resserrement monétaire sans choc d&apos;inflation. Pour
           l&apos;immobilier, le choc dépend du taux OAT 10 ans, via une sensibilité régressée
           par zone sur les indices Notaires-INSEE. Pour l&apos;or et l&apos;argent, le choc
           dépend de l&apos;inflation, via une régression sur cinquante ans de prix.

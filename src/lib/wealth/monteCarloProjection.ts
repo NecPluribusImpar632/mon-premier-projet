@@ -14,7 +14,7 @@ import {
   SCPI_REAL_RETURN_PCT,
   LIQUIDITES_REAL_RETURN_PCT,
   MATIERES_PREMIERES_REAL_RETURN_PCT,
-  PE_NOMINAL_RETURN_PCT,
+  PE_REAL_RETURN_PCT,
   RENTAL_YIELD_CHARGES_HAIRCUT_PCT,
 } from "@/lib/wealth/monteCarloAssumptions";
 import { mulberry32, hashSeed, drawStandardNormal } from "@/lib/wealth/monteCarloPrng";
@@ -190,7 +190,7 @@ export function computeWealthGoalMonteCarlo(
     MATIERES_PREMIERES_REAL_RETURN_PCT,
     inflationPct
   );
-  const peNominalRate = PE_NOMINAL_RETURN_PCT;
+  const peNominalRate = toNominalMean(PE_REAL_RETURN_PCT, inflationPct);
 
   const obligationsAmount = amounts.obligations ?? 0;
   const scpiAmount = amounts.scpi ?? 0;
@@ -371,9 +371,9 @@ export function computeWealthGoalMonteCarlo(
       label: "Private Equity",
       amount: peAmount,
       status: "pointMass",
-      meanPct: PE_NOMINAL_RETURN_PCT,
+      meanPct: PE_REAL_RETURN_PCT,
       stdPct: 0,
-      sourceNote: "Hypothèse simple (nominal), décote d'illiquidité du stress test appliquée",
+      sourceNote: "Hypothèse simple, décote d'illiquidité du stress test appliquée",
     },
     {
       categoryId: "matieres-premieres",

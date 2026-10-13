@@ -57,8 +57,10 @@ export const OBLIGATIONS_REAL_RETURN_PCT = 1.5;
 export const SCPI_REAL_RETURN_PCT = 4;
 export const LIQUIDITES_REAL_RETURN_PCT = 0;
 export const MATIERES_PREMIERES_REAL_RETURN_PCT = 0;
-/** Nominal, pas réel — pas de conversion via toNominal. */
-export const PE_NOMINAL_RETURN_PCT = 6.5;
+/** Réel, comme tous les autres postes. L'ancienne hypothèse était 6,5 %
+ * nominal, soit environ 4,4 % réel à 2 % d'inflation : même ordre de
+ * grandeur, exprimé dans la même unité que le reste du moteur. */
+export const PE_REAL_RETURN_PCT = 4.5;
 /** Décote sur le rendement locatif brut pour charges/copropriété/vacance/
  * entretien uniquement — pas la fiscalité, qui dépend du régime choisi. */
 export const RENTAL_YIELD_CHARGES_HAIRCUT_PCT = 30;
