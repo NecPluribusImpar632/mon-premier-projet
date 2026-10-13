@@ -52,7 +52,7 @@ export function ScenarioNarrative({ result, activeChocCount }: ScenarioNarrative
                 </span>
               </div>
               <p className="text-xs text-slate">
-                {POST_METHODOLOGY_NOTES[post.id]}
+                {post.methodologyNote ?? POST_METHODOLOGY_NOTES[post.id]}
                 {post.isAssumption && " Repose sur une hypothèse simplificatrice."}
               </p>
             </li>

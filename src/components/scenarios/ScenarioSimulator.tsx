@@ -108,6 +108,10 @@ export function ScenarioSimulator({
   const [oatRateChangePts, setOatRateChangePts] = useState(
     CUSTOM_PRESET.oatRateChangePts
   );
+  // null = derived from the OAT move (zone sensitivity / duration); a number
+  // is a direct shock fixed by a preset or by the advisor.
+  const [realEstateShockPct, setRealEstateShockPct] = useState<number | null>(null);
+  const [obligationsShockPct, setObligationsShockPct] = useState<number | null>(null);
   const [scpiShockPct, setScpiShockPct] = useState(0);
   const [inflationPct, setInflationPct] = useState(CUSTOM_PRESET.inflationPct);
   const [inflationYears, setInflationYears] = useState(5);
@@ -138,11 +142,16 @@ export function ScenarioSimulator({
     setSelectedSavedScenarioId(null);
   }
 
+  // A preset sets every shock it defines, SCPI included, so switching presets
+  // never carries a stale value over from the previous one.
   function applyPreset(preset: ScenarioPreset) {
     setSelectedPresetId(preset.id);
     setSelectedSavedScenarioId(null);
     setMarketShockPct(resolvedMarketShockPct(preset, actionsIndexBreakdown));
     setOatRateChangePts(preset.oatRateChangePts);
+    setRealEstateShockPct(preset.realEstateShockPct);
+    setObligationsShockPct(preset.obligationsShockPct);
+    setScpiShockPct(preset.scpiShockPct);
     setInflationPct(preset.inflationPct);
   }
 
@@ -150,6 +159,8 @@ export function ScenarioSimulator({
     const p = scenarioParamsFromSavedScenario(scenario);
     setMarketShockPct(p.marketShockPct);
     setOatRateChangePts(p.oatRateChangePts);
+    setRealEstateShockPct(p.realEstateShockPct);
+    setObligationsShockPct(p.obligationsShockPct);
     setScpiShockPct(p.scpiShockPct);
     setInflationPct(p.inflationPct);
     setInflationYears(p.inflationYears);
@@ -182,7 +193,7 @@ export function ScenarioSimulator({
     setAddedCardIds((prev) => new Set(prev).add(id));
     if (id === "privateEquity") setPeIlliquidityDiscountPct(20);
     if (id === "vacancy") setVacancyMonths(3);
-    if (id === "scpi") setScpiShockPct(-11);
+    if (id === "scpi") setScpiShockPct(-12);
   }
 
   function removeCard(id: OptionalCardId) {
@@ -195,11 +206,17 @@ export function ScenarioSimulator({
     if (id === "scpi") setScpiShockPct(0);
     if (id === "privateEquity") setPeIlliquidityDiscountPct(0);
     if (id === "vacancy") setVacancyMonths(0);
-    if (id === "obligations") setObligationsDurationYears(0);
+    if (id === "obligations") {
+      setObligationsShockPct(null);
+      setObligationsDurationYears(0);
+    }
     if (id === "inflation") setInflationPct(0);
-    // oatRateChangePts is shared with the Obligations card's own shock —
+    // oatRateChangePts is shared with the Obligations card's derived shock —
     // only neutralize it if nothing else currently depends on it.
-    if (id === "realEstate" && !isCardVisible("obligations")) setOatRateChangePts(0);
+    if (id === "realEstate") {
+      setRealEstateShockPct(null);
+      if (!isCardVisible("obligations")) setOatRateChangePts(0);
+    }
   }
 
   function handleMarketShockChange(value: number) {
@@ -212,6 +229,18 @@ export function ScenarioSimulator({
     setOatRateChangePts(value);
     markCustom();
     setAddedCardIds((prev) => new Set(prev).add("realEstate"));
+  }
+
+  function handleRealEstateShockChange(value: number | null) {
+    setRealEstateShockPct(value);
+    markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("realEstate"));
+  }
+
+  function handleObligationsShockChange(value: number | null) {
+    setObligationsShockPct(value);
+    markCustom();
+    setAddedCardIds((prev) => new Set(prev).add("obligations"));
   }
 
   function handleScpiShockChange(value: number) {
@@ -255,6 +284,8 @@ export function ScenarioSimulator({
   const currentParams: ScenarioParams = {
     marketShockPct,
     oatRateChangePts,
+    realEstateShockPct,
+    obligationsShockPct,
     scpiShockPct,
     inflationPct,
     inflationYears,
@@ -291,21 +322,22 @@ export function ScenarioSimulator({
   };
 
   // Beyond being relevant, a card only shows by default when the currently
-  // selected named preset actually drives it (2008/Choc pétrolier/Remontée
-  // des taux all set marketShockPct/oatRateChangePts/inflationPct). PE and
-  // vacancy have no preset field at all, so they always require a manual add.
-  // SCPI has no rate-derived value either (no reliable coefficient exists —
-  // see ScpiShockCard's methodology note), but it still surfaces as a
-  // reminder under a rate preset so the advisor doesn't forget to set it by
-  // hand — the shock itself stays at 0 until they actually touch the slider.
+  // selected named preset actually drives it: a direct shock for the poste,
+  // or a rate move that feeds its derived shock. PE and vacancy have no
+  // preset field at all, so they always require a manual add.
   const activePreset =
     SCENARIO_PRESETS.find((preset) => preset.id === selectedPresetId) ?? CUSTOM_PRESET;
+  const isNamedPreset = activePreset.id !== CUSTOM_PRESET_ID;
   const presetTouchesCard: Record<OptionalCardId, boolean> = {
-    actions: activePreset.id !== CUSTOM_PRESET_ID && activePreset.marketShockPct !== 0,
-    realEstate: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
-    obligations: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
-    inflation: activePreset.id !== CUSTOM_PRESET_ID && activePreset.inflationPct !== 0,
-    scpi: activePreset.id !== CUSTOM_PRESET_ID && activePreset.oatRateChangePts !== 0,
+    actions: isNamedPreset && activePreset.marketShockPct !== 0,
+    realEstate:
+      isNamedPreset &&
+      (activePreset.realEstateShockPct !== null || activePreset.oatRateChangePts !== 0),
+    obligations:
+      isNamedPreset &&
+      (activePreset.obligationsShockPct !== null || activePreset.oatRateChangePts !== 0),
+    inflation: isNamedPreset && activePreset.inflationPct !== 0,
+    scpi: isNamedPreset && activePreset.scpiShockPct !== 0,
     privateEquity: false,
     preciousMetals: false,
     vacancy: false,
@@ -391,6 +423,8 @@ export function ScenarioSimulator({
             properties={properties}
             oatRateChangePts={oatRateChangePts}
             onOatRateChangePtsChange={handleOatRateChangePts}
+            shockPct={realEstateShockPct}
+            onShockPctChange={handleRealEstateShockChange}
             onRemove={addedCardIds.has("realEstate") ? () => removeCard("realEstate") : undefined}
           />
         )}
@@ -408,6 +442,8 @@ export function ScenarioSimulator({
             oatRateChangePts={oatRateChangePts}
             durationYears={obligationsDurationYears}
             onDurationYearsChange={handleObligationsDurationChange}
+            shockPct={obligationsShockPct}
+            onShockPctChange={handleObligationsShockChange}
             onRemove={addedCardIds.has("obligations") ? () => removeCard("obligations") : undefined}
           />
         )}

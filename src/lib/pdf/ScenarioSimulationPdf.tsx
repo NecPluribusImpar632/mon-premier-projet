@@ -134,7 +134,8 @@ export function ScenarioSimulationPdf({
   const result = computeFullScenarioImpact(context, params);
   const realEstateShock = computeRealEstateShockImpact(
     context.properties,
-    params.oatRateChangePts
+    params.oatRateChangePts,
+    params.realEstateShockPct
   );
   const heldIndices = REFERENCE_INDICES.filter(
     (index) => context.actionsIndexBreakdown[index] > 0
@@ -142,7 +143,8 @@ export function ScenarioSimulationPdf({
   const obligationsShock = computeObligationsShockImpact(
     context.obligationsAmount,
     params.oatRateChangePts,
-    params.obligationsDurationYears
+    params.obligationsDurationYears,
+    params.obligationsShockPct
   );
   const vacancyProperty = context.properties.find(
     (p) => p.id === params.vacancyPropertyId
@@ -201,14 +203,23 @@ export function ScenarioSimulationPdf({
           {context.properties.length > 0 && (
             <View style={styles.methodologyBlock}>
               <Text style={styles.methodologyTitle}>Choc immobilier</Text>
-              {realEstateShock.perProperty.map((property) => (
-                <Text key={property.propertyId} style={styles.methodologyText}>
-                  {property.propertyName} — zone {property.sensitivity.zoneLabel},
-                  coefficient {property.sensitivity.coefficient.toFixed(2)} %/pt (R²{" "}
-                  {property.sensitivity.r2Pct.toFixed(1)} %, décalage{" "}
-                  {property.sensitivity.lagQuarters} trim., n={property.sensitivity.n})
+              {realEstateShock.mode === "fixed" ? (
+                <Text style={styles.methodologyText}>
+                  Choc de prix de {params.realEstateShockPct} % appliqué à tous les biens,
+                  valeur fixée par le scénario (la sensibilité par zone ne s&apos;applique
+                  pas dans ce mode).
                 </Text>
-              ))}
+              ) : (
+                realEstateShock.perProperty.map((property) => (
+                  <Text key={property.propertyId} style={styles.methodologyText}>
+                    {property.propertyName} — zone {property.sensitivity.zoneLabel},
+                    coefficient {property.sensitivity.coefficient.toFixed(2)} %/pt (R²{" "}
+                    {property.sensitivity.r2Pct.toFixed(1)} %, décalage{" "}
+                    {property.sensitivity.lagQuarters} trim., n={property.sensitivity.n}),
+                    pour {params.oatRateChangePts} pt de variation du taux OAT.
+                  </Text>
+                ))
+              )}
             </View>
           )}
 
@@ -231,12 +242,19 @@ export function ScenarioSimulationPdf({
           {context.obligationsAmount > 0 && (
             <View style={styles.methodologyBlock}>
               <Text style={styles.methodologyTitle}>Choc obligataire</Text>
-              <Text style={styles.methodologyText}>
-                Approximation de duration modifiée (ΔPrix/Prix ≈ -duration × Δtaux) avec
-                une duration de {params.obligationsDurationYears} ans — hypothèse manuelle,
-                à ajuster selon les titres réellement détenus ({obligationsShock.shockPct.toFixed(1)} %
-                de variation pour {params.oatRateChangePts} pt de variation du taux OAT).
-              </Text>
+              {obligationsShock.mode === "fixed" ? (
+                <Text style={styles.methodologyText}>
+                  Variation de {obligationsShock.shockPct.toFixed(1)} % fixée par le
+                  scénario, appliquée au montant détenu.
+                </Text>
+              ) : (
+                <Text style={styles.methodologyText}>
+                  Approximation de duration modifiée (ΔPrix/Prix ≈ -duration × Δtaux) avec
+                  une duration de {params.obligationsDurationYears} ans — hypothèse manuelle,
+                  à ajuster selon les titres réellement détenus ({obligationsShock.shockPct.toFixed(1)} %
+                  de variation pour {params.oatRateChangePts} pt de variation du taux OAT).
+                </Text>
+              )}
             </View>
           )}
 

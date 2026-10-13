@@ -46,27 +46,37 @@ export interface PropertyValueImpact {
   sensitivity: ZoneSensitivity;
 }
 
+/** "fixed": the scenario sets the shock directly (same % for every
+ * property); "derived": it follows the OAT move through each zone's
+ * sensitivity coefficient. */
+export type ShockMode = "fixed" | "derived";
+
 export interface RealEstateShockResult {
   perProperty: PropertyValueImpact[];
   totalCurrentValue: number;
   totalNewValue: number;
   totalDelta: number;
+  mode: ShockMode;
 }
 
 /**
- * Chaque bien revalorise selon le coefficient de sensibilité prix/taux de sa propre
- * zone, pas un pourcentage national unique : shockPct = coefficient_zone ×
+ * Mode dérivé (overrideShockPct null) : chaque bien revalorise selon le coefficient
+ * de sensibilité prix/taux de sa propre zone, shockPct = coefficient_zone ×
  * oatRateChangePts. La zone de chaque bien est résolue en amont, côté serveur
- * (voir `resolvePropertySensitivity`) — cette fonction ne fait que lire
- * `property.sensitivity`, elle n'a pas accès à la table commune → zone.
+ * (voir `resolvePropertySensitivity`). Mode fixe : le scénario impose le même
+ * choc à tous les biens (ex. Crise 2008 : -8 %), la sensibilité par zone n'entre
+ * pas en jeu.
  */
 export function computeRealEstateShockImpact(
   properties: PropertyWithSensitivity[],
-  oatRateChangePts: number
+  oatRateChangePts: number,
+  overrideShockPct: number | null = null
 ): RealEstateShockResult {
+  const mode: ShockMode = overrideShockPct === null ? "derived" : "fixed";
   const perProperty = properties.map((property) => {
     const sensitivity = property.sensitivity;
-    const shockPct = sensitivity.coefficient * oatRateChangePts;
+    const shockPct =
+      overrideShockPct === null ? sensitivity.coefficient * oatRateChangePts : overrideShockPct;
     const newValue = property.currentValue * (1 + shockPct / 100);
     const remainingLoanAmount = totalRemainingDebt(property);
     const newEquity = newValue - remainingLoanAmount;
@@ -92,6 +102,7 @@ export function computeRealEstateShockImpact(
     totalCurrentValue,
     totalNewValue,
     totalDelta: totalNewValue - totalCurrentValue,
+    mode,
   };
 }
 
@@ -255,25 +266,32 @@ export interface ObligationsShockResult {
   newValue: number;
   deltaValue: number;
   shockPct: number;
+  mode: ShockMode;
 }
 
 /**
- * Approximation de duration modifiée : ΔP/P ≈ -duration × Δtaux. `durationYears`
- * est une hypothèse manuelle réglée par le conseiller — l'app ne connaît pas les
- * maturités réelles des titres obligataires détenus par le client.
+ * Mode dérivé (overrideShockPct null) : approximation de duration modifiée,
+ * ΔP/P ≈ -duration × Δtaux, où `durationYears` est une hypothèse manuelle réglée
+ * par le conseiller (l'app ne connaît pas les maturités réelles des titres).
+ * Mode fixe : le scénario impose la variation (ex. Crise 2008 : +8 %, les
+ * obligations d'État ayant monté quand les taux baissaient).
  */
 export function computeObligationsShockImpact(
   obligationsAmount: number,
   oatRateChangePts: number,
-  durationYears: number
+  durationYears: number,
+  overrideShockPct: number | null = null
 ): ObligationsShockResult {
-  const shockPct = -durationYears * oatRateChangePts;
+  const mode: ShockMode = overrideShockPct === null ? "derived" : "fixed";
+  const shockPct =
+    overrideShockPct === null ? -durationYears * oatRateChangePts : overrideShockPct;
   const newValue = obligationsAmount * (1 + shockPct / 100);
   return {
     currentValue: obligationsAmount,
     newValue,
     deltaValue: newValue - obligationsAmount,
     shockPct,
+    mode,
   };
 }
 
@@ -386,6 +404,10 @@ export interface ScenarioImpactPost {
    * hypothesis already flagged elsewhere in the app (bond duration, PE exit
    * discount, real estate zone coefficient reliability). */
   isAssumption: boolean;
+  /** One-line method note for the detail list, when it depends on the
+   * scenario (fixed shock vs rate-derived); otherwise the static note in
+   * narrative.ts applies. */
+  methodologyNote?: string;
 }
 
 export interface FullScenarioResult {
@@ -450,6 +472,8 @@ export function computeFullScenarioImpact(
   const {
     marketShockPct,
     oatRateChangePts,
+    realEstateShockPct,
+    obligationsShockPct,
     scpiShockPct,
     inflationPct,
     inflationYears,
@@ -473,7 +497,8 @@ export function computeFullScenarioImpact(
   const obligationsShock = computeObligationsShockImpact(
     obligationsAmount,
     oatRateChangePts,
-    obligationsDurationYears
+    obligationsDurationYears,
+    obligationsShockPct
   );
   const peShock = computePrivateEquityIlliquidityImpact(
     privateEquityAmount,
@@ -499,7 +524,11 @@ export function computeFullScenarioImpact(
     goldShock.deltaValue +
     silverShock.deltaValue;
 
-  const realEstateShock = computeRealEstateShockImpact(properties, oatRateChangePts);
+  const realEstateShock = computeRealEstateShockImpact(
+    properties,
+    oatRateChangePts,
+    realEstateShockPct
+  );
   const realEstateAfterShock = realEstateShock.totalNewValue + immobilierBaseline;
   const realEstateDelta = realEstateShock.totalDelta;
 
@@ -544,7 +573,13 @@ export function computeFullScenarioImpact(
       valueBefore: totalPropertyValue,
       delta: realEstateDelta,
       deltaPct: pct(realEstateDelta, totalPropertyValue),
-      isAssumption: true,
+      // A fixed shock is scenario data, not an estimate; only the rate-derived
+      // path rests on the zone regressions' modest reliability.
+      isAssumption: realEstateShock.mode === "derived",
+      methodologyNote:
+        realEstateShock.mode === "fixed"
+          ? "Choc de prix fixé par le scénario, identique pour tous les biens."
+          : "Revalorisation selon la sensibilité prix/taux calibrée par zone.",
     });
   }
   if (scpiAmount > 0) {
@@ -568,7 +603,11 @@ export function computeFullScenarioImpact(
       valueBefore: obligationsAmount,
       delta: obligationsShock.deltaValue,
       deltaPct: pct(obligationsShock.deltaValue, obligationsAmount),
-      isAssumption: true,
+      isAssumption: obligationsShock.mode === "derived",
+      methodologyNote:
+        obligationsShock.mode === "fixed"
+          ? "Variation fixée par le scénario."
+          : "Approximation de duration : ΔPrix/Prix ≈ -duration × Δtaux.",
     });
   }
   if (privateEquityAmount > 0) {

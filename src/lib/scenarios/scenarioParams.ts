@@ -6,6 +6,11 @@ import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdo
 export interface ScenarioParams {
   marketShockPct: number;
   oatRateChangePts: number;
+  /** null = derived from the OAT move through each property's zone
+   * sensitivity; a number applies the same shock to every property. */
+  realEstateShockPct: number | null;
+  /** null = derived from the OAT move through the bond duration. */
+  obligationsShockPct: number | null;
   scpiShockPct: number;
   inflationPct: number;
   inflationYears: number;
@@ -22,6 +27,8 @@ export interface ScenarioParams {
 export const DEFAULT_SCENARIO_PARAMS: ScenarioParams = {
   marketShockPct: 0,
   oatRateChangePts: 0,
+  realEstateShockPct: null,
+  obligationsShockPct: null,
   scpiShockPct: 0,
   inflationPct: 0,
   inflationYears: 5,
@@ -39,6 +46,9 @@ export function scenarioParamsFromPreset(
     ...DEFAULT_SCENARIO_PARAMS,
     marketShockPct: resolvedMarketShockPct(preset, actionsIndexBreakdown),
     oatRateChangePts: preset.oatRateChangePts,
+    realEstateShockPct: preset.realEstateShockPct,
+    obligationsShockPct: preset.obligationsShockPct,
+    scpiShockPct: preset.scpiShockPct,
     inflationPct: preset.inflationPct,
   };
 }
@@ -47,6 +57,8 @@ export function scenarioParamsFromSavedScenario(saved: SavedScenario): ScenarioP
   return {
     marketShockPct: saved.marketShockPct,
     oatRateChangePts: saved.oatRateChangePts,
+    realEstateShockPct: saved.realEstateShockPct,
+    obligationsShockPct: saved.obligationsShockPct,
     scpiShockPct: saved.scpiShockPct,
     inflationPct: saved.inflationPct,
     inflationYears: saved.inflationYears,
@@ -64,6 +76,9 @@ export function scenarioParamsToSearchParams(params: ScenarioParams): URLSearchP
   return new URLSearchParams({
     marketShockPct: String(params.marketShockPct),
     oatRateChangePts: String(params.oatRateChangePts),
+    realEstateShockPct: params.realEstateShockPct === null ? "" : String(params.realEstateShockPct),
+    obligationsShockPct:
+      params.obligationsShockPct === null ? "" : String(params.obligationsShockPct),
     scpiShockPct: String(params.scpiShockPct),
     inflationPct: String(params.inflationPct),
     inflationYears: String(params.inflationYears),
@@ -81,11 +96,20 @@ export function scenarioParamsFromSearchParams(
     const parsed = Number(searchParams.get(key));
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+  // Absent or empty = null = derived from the rate, matching the URL writer.
+  const optionalNum = (key: string): number | null => {
+    const raw = searchParams.get(key);
+    if (raw === null || raw === "") return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
   const vacancyPropertyId = searchParams.get("vacancyPropertyId");
 
   return {
     marketShockPct: num("marketShockPct", DEFAULT_SCENARIO_PARAMS.marketShockPct),
     oatRateChangePts: num("oatRateChangePts", DEFAULT_SCENARIO_PARAMS.oatRateChangePts),
+    realEstateShockPct: optionalNum("realEstateShockPct"),
+    obligationsShockPct: optionalNum("obligationsShockPct"),
     scpiShockPct: num("scpiShockPct", DEFAULT_SCENARIO_PARAMS.scpiShockPct),
     inflationPct: num("inflationPct", DEFAULT_SCENARIO_PARAMS.inflationPct),
     inflationYears: num("inflationYears", DEFAULT_SCENARIO_PARAMS.inflationYears),

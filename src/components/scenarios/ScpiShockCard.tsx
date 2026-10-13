@@ -89,11 +89,13 @@ export function ScpiShockCard({
           fiable reliant cette décote au taux OAT : une régression testée sur
           13 trimestres (Ramify SCPI Index, T2 2023 à T2 2026) donne au mieux
           un R² de 25 %, non significatif statistiquement. La valeur
-          suggérée de 11 % vient donc d&apos;un seul épisode documenté, pas
+          suggérée de 12 % vient donc d&apos;un seul épisode documenté, pas
           d&apos;un calcul : lors de la baisse des prix de 2023, une
           vingtaine de SCPI sur environ 215 ont réévalué leur prix de part,
-          avec une baisse moyenne de 11 % (jusqu&apos;à 17 % pour les plus
-          touchées). À ajuster selon le fonds réellement détenu.
+          avec une baisse moyenne d&apos;environ 11 % (jusqu&apos;à 17 % pour
+          les plus touchées). Le scénario Crise 2008 retient −3 %, l&apos;ordre
+          de grandeur observé en 2008-2009. À ajuster selon le fonds réellement
+          détenu.
         </InfoTooltip>
       </div>
     </CollapsibleScenarioCard>

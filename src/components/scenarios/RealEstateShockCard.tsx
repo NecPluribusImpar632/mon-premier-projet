@@ -6,6 +6,7 @@ import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySen
 import { ScenarioCard } from "@/components/scenarios/ScenarioCard";
 import { CollapsibleScenarioCard } from "@/components/scenarios/CollapsibleScenarioCard";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
+import { ShockModeToggle } from "@/components/scenarios/ShockModeToggle";
 import {
   computeRealEstateShockImpact,
   computeRateHikeImpact,
@@ -20,6 +21,10 @@ interface RealEstateShockCardProps {
   properties: PropertyWithSensitivity[];
   oatRateChangePts: number;
   onOatRateChangePtsChange: (value: number) => void;
+  /** null = derived from the OAT move through each zone's sensitivity; a
+   * number applies the same price shock to every property. */
+  shockPct: number | null;
+  onShockPctChange: (value: number | null) => void;
   onRemove?: () => void;
 }
 
@@ -27,6 +32,8 @@ export function RealEstateShockCard({
   properties,
   oatRateChangePts,
   onOatRateChangePtsChange,
+  shockPct,
+  onShockPctChange,
   onRemove,
 }: RealEstateShockCardProps) {
   const [needsLiquidity, setNeedsLiquidity] = useState(false);
@@ -48,8 +55,16 @@ export function RealEstateShockCard({
     );
   }
 
-  const result = computeRealEstateShockImpact(properties, oatRateChangePts);
+  const result = computeRealEstateShockImpact(properties, oatRateChangePts, shockPct);
   const rateHike = computeRateHikeImpact(properties, oatRateChangePts);
+  // Average rate-derived shock, used to seed the direct slider when the
+  // advisor switches modes so the number doesn't jump to zero.
+  const derivedAveragePct =
+    result.totalCurrentValue > 0
+      ? (computeRealEstateShockImpact(properties, oatRateChangePts).totalDelta /
+          result.totalCurrentValue) *
+        100
+      : 0;
   const totalFixedDebt = rateHike.perProperty.reduce((sum, p) => sum + p.fixedDebt, 0);
   const totalVariableDebt = rateHike.perProperty.reduce(
     (sum, p) => sum + p.variableDebt,
@@ -83,8 +98,32 @@ export function RealEstateShockCard({
       isActive={isActive}
       onRemove={onRemove}
     >
+      <ShockModeToggle
+        mode={result.mode}
+        derivedLabel="Dérivé du taux par zone"
+        fixedLabel="Choc direct"
+        onChange={(mode) =>
+          onShockPctChange(mode === "fixed" ? Math.round(derivedAveragePct) : null)
+        }
+      />
+
+      {result.mode === "fixed" && (
+        <ShockSlider
+          label="Choc de prix (tous les biens)"
+          value={shockPct ?? 0}
+          min={-30}
+          max={10}
+          step={1}
+          onChange={onShockPctChange}
+        />
+      )}
+
       <ShockSlider
-        label="Variation du taux OAT"
+        label={
+          result.mode === "fixed"
+            ? "Variation du taux OAT (obligations, prêts à taux variable)"
+            : "Variation du taux OAT"
+        }
         value={oatRateChangePts}
         min={-3}
         max={8}
@@ -123,7 +162,7 @@ export function RealEstateShockCard({
             <span className="text-slate">
               {property.propertyName}
               <span className="ml-1.5 text-slate/70">
-                ({property.sensitivity.zoneLabel},{" "}
+                ({result.mode === "derived" && `${property.sensitivity.zoneLabel}, `}
                 {property.shockPct > 0 ? "+" : ""}
                 {roundPercent(property.shockPct, 1)}%)
               </span>
@@ -159,17 +198,22 @@ export function RealEstateShockCard({
       <div className="flex items-center gap-1.5 border-t border-line pt-3 text-xs text-slate">
         <span>Méthodologie</span>
         <InfoTooltip>
+          <p className="mb-2">
+            Deux modes. « Choc direct » : le même pourcentage s&apos;applique à tous les
+            biens, c&apos;est le mode du scénario Crise 2008 (−8 %, repli des prix
+            français en 2008-2009). « Dérivé du taux par zone » : pour chaque bien, le
+            coefficient de sensibilité prix/taux calibré sur sa zone (régression
+            Notaires-INSEE / Notaires du Grand Paris entre variation du taux OAT 10 ans
+            et croissance des prix, décalage de 0 à 8 trimestres), fiabilité modeste à
+            correcte selon les zones (R² de 3 % à 46 %). C&apos;est le mode des
+            scénarios 2022 et 2018 et du mode Personnalisé par défaut.
+          </p>
           <p>
-            Le choc prix applique, pour chaque bien, le coefficient de
-            sensibilité prix/taux calibré sur sa zone (régression historique
-            Notaires-INSEE / Notaires du Grand Paris entre variation du taux
-            OAT 10 ans et croissance des prix, en glissement annuel, meilleur
-            décalage retenu entre 0 et 8 trimestres). Fiabilité statistique
-            modeste à correcte selon les zones (R² de 3 % à 46 %) — une
-            tendance indicative, pas une certitude.
+            Dans les deux modes, le taux OAT pilote le choc obligataire en mode duration
+            et le surcoût des prêts à taux variable.
           </p>
           <ul className="mt-2 flex flex-col gap-0.5 border-t border-line pt-2">
-            {zonesUsed.map((zone) => {
+            {result.mode === "derived" && zonesUsed.map((zone) => {
               const reliability = reliabilityTierForR2(zone.r2Pct);
               return (
                 <li key={zone.zoneLabel} className="flex items-center justify-between gap-3">

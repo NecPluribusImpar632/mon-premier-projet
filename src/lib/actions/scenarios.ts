@@ -22,6 +22,10 @@ function validateScenarioParams(name: string, params: ScenarioParams) {
   if (numericFields.some((value) => !Number.isFinite(value))) {
     throw new Error("Les valeurs du scénario doivent être des nombres valides.");
   }
+  const optionalFields = [params.realEstateShockPct, params.obligationsShockPct];
+  if (optionalFields.some((value) => value !== null && !Number.isFinite(value))) {
+    throw new Error("Les chocs directs doivent être des nombres valides ou absents.");
+  }
 }
 
 export async function getSavedScenarios(clientId: string) {

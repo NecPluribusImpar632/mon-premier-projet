@@ -137,6 +137,10 @@ model SavedScenario {
   name                     String
   marketShockPct           Float
   oatRateChangePts         Float
+  /** null = derived from the rate (zone sensitivity / duration), see
+   * ScenarioParams. Nullable so the migration stays additive. */
+  realEstateShockPct       Float?
+  obligationsShockPct      Float?
   scpiShockPct             Float
   inflationPct             Float
   inflationYears           Int
