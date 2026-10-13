@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ASSET_CATEGORIES } from "@/lib/allocation/categories";
 import { formatCurrency } from "@/lib/format/currency";
-import { roundPercent } from "@/lib/format/percent";
+import { formatPercent } from "@/lib/format/percent";
 import type { AllocationEntry } from "@/types/allocation";
 
 interface AllocationDonutChartProps {
@@ -283,13 +283,16 @@ export function AllocationDonutChart({
                   fontWeight={600}
                   className="fill-ink"
                 >
-                  {roundPercent(item.percentage)}%
+                  {formatPercent(item.percentage)}
                 </tspan>
               </text>
             </g>
           );
         })}
 
+        {/* Large segments carry their own name inside the ring, so every
+            slice is identified in place (small ones get name + share on
+            their outside callout) and no separate legend is needed. */}
         {insideLabels.map((segment) => (
           <text
             key={segment.categoryId}
@@ -297,12 +300,26 @@ export function AllocationDonutChart({
             y={segment.position.y}
             textAnchor="middle"
             dominantBaseline="middle"
-            fontFamily="var(--font-mono)"
-            fontSize={30}
-            fontWeight={500}
             style={{ fill: `var(--on-segment-${segment.categoryId})` }}
           >
-            {roundPercent(segment.percentage)}%
+            <tspan
+              x={segment.position.x}
+              dy="-0.65em"
+              fontFamily="var(--font-sans)"
+              fontSize={20}
+              fontWeight={500}
+            >
+              {segment.label}
+            </tspan>
+            <tspan
+              x={segment.position.x}
+              dy="1.25em"
+              fontFamily="var(--font-mono)"
+              fontSize={30}
+              fontWeight={500}
+            >
+              {formatPercent(segment.percentage)}
+            </tspan>
           </text>
         ))}
       </svg>

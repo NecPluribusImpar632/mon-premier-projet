@@ -72,7 +72,13 @@ export function CategoryDetailsToggle({
     return null;
   }
 
-  const isMuted = categoryAmount === 0 && !hasAnyDetail;
+  // Nothing entered for this category and nothing detailed behind it: no
+  // entry point at all, rather than a greyed-out "…" that reads as an
+  // orphaned glyph under an empty line. It reappears as soon as an amount
+  // is typed (the panel is only useful once there is something to split).
+  if (categoryAmount === 0 && !hasAnyDetail) {
+    return null;
+  }
 
   if (!expanded) {
     return (
@@ -80,12 +86,10 @@ export function CategoryDetailsToggle({
         type="button"
         tabIndex={-1}
         onClick={() => setExpanded(true)}
-        aria-label="Détailler cette catégorie"
-        className={`ml-4 flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${
-          isMuted ? "text-line hover:text-slate" : "text-slate hover:text-ink"
-        }`}
+        className="ml-auto flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-slate transition-colors hover:text-ink"
       >
-        <MoreHorizontal className="h-4 w-4" />
+        <MoreHorizontal className="h-3.5 w-3.5" />
+        {hasActionsSection ? "Détailler les indices" : "Détailler or / argent"}
       </button>
     );
   }

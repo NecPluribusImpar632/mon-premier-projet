@@ -6,7 +6,7 @@ import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { CategoryDetailsToggle } from "@/components/allocation/CategoryDetailsToggle";
 import { formatCurrency } from "@/lib/format/currency";
-import { roundPercent } from "@/lib/format/percent";
+import { formatPercent } from "@/lib/format/percent";
 import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { ReferenceIndex } from "@/lib/allocation/referenceIndices";
 import type {
@@ -73,8 +73,8 @@ export function AllocationAmountForm({
             <label className="flex items-center justify-between gap-4">
               <span className="text-sm text-ink">{category.label}</span>
               <span className="flex items-center gap-2">
-                <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-slate">
-                  {roundPercent(percentages[category.id] ?? 0)}%
+                <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums text-slate">
+                  {formatPercent(percentages[category.id] ?? 0)}
                 </span>
                 {isLockedImmobilier ? (
                   <span className="w-28 rounded-md border border-dashed border-line bg-paper px-2 py-1 text-right font-mono text-sm tabular-nums text-slate">
