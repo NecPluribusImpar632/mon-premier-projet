@@ -16,6 +16,7 @@ import { PRECIOUS_METALS, type PreciousMetalsBreakdown } from "@/lib/allocation/
 import { isRiskProfile } from "@/lib/client/riskProfile";
 import { isMaritalStatus } from "@/lib/client/maritalStatus";
 import { clientScope, requireUser } from "@/lib/auth/currentUser";
+import type { AnnualFeesPct } from "@/lib/wealth/monteCarloAssumptions";
 import { assertClientAccess } from "@/lib/auth/clientAccess";
 
 // Every read is scoped to the signed-in user (an admin sees everything, an
@@ -151,6 +152,26 @@ export async function updateWealthGoal(
   await prisma.client.update({
     where: { id: clientId },
     data: { wealthGoalAmount, wealthGoalAge, wealthGoalInflationPct, monthlySavingsAmount },
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
+export async function updateWealthGoalFees(clientId: string, fees: AnnualFeesPct) {
+  const values = Object.values(fees);
+  if (values.some((value) => !Number.isFinite(value) || value < 0 || value > 10)) {
+    throw new Error("Chaque taux de frais doit être compris entre 0 et 10 %.");
+  }
+
+  await assertClientAccess(clientId);
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      feesActionsPct: fees.actions,
+      feesObligationsPct: fees.obligations,
+      feesScpiPct: fees.scpi,
+      feesPrivateEquityPct: fees.privateEquity,
+      feesImmobilierPct: fees.immobilier,
+    },
   });
   revalidatePath(`/clients/${clientId}`);
 }

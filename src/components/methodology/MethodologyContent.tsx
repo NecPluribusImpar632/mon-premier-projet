@@ -179,9 +179,13 @@ export function MethodologyContent() {
           trajectoires sont tirées au hasard, année par année, jusqu&apos;à l&apos;échéance
           choisie. Chaque année, les postes calibrés reçoivent un rendement tiré dans leur
           distribution historique, les postes en hypothèse fixe reçoivent leur rendement
-          constant. L&apos;épargne mensuelle est versée en fin d&apos;année dans les poches
-          financières, au prorata de l&apos;allocation. La dette s&apos;amortit selon les prêts
-          saisis. Le résultat est la part des trajectoires où le patrimoine net final atteint
+          constant. Des frais annuels par poste (ligne « Frais annuels » du tableau,
+          modifiables par client) sont soustraits du rendement nominal chaque année.
+          L&apos;épargne mensuelle est versée en fin d&apos;année dans les poches
+          financières, au prorata de l&apos;allocation. Le Private Equity est compté à
+          100 % de sa valeur, comme dans la vue d&apos;ensemble ; sa décote
+          d&apos;illiquidité ne s&apos;applique qu&apos;au stress test. La dette
+          s&apos;amortit selon les prêts saisis. Le résultat est la part des trajectoires où le patrimoine net final atteint
           l&apos;objectif, accompagnée des trajectoires médiane, optimiste (90e centile) et
           pessimiste (10e centile).
         </p>

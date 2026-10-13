@@ -1,12 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateWealthGoal } from "@/lib/actions/clients";
+import { updateWealthGoal, updateWealthGoalFees } from "@/lib/actions/clients";
 import {
   computeWealthGoalMonteCarlo,
   type AssetClassMonteCarloRow,
+  type MonteCarloRowStatus,
   type WealthGoalContext,
 } from "@/lib/wealth/monteCarloProjection";
+import {
+  ANNUAL_FEES_LABELS,
+  DEFAULT_ANNUAL_FEES_PCT,
+  type AnnualFeesPct,
+} from "@/lib/wealth/monteCarloAssumptions";
 import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { WealthGoalFanChart } from "@/components/wealth/WealthGoalFanChart";
@@ -27,6 +33,8 @@ interface WealthGoalSectionProps {
   initialWealthGoalAge: number | null;
   initialWealthGoalInflationPct: number | null;
   initialMonthlySavingsAmount: number | null;
+  /** null per poste = application default. */
+  initialWealthGoalFees: Record<keyof AnnualFeesPct, number | null>;
 }
 
 type SaveStatus = "saved" | "saving" | "error";
@@ -37,17 +45,21 @@ const STATUS_MESSAGE: Record<SaveStatus, string> = {
   error: "Erreur lors de l'enregistrement",
 };
 
-const ROW_STATUS_LABEL: Record<AssetClassMonteCarloRow["status"], string> = {
+const ROW_STATUS_LABEL: Record<MonteCarloRowStatus, string> = {
   calibrated: "Calibré",
+  assumed: "Hypothèse avec volatilité",
   pointMass: "Hypothèse simple",
   frozen: "Non projeté",
 };
 
-const ROW_STATUS_CLASS: Record<AssetClassMonteCarloRow["status"], string> = {
+const ROW_STATUS_CLASS: Record<MonteCarloRowStatus, string> = {
   calibrated: "text-emerald",
+  assumed: "text-ink",
   pointMass: "text-ink",
   frozen: "text-slate",
 };
+
+const FEE_KEYS = Object.keys(ANNUAL_FEES_LABELS) as (keyof AnnualFeesPct)[];
 
 interface GoalInputs {
   amount: number;
@@ -60,6 +72,18 @@ function yearsLabel(years: number): string {
   if (years <= 0) return "échéance atteinte";
   if (years === 1) return "dans 1 an";
   return `dans ${years} ans`;
+}
+
+function feesWithDefaults(
+  initial: Record<keyof AnnualFeesPct, number | null>
+): AnnualFeesPct {
+  return {
+    actions: initial.actions ?? DEFAULT_ANNUAL_FEES_PCT.actions,
+    obligations: initial.obligations ?? DEFAULT_ANNUAL_FEES_PCT.obligations,
+    scpi: initial.scpi ?? DEFAULT_ANNUAL_FEES_PCT.scpi,
+    privateEquity: initial.privateEquity ?? DEFAULT_ANNUAL_FEES_PCT.privateEquity,
+    immobilier: initial.immobilier ?? DEFAULT_ANNUAL_FEES_PCT.immobilier,
+  };
 }
 
 /**
@@ -81,6 +105,7 @@ export function WealthGoalSection({
   initialWealthGoalAge,
   initialWealthGoalInflationPct,
   initialMonthlySavingsAmount,
+  initialWealthGoalFees,
 }: WealthGoalSectionProps) {
   const [inputs, setInputs] = useState<GoalInputs>({
     amount: initialWealthGoalAmount ?? 0,
@@ -92,25 +117,31 @@ export function WealthGoalSection({
     inflationPct: initialWealthGoalInflationPct ?? 2,
     monthlySavings: initialMonthlySavingsAmount ?? 0,
   });
+  const [fees, setFees] = useState<AnnualFeesPct>(() => feesWithDefaults(initialWealthGoalFees));
+  const [showFees, setShowFees] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [isPending, startTransition] = useTransition();
 
-  function save(next: GoalInputs) {
+  function run(action: () => Promise<void>) {
     setStatus("saving");
     startTransition(async () => {
       try {
-        await updateWealthGoal(
-          clientId,
-          next.amount,
-          next.age,
-          next.inflationPct,
-          next.monthlySavings
-        );
+        await action();
         setStatus("saved");
       } catch {
         setStatus("error");
       }
     });
+  }
+
+  function save(next: GoalInputs) {
+    run(() =>
+      updateWealthGoal(clientId, next.amount, next.age, next.inflationPct, next.monthlySavings)
+    );
+  }
+
+  function saveFees(next: AnnualFeesPct) {
+    run(() => updateWealthGoalFees(clientId, next));
   }
 
   function update(patch: Partial<GoalInputs>) {
@@ -124,20 +155,21 @@ export function WealthGoalSection({
   }
 
   const context: WealthGoalContext = { amounts, properties, immobilierValue };
-  const result = computeWealthGoalMonteCarlo(
-    context,
+  const result = computeWealthGoalMonteCarlo(context, {
     currentAge,
-    inputs.age,
-    inputs.amount,
-    inputs.inflationPct,
+    targetAge: inputs.age,
+    targetAmount: inputs.amount,
+    inflationPct: inputs.inflationPct,
     actionsIndexBreakdown,
-    inputs.monthlySavings
-  );
+    monthlySavingsAmount: inputs.monthlySavings,
+    fees,
+  });
   const successRounded = Math.round(result.successPct);
   const medianFinalNominal = result.bands.p50[result.bands.p50.length - 1]?.netWorth ?? 0;
   const medianFinalReal =
     medianFinalNominal / Math.pow(1 + inputs.inflationPct / 100, result.horizonYears);
   const horizonYears = Math.max(inputs.age - currentAge, 0);
+  const feesAreDefault = FEE_KEYS.every((key) => fees[key] === DEFAULT_ANNUAL_FEES_PCT[key]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -202,6 +234,53 @@ export function WealthGoalSection({
         onChange={handleInflationChange}
       />
 
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setShowFees((v) => !v)}
+          className="w-fit text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
+        >
+          {showFees ? "Masquer les frais annuels" : "Frais annuels par poste"}
+          {!showFees && !feesAreDefault && " (modifiés)"}
+        </button>
+        {showFees && (
+          <div className="flex flex-wrap gap-4 rounded-md border border-line bg-paper p-3">
+            {FEE_KEYS.map((key) => (
+              <label key={key} className="flex flex-col gap-1.5 text-xs text-ink">
+                {ANNUAL_FEES_LABELS[key]}
+                <span className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    value={fees[key]}
+                    onChange={(e) =>
+                      setFees((prev) => ({ ...prev, [key]: Number(e.target.value) }))
+                    }
+                    onBlur={() => saveFees(fees)}
+                    className={`w-20 ${NUMERIC_FIELD_CLASS}`}
+                  />
+                  <span className="text-slate">% / an</span>
+                </span>
+              </label>
+            ))}
+            {!feesAreDefault && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFees({ ...DEFAULT_ANNUAL_FEES_PCT });
+                  saveFees({ ...DEFAULT_ANNUAL_FEES_PCT });
+                }}
+                className="self-end pb-2 text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
+              >
+                Rétablir les défauts
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {result.horizonYears === 0 ? (
         <p className="border-t border-line pt-3 text-sm text-slate">
           L&apos;échéance choisie est déjà atteinte ou dépassée.
@@ -263,11 +342,12 @@ export function WealthGoalSection({
                   <th className="pb-1 font-normal">Poste</th>
                   <th className="pb-1 text-right font-normal">Montant</th>
                   <th className="pb-1 text-right font-normal">Rendement réel</th>
+                  <th className="pb-1 text-right font-normal">Frais / an</th>
                   <th className="pb-1 text-right font-normal">Statut</th>
                 </tr>
               </thead>
               <tbody className="font-mono tabular-nums text-ink">
-                {result.breakdown.map((row) => (
+                {result.breakdown.map((row: AssetClassMonteCarloRow) => (
                   <tr key={row.categoryId} className="border-t border-line/50">
                     <td className="py-1 font-sans">{row.label}</td>
                     <td className="py-1 text-right">{formatCurrency(row.amount)}</td>
@@ -277,6 +357,9 @@ export function WealthGoalSection({
                         : row.stdPct > 0
                           ? `${formatPercent(row.meanPct, 2)} ± ${formatPercent(row.stdPct, 1)}`
                           : formatPercent(row.meanPct, 2)}
+                    </td>
+                    <td className="py-1 text-right text-slate">
+                      {row.feesPct === null ? "" : formatPercent(row.feesPct, 1)}
                     </td>
                     <td className={`py-1 text-right font-sans text-[11px] ${ROW_STATUS_CLASS[row.status]}`}>
                       {ROW_STATUS_LABEL[row.status]}
@@ -302,12 +385,17 @@ export function WealthGoalSection({
             l&apos;objectif — même convention que le montant saisi, pas déflatée.
           </p>
           <p className="mb-2">
+            <strong>Frais annuels</strong> : soustraits du rendement nominal de chaque
+            poste chaque année (gestion, dépôt, frais de fonds). Défauts : actions
+            1,5 %, obligations 1 %, Private Equity 2 %, SCPI et immobilier 0 % (le
+            rendement SCPI retenu est déjà net de frais de gestion). Modifiables par
+            client ci-dessus.
+          </p>
+          <p className="mb-2">
             <strong>Épargne mensuelle</strong> : versée en fin de chaque année simulée
             (12 mois d&apos;un coup, sans rendement l&apos;année du versement, hypothèse
             prudente) dans les poches financières, au prorata de l&apos;allocation
             actuelle — jamais dans l&apos;immobilier ni dans les poches non projetées.
-            Elle suit donc les mêmes rendements et la même volatilité que le reste du
-            portefeuille, il n&apos;y a plus de « rendement attendu » saisi à la main.
           </p>
           <p className="mb-2">
             <strong>Simplification assumée sur les Actions</strong> : quand plusieurs
@@ -321,12 +409,14 @@ export function WealthGoalSection({
             s&apos;applique à tous les biens du client, un seul tirage par année.
           </p>
           <p>
-            Postes sans distribution fiable (Obligations, SCPI, Private Equity,
-            Liquidités, Matières premières) : hypothèse de rendement simple, volatilité
-            non modélisée — signalé comme tel dans le tableau ci-dessus, pas présenté
-            comme une mesure. Entreprise/outil professionnel et Autres restent gelés
-            (non projetés). La dette continue de s&apos;amortir selon les prêts
-            existants ; un éventuel crédit lombard n&apos;est pas modélisé.
+            SCPI : rendement réel de 2,5 % et volatilité de 6 %, choisis comme ordres de
+            grandeur faute de série longue fiable. Obligations, Private Equity,
+            Liquidités, Matières premières : hypothèse de rendement simple, volatilité
+            non modélisée. Le Private Equity est compté à 100 % de sa valeur, comme dans
+            la Vue d&apos;ensemble ; la décote d&apos;illiquidité ne s&apos;applique
+            qu&apos;au stress test. Entreprise/outil professionnel et Autres restent
+            gelés. La dette continue de s&apos;amortir selon les prêts existants ; un
+            éventuel crédit lombard n&apos;est pas modélisé.
           </p>
         </InfoTooltip>
       </div>

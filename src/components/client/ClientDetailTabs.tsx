@@ -23,6 +23,7 @@ import { PropertyList } from "@/components/property/PropertyList";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { ScenarioSimulator } from "@/components/scenarios/ScenarioSimulator";
 import { MethodologyContent } from "@/components/methodology/MethodologyContent";
+import type { AnnualFeesPct } from "@/lib/wealth/monteCarloAssumptions";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
@@ -58,6 +59,7 @@ interface ClientDetailTabsProps {
   initialSavedScenarios: SavedScenario[];
 
   initialMonthlySavingsAmount: number | null;
+  initialWealthGoalFees: Record<keyof AnnualFeesPct, number | null>;
 
   initialWealthGoalAmount: number | null;
   initialWealthGoalAge: number | null;
@@ -90,6 +92,7 @@ export function ClientDetailTabs({
   scenarioContext,
   initialSavedScenarios,
   initialMonthlySavingsAmount,
+  initialWealthGoalFees,
   initialWealthGoalAmount,
   initialWealthGoalAge,
   initialWealthGoalInflationPct,
@@ -237,6 +240,7 @@ export function ClientDetailTabs({
                 initialWealthGoalAge={initialWealthGoalAge}
                 initialWealthGoalInflationPct={initialWealthGoalInflationPct}
                 initialMonthlySavingsAmount={initialMonthlySavingsAmount}
+                initialWealthGoalFees={initialWealthGoalFees}
               />
             </div>
           )}

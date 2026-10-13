@@ -50,17 +50,52 @@ export const IMMOBILIER_RETURN_STATS: ReturnStats = {
   period: "1970-2020",
 };
 
+/** SCPI : hypothèse de rendement réel net de frais de gestion (2,5 %) avec
+ * une volatilité de 6 %, un ordre de grandeur choisi, pas une distribution
+ * mesurée (aucune série longue fiable, voir la page Méthodologie). Les SCPI
+ * publiant un rendement déjà net, elles ne portent pas de frais annuels
+ * supplémentaires par défaut (DEFAULT_ANNUAL_FEES_PCT). */
+export const SCPI_REAL_RETURN_PCT = 2.5;
+export const SCPI_RETURN_STD_PCT = 6;
+
 // Hypothèses point mass — ordres de grandeur consensuels de long terme,
-// volatilité non modélisée faute de donnée fiable. Valeurs inchangées par
-// rapport à l'ancien wealthGoal.ts (ligne droite), seulement relocalisées ici.
+// volatilité non modélisée faute de donnée fiable.
 export const OBLIGATIONS_REAL_RETURN_PCT = 1.5;
-export const SCPI_REAL_RETURN_PCT = 4;
 export const LIQUIDITES_REAL_RETURN_PCT = 0;
 export const MATIERES_PREMIERES_REAL_RETURN_PCT = 0;
 /** Réel, comme tous les autres postes. L'ancienne hypothèse était 6,5 %
  * nominal, soit environ 4,4 % réel à 2 % d'inflation : même ordre de
- * grandeur, exprimé dans la même unité que le reste du moteur. */
+ * grandeur, exprimé dans la même unité que le reste du moteur. Compté à
+ * 100 % de sa valeur, comme dans la Vue d'ensemble ; la décote d'illiquidité
+ * est réservée au stress test. */
 export const PE_REAL_RETURN_PCT = 4.5;
 /** Décote sur le rendement locatif brut pour charges/copropriété/vacance/
  * entretien uniquement — pas la fiscalité, qui dépend du régime choisi. */
 export const RENTAL_YIELD_CHARGES_HAIRCUT_PCT = 30;
+
+/** Annual fees per poste (management, custody, fund fees), subtracted from
+ * the nominal return every simulated year. Editable per client in the
+ * Objectif patrimonial tab; these are the defaults when nothing is set. */
+export interface AnnualFeesPct {
+  actions: number;
+  obligations: number;
+  scpi: number;
+  privateEquity: number;
+  immobilier: number;
+}
+
+export const DEFAULT_ANNUAL_FEES_PCT: AnnualFeesPct = {
+  actions: 1.5,
+  obligations: 1,
+  scpi: 0,
+  privateEquity: 2,
+  immobilier: 0,
+};
+
+export const ANNUAL_FEES_LABELS: Record<keyof AnnualFeesPct, string> = {
+  actions: "Actions",
+  obligations: "Obligations",
+  scpi: "SCPI",
+  privateEquity: "Private Equity",
+  immobilier: "Immobilier",
+};

@@ -37,7 +37,6 @@ import { PrivateEquityIlliquidityCard } from "@/components/scenarios/PrivateEqui
 import { InflationScenarioCard } from "@/components/scenarios/InflationScenarioCard";
 import { PreciousMetalsShockCard } from "@/components/scenarios/PreciousMetalsShockCard";
 import { VacancyCard } from "@/components/scenarios/VacancyCard";
-import { ProjectionCard } from "@/components/scenarios/ProjectionCard";
 
 interface ScenarioSimulatorProps {
   clientId: string;
@@ -541,8 +540,6 @@ export function ScenarioSimulator({
       )}
 
       <ScenarioNarrative result={combinedImpact} activeChocCount={visibleCardIds.length} />
-
-      <ProjectionCard context={context} params={currentParams} />
     </div>
   );
 }

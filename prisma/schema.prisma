@@ -44,6 +44,13 @@ model Client {
   wealthGoalAmount              Float?
   wealthGoalAge                 Int?
   wealthGoalInflationPct        Float?
+  /** Annual fees per poste for the wealth-goal simulation; null = default
+   * (DEFAULT_ANNUAL_FEES_PCT). */
+  feesActionsPct                Float?
+  feesObligationsPct            Float?
+  feesScpiPct                   Float?
+  feesPrivateEquityPct          Float?
+  feesImmobilierPct             Float?
   maritalStatus                 String?
   spouseName                    String?
   spouseImmobilierAmount        Float?

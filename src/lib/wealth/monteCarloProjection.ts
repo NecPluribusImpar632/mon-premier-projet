@@ -1,6 +1,5 @@
 import { projectLoanBalance, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { computeRentalYield } from "@/lib/property/rentalYield";
-import { DEFAULT_SCENARIO_PARAMS } from "@/lib/scenarios/scenarioParams";
 import { REFERENCE_INDICES, REFERENCE_INDEX_LABELS } from "@/lib/allocation/referenceIndices";
 import {
   actionsIndexBreakdownTotal,
@@ -9,13 +8,16 @@ import {
 import {
   ACTIONS_INDEX_RETURN_STATS,
   ACTIONS_POINT_MASS_REAL_RETURN_PCT,
+  DEFAULT_ANNUAL_FEES_PCT,
   IMMOBILIER_RETURN_STATS,
   OBLIGATIONS_REAL_RETURN_PCT,
   SCPI_REAL_RETURN_PCT,
+  SCPI_RETURN_STD_PCT,
   LIQUIDITES_REAL_RETURN_PCT,
   MATIERES_PREMIERES_REAL_RETURN_PCT,
   PE_REAL_RETURN_PCT,
   RENTAL_YIELD_CHARGES_HAIRCUT_PCT,
+  type AnnualFeesPct,
 } from "@/lib/wealth/monteCarloAssumptions";
 import { mulberry32, hashSeed, drawStandardNormal } from "@/lib/wealth/monteCarloPrng";
 
@@ -40,15 +42,28 @@ export interface MonteCarloYearPoint {
   netWorth: number;
 }
 
+export type MonteCarloRowStatus =
+  /** Mean and volatility measured on a real historical series. */
+  | "calibrated"
+  /** Mean and volatility both chosen as orders of magnitude (SCPI). */
+  | "assumed"
+  /** Fixed rate, no volatility modeled. */
+  | "pointMass"
+  /** Not projected, value held constant. */
+  | "frozen";
+
 export interface AssetClassMonteCarloRow {
   categoryId: string;
   label: string;
   amount: number;
-  status: "calibrated" | "pointMass" | "frozen";
-  /** Real annual mean return, null for frozen (non projeté) buckets. */
+  status: MonteCarloRowStatus;
+  /** Real annual mean return before fees, null for frozen buckets. */
   meanPct: number | null;
   /** Real annual standard deviation, 0 for pointMass/frozen buckets. */
   stdPct: number;
+  /** Annual fees subtracted from the nominal return, null when the poste
+   * carries none (frozen, liquidités, matières premières). */
+  feesPct: number | null;
   sourceNote: string | null;
 }
 
@@ -72,20 +87,32 @@ export interface WealthGoalContext {
   immobilierValue: number;
 }
 
+export interface WealthGoalInputs {
+  currentAge: number;
+  targetAge: number;
+  targetAmount: number;
+  inflationPct: number;
+  actionsIndexBreakdown: ActionsIndexBreakdown;
+  monthlySavingsAmount: number;
+  fees: AnnualFeesPct;
+}
+
 interface RealEstatePocket {
   currentValue: number;
-  /** Appréciation nationale + (si loué) rendement locatif net propre au bien —
-   * la moyenne diffère d'une poche à l'autre, l'écart-type national est
-   * partagé (un seul choc de marché immobilier par année, cf. Actions). */
+  /** Appréciation nationale + (si loué) rendement locatif net propre au bien,
+   * frais annuels déduits — la moyenne diffère d'une poche à l'autre,
+   * l'écart-type national est partagé (un seul choc de marché immobilier par
+   * année, cf. Actions). */
   nominalMeanPct: number;
 }
 
 function realEstatePockets(
   properties: PropertyWithLoans[],
   immobilierValue: number,
-  inflationPct: number
+  inflationPct: number,
+  feesPct: number
 ): RealEstatePocket[] {
-  const appreciationNominalPct = toNominalMean(IMMOBILIER_RETURN_STATS.meanPct, inflationPct);
+  const appreciationNominalPct = toNominalMean(IMMOBILIER_RETURN_STATS.meanPct, inflationPct) - feesPct;
 
   if (properties.length === 0) {
     return immobilierValue > 0
@@ -107,10 +134,9 @@ function realEstatePockets(
 /** Combine the client's real per-index Actions stats into a single effective
  * distribution, weighted by their actual holdings. A weighted sum of
  * perfectly-correlated normal variables is itself normal — mean and std both
- * combine linearly (not via a sum-of-squares) because of that shared-shock
- * simplification (see `documentedCorrelationNote` below and the InfoTooltip
- * in WealthGoalSection), not because it's a statistical identity for
- * independent variables. */
+ * combine linearly (not via a sum-of-squares) because of the shared-shock
+ * simplification documented in the InfoTooltip of WealthGoalSection, not
+ * because it's a statistical identity for independent variables. */
 function blendedActionsStats(breakdown: ActionsIndexBreakdown): {
   meanPct: number;
   stdPct: number;
@@ -152,45 +178,45 @@ function actionsSourceNote(breakdown: ActionsIndexBreakdown, calibratedWeightPct
 
 /**
  * Simule `TRIAL_COUNT` trajectoires de patrimoine net, en tirant chaque année
- * un rendement pour chaque poche calibrée (Actions, Immobilier) et en
- * appliquant un taux fixe pour les postes en point mass. Les tirages sont
- * indépendants ENTRE classes d'actifs (Actions / Immobilier / le reste), mais
- * PARFAITEMENT corrélés AU SEIN de la poche Actions (un seul tirage partagé
- * pondéré par la volatilité propre de chaque indice détenu) et au sein de
- * l'Immobilier (un seul tirage partagé pour toutes les poches du client) —
- * une simplification assumée, pas une corrélation partielle mesurée.
+ * un rendement pour chaque poche à distribution (Actions, Immobilier, SCPI) et
+ * en appliquant un taux fixe pour les postes en point mass. Les frais annuels
+ * du poste sont soustraits du rendement nominal chaque année. Les tirages
+ * sont indépendants ENTRE classes d'actifs, mais PARFAITEMENT corrélés AU
+ * SEIN de la poche Actions (un seul tirage partagé pondéré par la volatilité
+ * propre de chaque indice détenu) et au sein de l'Immobilier (un seul tirage
+ * partagé pour toutes les poches du client) — une simplification assumée,
+ * pas une corrélation partielle mesurée.
  */
 export function computeWealthGoalMonteCarlo(
   context: WealthGoalContext,
-  currentAge: number,
-  targetAge: number,
-  targetAmount: number,
-  inflationPct: number,
-  actionsIndexBreakdown: ActionsIndexBreakdown,
-  monthlySavingsAmount: number = 0
+  inputs: WealthGoalInputs
 ): MonteCarloResult {
   const { amounts, properties, immobilierValue } = context;
+  const { currentAge, targetAge, targetAmount, inflationPct, actionsIndexBreakdown } = inputs;
+  const fees = { ...DEFAULT_ANNUAL_FEES_PCT, ...inputs.fees };
   const horizonYears = Math.max(targetAge - currentAge, 0);
-  const peDiscountFactor = 1 - DEFAULT_SCENARIO_PARAMS.peIlliquidityDiscountPct / 100;
-  const annualSavings = Math.max(monthlySavingsAmount, 0) * 12;
+  const annualSavings = Math.max(inputs.monthlySavingsAmount, 0) * 12;
 
   const actionsAmount = amounts.actions ?? 0;
   const { meanPct: actionsRealMean, stdPct: actionsRealStd, calibratedWeightPct } =
     blendedActionsStats(actionsIndexBreakdown);
-  const actionsNominalMean = toNominalMean(actionsRealMean, inflationPct);
+  const actionsNominalMean = toNominalMean(actionsRealMean, inflationPct) - fees.actions;
   const actionsNominalStd = toNominalStd(actionsRealStd, inflationPct);
 
-  const pockets = realEstatePockets(properties, immobilierValue, inflationPct);
+  const pockets = realEstatePockets(properties, immobilierValue, inflationPct, fees.immobilier);
   const immobilierNominalStd = toNominalStd(IMMOBILIER_RETURN_STATS.stdPct, inflationPct);
 
-  const obligationsNominalRate = toNominalMean(OBLIGATIONS_REAL_RETURN_PCT, inflationPct);
-  const scpiNominalRate = toNominalMean(SCPI_REAL_RETURN_PCT, inflationPct);
+  const scpiNominalMean = toNominalMean(SCPI_REAL_RETURN_PCT, inflationPct) - fees.scpi;
+  const scpiNominalStd = toNominalStd(SCPI_RETURN_STD_PCT, inflationPct);
+
+  const obligationsNominalRate =
+    toNominalMean(OBLIGATIONS_REAL_RETURN_PCT, inflationPct) - fees.obligations;
   const liquiditesNominalRate = toNominalMean(LIQUIDITES_REAL_RETURN_PCT, inflationPct);
   const matieresPremieresNominalRate = toNominalMean(
     MATIERES_PREMIERES_REAL_RETURN_PCT,
     inflationPct
   );
-  const peNominalRate = toNominalMean(PE_REAL_RETURN_PCT, inflationPct);
+  const peNominalRate = toNominalMean(PE_REAL_RETURN_PCT, inflationPct) - fees.privateEquity;
 
   const obligationsAmount = amounts.obligations ?? 0;
   const scpiAmount = amounts.scpi ?? 0;
@@ -225,7 +251,7 @@ export function computeWealthGoalMonteCarlo(
 
   const random = mulberry32(
     hashSeed(
-      `${targetAmount}|${targetAge}|${currentAge}|${inflationPct}|${annualSavings}|${actionsAmount}|${JSON.stringify(actionsIndexBreakdown)}|${properties.map((p) => p.id).join(",")}|${immobilierValue}`
+      `${targetAmount}|${targetAge}|${currentAge}|${inflationPct}|${annualSavings}|${JSON.stringify(fees)}|${actionsAmount}|${JSON.stringify(actionsIndexBreakdown)}|${properties.map((p) => p.id).join(",")}|${immobilierValue}`
     )
   );
 
@@ -260,8 +286,12 @@ export function computeWealthGoalMonteCarlo(
           });
         }
 
+        if (scpiValue > 0) {
+          const zScpi = drawStandardNormal(random);
+          scpiValue *= 1 + (scpiNominalMean + zScpi * scpiNominalStd) / 100;
+        }
+
         obligationsValue *= 1 + obligationsNominalRate / 100;
-        scpiValue *= 1 + scpiNominalRate / 100;
         liquiditesValue *= 1 + liquiditesNominalRate / 100;
         peValue *= 1 + peNominalRate / 100;
         matieresPremieresValue *= 1 + matieresPremieresNominalRate / 100;
@@ -287,7 +317,7 @@ export function computeWealthGoalMonteCarlo(
         obligationsValue +
         scpiValue +
         liquiditesValue +
-        peValue * peDiscountFactor +
+        peValue +
         matieresPremieresValue +
         outilProfessionnelAmount +
         autresAmount;
@@ -325,6 +355,7 @@ export function computeWealthGoalMonteCarlo(
       status: "calibrated",
       meanPct: actionsRealMean,
       stdPct: actionsRealStd,
+      feesPct: fees.actions,
       sourceNote: actionsSourceNote(actionsIndexBreakdown, calibratedWeightPct),
     },
     {
@@ -334,6 +365,7 @@ export function computeWealthGoalMonteCarlo(
       status: pockets.length > 0 ? "calibrated" : "frozen",
       meanPct: pockets.length > 0 ? IMMOBILIER_RETURN_STATS.meanPct : null,
       stdPct: pockets.length > 0 ? IMMOBILIER_RETURN_STATS.stdPct : 0,
+      feesPct: pockets.length > 0 ? fees.immobilier : null,
       sourceNote:
         pockets.length > 0
           ? `Distribution nationale (n=${IMMOBILIER_RETURN_STATS.n}, ${IMMOBILIER_RETURN_STATS.period}), pas de détail par zone dans ce module`
@@ -346,16 +378,18 @@ export function computeWealthGoalMonteCarlo(
       status: "pointMass",
       meanPct: OBLIGATIONS_REAL_RETURN_PCT,
       stdPct: 0,
+      feesPct: fees.obligations,
       sourceNote: "Hypothèse simple, volatilité non modélisée",
     },
     {
       categoryId: "scpi",
       label: "SCPI",
       amount: scpiAmount,
-      status: "pointMass",
+      status: "assumed",
       meanPct: SCPI_REAL_RETURN_PCT,
-      stdPct: 0,
-      sourceNote: "Hypothèse simple, volatilité non modélisée",
+      stdPct: SCPI_RETURN_STD_PCT,
+      feesPct: fees.scpi,
+      sourceNote: "Rendement net de frais de gestion et volatilité choisis comme ordres de grandeur, pas mesurés",
     },
     {
       categoryId: "liquidites",
@@ -364,6 +398,7 @@ export function computeWealthGoalMonteCarlo(
       status: "pointMass",
       meanPct: LIQUIDITES_REAL_RETURN_PCT,
       stdPct: 0,
+      feesPct: null,
       sourceNote: "Hypothèse simple, volatilité non modélisée",
     },
     {
@@ -373,7 +408,8 @@ export function computeWealthGoalMonteCarlo(
       status: "pointMass",
       meanPct: PE_REAL_RETURN_PCT,
       stdPct: 0,
-      sourceNote: "Hypothèse simple, décote d'illiquidité du stress test appliquée",
+      feesPct: fees.privateEquity,
+      sourceNote: "Hypothèse simple, compté à 100 % de sa valeur (décote d'illiquidité réservée au stress test)",
     },
     {
       categoryId: "matieres-premieres",
@@ -382,6 +418,7 @@ export function computeWealthGoalMonteCarlo(
       status: "pointMass",
       meanPct: MATIERES_PREMIERES_REAL_RETURN_PCT,
       stdPct: 0,
+      feesPct: null,
       sourceNote:
         "Hypothèse simple — l'or/argent sont calibrés ailleurs (stress test uniquement), pas encore repris ici",
     },
@@ -392,6 +429,7 @@ export function computeWealthGoalMonteCarlo(
       status: "frozen",
       meanPct: null,
       stdPct: 0,
+      feesPct: null,
       sourceNote: null,
     },
     {
@@ -401,6 +439,7 @@ export function computeWealthGoalMonteCarlo(
       status: "frozen",
       meanPct: null,
       stdPct: 0,
+      feesPct: null,
       sourceNote: null,
     },
   ];
