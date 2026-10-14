@@ -9,7 +9,7 @@
  *   (scrypt, sel hexa 16 octets, clé 64 octets, format "sel:empreinte"), qui
  *   est réimplémenté ici parce que ce module importe "server-only" et ne peut
  *   pas être chargé hors de Next.
- * - Efface les 7 clients de démo de référence, par identifiant (les biens,
+ * - Efface les 8 clients de démo de référence, par identifiant (les biens,
  *   prêts, scénarios et répartitions suivent par cascade), puis les recrée
  *   depuis DEMO_CLIENTS ci-dessous avec leurs identifiants d'origine, pour que
  *   les liens déjà partagés restent valables. Les dossiers créés par un testeur
@@ -51,17 +51,30 @@ type DemoProperty = Omit<
 > & { loans?: DemoLoan[] };
 type DemoClient = Omit<
   Prisma.ClientCreateWithoutOwnerInput,
-  "properties" | "wrapperAllocations" | "actionsIndexAllocations" | "savedScenarios" | "updatedAt"
+  | "properties"
+  | "wrapperAllocations"
+  | "actionsIndexAllocations"
+  | "savedScenarios"
+  | "wealthGoalProposal"
+  | "updatedAt"
 > & {
   id: string;
   createdAt: Date;
   properties?: DemoProperty[];
   wrapperAllocations?: Prisma.WrapperAllocationCreateWithoutClientInput[];
   actionsIndexAllocations?: Prisma.ActionsIndexAllocationCreateWithoutClientInput[];
+  /** Allocation proposée pour la comparaison avant / après (une par client). */
+  wealthGoalProposal?: Omit<
+    Prisma.WealthGoalProposalCreateWithoutClientInput,
+    "createdAt" | "updatedAt"
+  >;
 };
 
 // État de référence de la démo. `createdAt` est conservé pour garder l'ordre
 // d'affichage de la liste des clients ; les identifiants sont ceux d'origine.
+// Marc est le dossier pensé pour la comparaison avant / après : pas
+// d'immobilier, 800 000 € de poche financière, une proposition qui bascule
+// 400 000 € de liquidités vers les actions (67 % → 81 % à sa création).
 const DEMO_CLIENTS: DemoClient[] = [
   {
     id: "cmsd7e2ks0000b1ff1ddhklip",
@@ -247,6 +260,35 @@ const DEMO_CLIENTS: DemoClient[] = [
     ],
   },
   {
+    id: "cmv7demo0marc000000000001",
+    createdAt: date("2026-10-14"),
+    name: "Marc",
+    age: 45,
+    actionsAmount: 100000,
+    obligationsAmount: 200000,
+    liquiditesAmount: 500000,
+    riskProfile: "equilibre",
+    wealthGoalAmount: 1500000,
+    wealthGoalAge: 60,
+    wealthGoalInflationPct: 2,
+    monthlySavingsAmount: 1500,
+    actionsIndexAllocations: [{ index: "msci-world", percentage: 100 }],
+    wealthGoalProposal: {
+      actionsAmount: 500000,
+      obligationsAmount: 200000,
+      scpiAmount: 0,
+      liquiditesAmount: 100000,
+      privateEquityAmount: 0,
+      matieresPremieresAmount: 0,
+      actionsIndexBreakdown: { "msci-world": 100 },
+      feesActionsPct: 1.5,
+      feesObligationsPct: 1,
+      feesScpiPct: 0,
+      feesPrivateEquityPct: 2,
+      feesImmobilierPct: 0,
+    },
+  },
+  {
     id: "cmsmeli5s000068exh6wmc4dw",
     createdAt: date("2026-08-09"),
     name: "dvxv",
@@ -291,11 +333,18 @@ async function main() {
     where: { id: { in: DEMO_CLIENTS.map((c) => c.id) } },
   });
 
-  for (const { properties, wrapperAllocations, actionsIndexAllocations, ...client } of DEMO_CLIENTS) {
+  for (const {
+    properties,
+    wrapperAllocations,
+    actionsIndexAllocations,
+    wealthGoalProposal,
+    ...client
+  } of DEMO_CLIENTS) {
     await prisma.client.create({
       data: {
         ...client,
         owner: { connect: { id: user.id } },
+        wealthGoalProposal: wealthGoalProposal ? { create: wealthGoalProposal } : undefined,
         wrapperAllocations: wrapperAllocations ? { create: wrapperAllocations } : undefined,
         actionsIndexAllocations: actionsIndexAllocations
           ? { create: actionsIndexAllocations }
