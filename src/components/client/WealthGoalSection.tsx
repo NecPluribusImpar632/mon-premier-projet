@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { FileDown } from "lucide-react";
 import {
   deleteWealthGoalProposal,
@@ -32,6 +32,7 @@ import { DEFAULT_ANNUAL_FEES_PCT, type AnnualFeesPct } from "@/lib/wealth/monteC
 import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { WealthGoalFanChart } from "@/components/wealth/WealthGoalFanChart";
+import { SyncedRange } from "@/components/wealth/SyncedRange";
 import { WealthGoalProposalEditor } from "@/components/wealth/WealthGoalProposalEditor";
 import { AnnualFeesFields, feesAreDefault } from "@/components/wealth/AnnualFeesFields";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
@@ -155,6 +156,13 @@ export function WealthGoalSection({
     inflationPct: initialWealthGoalInflationPct ?? 2,
     monthlySavings: initialMonthlySavingsAmount ?? 0,
   });
+  // Latest inputs for the sliders' release handler: a drag fires many
+  // onChange renders, the save happens once on release with whatever the
+  // last render left here.
+  const inputsRef = useRef(inputs);
+  useEffect(() => {
+    inputsRef.current = inputs;
+  }, [inputs]);
   const [fees, setFees] = useState<AnnualFeesPct>(() => feesWithDefaults(initialWealthGoalFees));
   const [showFees, setShowFees] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("saved");
@@ -190,6 +198,10 @@ export function WealthGoalSection({
 
   function update(patch: Partial<GoalInputs>) {
     setInputs((prev) => ({ ...prev, ...patch }));
+  }
+
+  function commitSliders() {
+    save(inputsRef.current);
   }
 
   function handleInflationChange(value: number) {
@@ -257,6 +269,11 @@ export function WealthGoalSection({
   const medianFinalNominal = result.bands.p50[result.bands.p50.length - 1]?.netWorth ?? 0;
   const medianFinalReal = deflate(medianFinalNominal, inputs.inflationPct, result.horizonYears);
   const horizonYears = Math.max(inputs.age - currentAge, 0);
+  // Year 0 of any trajectory is today's net worth (no draw applied yet), the
+  // natural scale for the goal slider: 0 to three times the current net
+  // worth, rounded up to the 10 000 € step.
+  const netWorthNow = result.bands.p50[0]?.netWorth ?? 0;
+  const goalSliderMax = Math.max(10000, Math.ceil((3 * netWorthNow) / 10000) * 10000);
   const reallocatableTotal = PROPOSAL_CATEGORY_IDS.reduce((sum, id) => sum + (amounts[id] ?? 0), 0);
 
   const proposedMedianNominal = comparison
@@ -284,6 +301,15 @@ export function WealthGoalSection({
               onBlur={() => save(inputs)}
               className={`w-40 ${NUMERIC_FIELD_CLASS}`}
             />
+            <SyncedRange
+              value={inputs.amount}
+              min={0}
+              max={goalSliderMax}
+              step={10000}
+              onChange={(value) => update({ amount: value })}
+              onCommit={commitSliders}
+              ariaLabel="Objectif de patrimoine net"
+            />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-ink">
             <span>
@@ -300,6 +326,15 @@ export function WealthGoalSection({
               onBlur={() => save(inputs)}
               className={`w-20 ${NUMERIC_FIELD_CLASS}`}
             />
+            <SyncedRange
+              value={inputs.age}
+              min={currentAge + 1}
+              max={90}
+              step={1}
+              onChange={(value) => update({ age: value })}
+              onCommit={commitSliders}
+              ariaLabel="Échéance (âge)"
+            />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-ink">
             Épargne mensuelle (€ / mois)
@@ -311,6 +346,15 @@ export function WealthGoalSection({
               onChange={(e) => update({ monthlySavings: Number(e.target.value) })}
               onBlur={() => save(inputs)}
               className={`w-28 ${NUMERIC_FIELD_CLASS}`}
+            />
+            <SyncedRange
+              value={inputs.monthlySavings}
+              min={0}
+              max={10000}
+              step={100}
+              onChange={(value) => update({ monthlySavings: value })}
+              onCommit={commitSliders}
+              ariaLabel="Épargne mensuelle"
             />
           </label>
         </div>
