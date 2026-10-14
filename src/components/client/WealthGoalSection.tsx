@@ -5,9 +5,14 @@ import { FileDown } from "lucide-react";
 import {
   deleteWealthGoalProposal,
   saveWealthGoalProposal,
+  updateClientFlows,
   updateWealthGoal,
   updateWealthGoalFees,
+  type ClientFlowsData,
 } from "@/lib/actions/clients";
+import { computeCashFlowSchedule, firstYearFlows, type WealthGoalFlows } from "@/lib/wealth/cashFlows";
+import { fiscalPartsFromFoyer } from "@/lib/fiscal/incomeTax";
+import { CashFlowFields } from "@/components/wealth/CashFlowFields";
 import {
   computeWealthGoalMonteCarlo,
   type AssetClassMonteCarloRow,
@@ -55,6 +60,10 @@ interface WealthGoalSectionProps {
   /** null per poste = application default. */
   initialWealthGoalFees: Record<keyof AnnualFeesPct, number | null>;
   initialProposal: WealthGoalProposalData | null;
+  initialFlows: ClientFlowsData;
+  /** For the fiscal parts, read from the foyer fiscal section. */
+  maritalStatus: string | null;
+  minorChildrenCount: number | null;
 }
 
 type SaveStatus = "saved" | "saving" | "error";
@@ -115,6 +124,20 @@ function signedCurrency(value: number): string {
   return `${value > 0 ? "+" : ""}${formatCurrency(value)}`;
 }
 
+/** Shown only when a negative yearly balance exhausted the financial
+ * pockets in some trajectories (the rest then accumulates as an overdraft). */
+function depletedNote(currentPct: number, proposedPct: number | null) {
+  if (Math.round(currentPct) === 0 && Math.round(proposedPct ?? 0) === 0) return null;
+  return (
+    <p className="text-xs text-bronze">
+      Poche financière épuisée par les flux négatifs dans {Math.round(currentPct)} % des
+      trajectoires
+      {proposedPct !== null && ` (${Math.round(proposedPct)} % avec la proposition)`} : au-delà,
+      le découvert s&apos;accumule sans intérêt.
+    </p>
+  );
+}
+
 function signedPoints(value: number): string {
   const rounded = Math.round(value);
   if (rounded === 0) return "0 pt";
@@ -145,6 +168,9 @@ export function WealthGoalSection({
   initialMonthlySavingsAmount,
   initialWealthGoalFees,
   initialProposal,
+  initialFlows,
+  maritalStatus,
+  minorChildrenCount,
 }: WealthGoalSectionProps) {
   const [inputs, setInputs] = useState<GoalInputs>({
     amount: initialWealthGoalAmount ?? 0,
@@ -165,6 +191,8 @@ export function WealthGoalSection({
   }, [inputs]);
   const [fees, setFees] = useState<AnnualFeesPct>(() => feesWithDefaults(initialWealthGoalFees));
   const [showFees, setShowFees] = useState(false);
+  const [flows, setFlows] = useState<ClientFlowsData>(initialFlows);
+  const [showFlows, setShowFlows] = useState(initialFlows.savingsFromFlows);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [isPending, startTransition] = useTransition();
 
@@ -194,6 +222,38 @@ export function WealthGoalSection({
 
   function saveFees(next: AnnualFeesPct) {
     run(() => updateWealthGoalFees(clientId, next));
+  }
+
+  function saveFlows(next: ClientFlowsData) {
+    run(() => updateClientFlows(clientId, next));
+  }
+
+  /** Flows mode on: the computed balance replaces the manual savings. */
+  function enableFlows() {
+    const next = { ...flows, savingsFromFlows: true };
+    setFlows(next);
+    setShowFlows(true);
+    saveFlows(next);
+  }
+
+  /** Back to manual: the field is pre-filled with the computed monthly figure,
+   * the advisor can then edit it. */
+  function disableFlows() {
+    const monthly = Math.max(0, Math.round(firstYear.balance / 12));
+    const nextInputs = { ...inputs, monthlySavings: monthly };
+    const nextFlows = { ...flows, savingsFromFlows: false };
+    setInputs(nextInputs);
+    setFlows(nextFlows);
+    run(async () => {
+      await updateWealthGoal(
+        clientId,
+        nextInputs.amount,
+        nextInputs.age,
+        nextInputs.inflationPct,
+        nextInputs.monthlySavings
+      );
+      await updateClientFlows(clientId, nextFlows);
+    });
   }
 
   function update(patch: Partial<GoalInputs>) {
@@ -249,6 +309,18 @@ export function WealthGoalSection({
     });
   }
 
+  const fiscalParts = fiscalPartsFromFoyer(maritalStatus, minorChildrenCount);
+  const engineFlows: WealthGoalFlows = {
+    incomeFranceAnnual: flows.incomeFranceAnnual,
+    incomeForeignAnnual: flows.incomeForeignAnnual,
+    livingExpensesAnnual: flows.livingExpensesAnnual,
+    fiscalParts,
+  };
+  const firstYear = firstYearFlows(engineFlows, properties, inputs.inflationPct);
+  const rentedPropertyCount = properties.filter((p) => p.monthlyRent !== null).length;
+  const loanCount = properties.reduce((sum, p) => sum + p.loans.length, 0);
+  const usesFlows = flows.savingsFromFlows;
+
   const context: WealthGoalContext = { amounts, properties, immobilierValue };
   const engineInputs: WealthGoalInputs = {
     currentAge,
@@ -257,6 +329,7 @@ export function WealthGoalSection({
     inflationPct: inputs.inflationPct,
     actionsIndexBreakdown,
     monthlySavingsAmount: inputs.monthlySavings,
+    flows: usesFlows ? engineFlows : null,
     fees,
   };
   const comparison: WealthGoalComparison | null = proposal
@@ -269,6 +342,23 @@ export function WealthGoalSection({
   const medianFinalNominal = result.bands.p50[result.bands.p50.length - 1]?.netWorth ?? 0;
   const medianFinalReal = deflate(medianFinalNominal, inputs.inflationPct, result.horizonYears);
   const horizonYears = Math.max(inputs.age - currentAge, 0);
+  // What the "épargne versée" line shows: the manual savings over the period,
+  // or in flows mode the cumulated yearly balances (euros courants).
+  const monthlySavingsShown = usesFlows ? firstYear.balance / 12 : inputs.monthlySavings;
+  const cumulatedSavings = usesFlows
+    ? computeCashFlowSchedule(engineFlows, properties, horizonYears, inputs.inflationPct).reduce(
+        (sum, year) => sum + year.balance,
+        0
+      )
+    : inputs.monthlySavings * 12 * horizonYears;
+  const savingsLineLabel = usesFlows
+    ? "Solde cumulé des flux sur la période"
+    : "Épargne versée sur la période";
+  const savingsNote = usesFlows
+    ? `, avec ${formatCurrency(Math.round(monthlySavingsShown))} de solde mensuel la première année`
+    : inputs.monthlySavings > 0
+      ? `, avec ${formatCurrency(inputs.monthlySavings)} d'épargne par mois`
+      : "";
   // Year 0 of any trajectory is today's net worth (no draw applied yet), the
   // natural scale for the goal slider: 0 to three times the current net
   // worth, rounded up to the 10 000 € step.
@@ -337,25 +427,38 @@ export function WealthGoalSection({
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm text-ink">
-            Épargne mensuelle (€ / mois)
+            {usesFlows ? "Épargne mensuelle calculée (année 1)" : "Épargne mensuelle (€ / mois)"}
             <input
               type="number"
               min={0}
               step={50}
-              value={inputs.monthlySavings}
+              value={usesFlows ? Math.round(monthlySavingsShown) : inputs.monthlySavings}
+              readOnly={usesFlows}
               onChange={(e) => update({ monthlySavings: Number(e.target.value) })}
-              onBlur={() => save(inputs)}
-              className={`w-28 ${NUMERIC_FIELD_CLASS}`}
+              onBlur={() => {
+                if (!usesFlows) save(inputs);
+              }}
+              className={`w-28 ${NUMERIC_FIELD_CLASS} ${usesFlows ? "text-slate" : ""}`}
             />
-            <SyncedRange
-              value={inputs.monthlySavings}
-              min={0}
-              max={10000}
-              step={100}
-              onChange={(value) => update({ monthlySavings: value })}
-              onCommit={commitSliders}
-              ariaLabel="Épargne mensuelle"
-            />
+            {usesFlows ? (
+              <button
+                type="button"
+                onClick={disableFlows}
+                className="w-fit text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
+              >
+                Saisir manuellement
+              </button>
+            ) : (
+              <SyncedRange
+                value={inputs.monthlySavings}
+                min={0}
+                max={10000}
+                step={100}
+                onChange={(value) => update({ monthlySavings: value })}
+                onCommit={commitSliders}
+                ariaLabel="Épargne mensuelle"
+              />
+            )}
           </label>
         </div>
         <span
@@ -375,6 +478,46 @@ export function WealthGoalSection({
         step={0.5}
         onChange={handleInflationChange}
       />
+
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowFlows((v) => !v)}
+            className="w-fit text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
+          >
+            {showFlows ? "Masquer les revenus et dépenses" : "Revenus et dépenses"}
+            {!showFlows && usesFlows && " (épargne calculée)"}
+          </button>
+          {!usesFlows && (
+            <button
+              type="button"
+              onClick={enableFlows}
+              className="w-fit text-xs text-emerald-strong underline decoration-dotted underline-offset-2 hover:text-ink"
+            >
+              Calculer l&apos;épargne à partir des flux
+            </button>
+          )}
+        </div>
+        {showFlows && (
+          <CashFlowFields
+            flows={flows}
+            onChange={setFlows}
+            onCommit={saveFlows}
+            firstYear={firstYear}
+            fiscalParts={fiscalParts}
+            rentedPropertyCount={rentedPropertyCount}
+            loanCount={loanCount}
+          />
+        )}
+        {showFlows && !usesFlows && (
+          <p className="text-xs text-slate">
+            Ces flux ne sont pas encore utilisés : la simulation suit l&apos;épargne mensuelle
+            saisie à la main. Cliquez sur « Calculer l&apos;épargne à partir des flux » pour
+            les activer.
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-col gap-2">
         <button
@@ -398,8 +541,7 @@ export function WealthGoalSection({
             <div>
               <p className="text-xs text-slate">
                 Sur 2000 trajectoires simulées, les mêmes tirages pour les deux allocations
-                {inputs.monthlySavings > 0 &&
-                  `, avec ${formatCurrency(inputs.monthlySavings)} d'épargne par mois`}
+                {savingsNote}
               </p>
               <div className="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -434,6 +576,7 @@ export function WealthGoalSection({
           )}
 
           <WealthGoalFanChart bands={comparison.current.bands} comparisonBands={comparison.proposed.bands} />
+          {depletedNote(comparison.current.flows?.depletedPct ?? 0, comparison.proposed.flows?.depletedPct ?? 0)}
 
           <div className="border-t border-line pt-3 text-sm">
             <table className="w-full">
@@ -458,11 +601,11 @@ export function WealthGoalSection({
                   <td className="py-1 text-right text-slate">{formatCurrency(proposedMedianReal)}</td>
                   <td className="py-1 text-right text-emerald-strong">{signedCurrency(comparison.medianGapReal)}</td>
                 </tr>
-                {inputs.monthlySavings > 0 && (
+                {(usesFlows || inputs.monthlySavings > 0) && (
                   <tr className="border-t border-line/50">
-                    <td className="py-1 font-sans">Épargne versée sur la période</td>
+                    <td className="py-1 font-sans">{savingsLineLabel}</td>
                     <td className="py-1 text-right text-slate" colSpan={3}>
-                      {formatCurrency(inputs.monthlySavings * 12 * comparison.current.horizonYears)}
+                      {signedCurrency(cumulatedSavings)}
                     </td>
                   </tr>
                 )}
@@ -525,8 +668,7 @@ export function WealthGoalSection({
               <p className="text-xs text-slate">
                 Sur 2000 trajectoires simulées à partir de la composition réelle du
                 portefeuille
-                {inputs.monthlySavings > 0 &&
-                  `, avec ${formatCurrency(inputs.monthlySavings)} d'épargne par mois`}
+                {savingsNote}
               </p>
               <p className="mt-1 font-serif text-5xl font-semibold tabular-nums text-ink">
                 {successRounded}%
@@ -545,6 +687,7 @@ export function WealthGoalSection({
           )}
 
           <WealthGoalFanChart bands={result.bands} />
+          {depletedNote(result.flows?.depletedPct ?? 0, null)}
 
           <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
             <p className="flex items-center justify-between text-ink">
@@ -557,11 +700,11 @@ export function WealthGoalSection({
                 {formatCurrency(medianFinalReal)}
               </span>
             </p>
-            {inputs.monthlySavings > 0 && (
+            {(usesFlows || inputs.monthlySavings > 0) && (
               <p className="flex items-center justify-between text-ink">
-                <span>Épargne versée sur la période</span>
+                <span>{savingsLineLabel}</span>
                 <span className="font-mono tabular-nums text-slate">
-                  {formatCurrency(inputs.monthlySavings * 12 * result.horizonYears)}
+                  {signedCurrency(cumulatedSavings)}
                 </span>
               </p>
             )}
@@ -693,7 +836,17 @@ export function WealthGoalSection({
             <strong>Épargne mensuelle</strong> : versée en fin de chaque année simulée
             (12 mois d&apos;un coup, sans rendement l&apos;année du versement, hypothèse
             prudente) dans les poches financières, au prorata de l&apos;allocation
-            de chaque côté — jamais dans l&apos;immobilier ni dans les poches non projetées.
+            de chaque côté, jamais dans l&apos;immobilier ni dans les poches non projetées.
+          </p>
+          <p className="mb-2">
+            <strong>Flux</strong> : quand l&apos;épargne est calculée à partir des flux, le
+            solde de chaque année (revenus France et étrangers, loyers bruts, moins dépenses,
+            mensualités des prêts jusqu&apos;à leur terme, impôt sur le revenu au barème
+            progressif avec les parts du foyer et prélèvements sociaux sur les loyers) remplace
+            l&apos;épargne saisie. Revenus, dépenses, loyers et tranches du barème sont indexés
+            sur l&apos;inflation retenue ; les mensualités restent nominales. Un solde négatif
+            est prélevé sur les liquidités puis sur les autres postes financiers. Les loyers
+            comptés en flux ne sont alors plus capitalisés dans le rendement du bien.
           </p>
           <p className="mb-2">
             <strong>Simplification assumée sur les Actions</strong> : quand plusieurs

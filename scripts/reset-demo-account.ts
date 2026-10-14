@@ -272,6 +272,15 @@ const DEMO_CLIENTS: DemoClient[] = [
     wealthGoalAge: 60,
     wealthGoalInflationPct: 2,
     monthlySavingsAmount: 1500,
+    // Épargne calculée à partir des flux (lot 5) : un célibataire sans enfant
+    // à 72 000 € nets perçus et 42 000 € de dépenses dégage à peu près les
+    // 1 500 € par mois de l'ancienne saisie manuelle une fois l'IR déduit.
+    incomeFranceAnnual: 72000,
+    incomeForeignAnnual: 0,
+    livingExpensesAnnual: 42000,
+    savingsFromFlows: true,
+    maritalStatus: "celibataire",
+    minorChildrenCount: 0,
     actionsIndexAllocations: [{ index: "msci-world", percentage: 100 }],
     wealthGoalProposal: {
       actionsAmount: 500000,

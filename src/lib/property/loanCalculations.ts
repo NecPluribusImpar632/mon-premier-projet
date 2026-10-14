@@ -129,3 +129,38 @@ export function projectLoanBalance(loan: Loan, yearsFromNow: number): number {
   if (r === 0) return P - M * monthsFromNow;
   return P * Math.pow(1 + r, monthsFromNow) - (M * (Math.pow(1 + r, monthsFromNow) - 1)) / r;
 }
+
+/**
+ * Cash paid on a loan during simulated year `year` (1 = the twelve months
+ * after today), capital and interest together, from the same re-annuitized
+ * schedule as `projectLoanBalance` so the two never disagree. Amortissable
+ * and partiel loans pay their monthly instalment for the months still due in
+ * that year (a partial last year is prorated); a partiel loan also repays its
+ * residual capital, and an in fine loan its whole capital, in cash at term.
+ * Nominal, never indexed: a fixed-rate loan does not follow inflation.
+ */
+export function projectLoanAnnualPayment(loan: Loan, year: number): number {
+  if (year <= 0) return 0;
+  const remainingTerm = remainingTermYears(loan);
+  const n = remainingTerm * 12;
+  if (n <= 0) return 0;
+
+  const monthsBefore = (year - 1) * 12;
+  const monthsPaid = Math.max(0, Math.min(12, n - monthsBefore));
+  // The term ends inside this year (or exactly at its end): any balloon is
+  // repaid now. Strictly before the end of the previous year means the loan
+  // has already been settled.
+  const termEndsThisYear = n > monthsBefore && n <= year * 12;
+
+  if (loan.amortizationType === "in_fine") {
+    const annualInterest = loan.remainingAmount * (loan.rate / 100);
+    const interest = annualInterest * (monthsPaid / 12);
+    return interest + (termEndsThisYear ? loan.remainingAmount : 0);
+  }
+
+  const P = loan.remainingAmount;
+  const V = loan.amortizationType === "partiel" ? loan.residualAmount ?? 0 : 0;
+  const r = loan.rate / 100 / 12;
+  const M = r === 0 ? (P - V) / n : ((P - V * Math.pow(1 + r, -n)) * r) / (1 - Math.pow(1 + r, -n));
+  return M * monthsPaid + (termEndsThisYear ? V : 0);
+}

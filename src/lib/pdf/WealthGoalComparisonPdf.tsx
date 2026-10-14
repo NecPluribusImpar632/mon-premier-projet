@@ -216,10 +216,45 @@ export function WealthGoalComparisonPdf({
               {targetAge} ans, dans {horizon} ans (âge actuel {currentAge} ans)
             </Text>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Épargne mensuelle</Text>
-            <Text style={styles.value}>{eur(monthlySavingsAmount)} / mois</Text>
-          </View>
+          {current.flows ? (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>Revenus nets perçus, imposables en France</Text>
+                <Text style={styles.value}>{eur(current.flows.firstYear.incomeFrance)} / an</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Revenus nets de source étrangère</Text>
+                <Text style={styles.value}>{eur(current.flows.firstYear.incomeForeign)} / an</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Loyers bruts</Text>
+                <Text style={styles.value}>{eur(current.flows.firstYear.grossRents)} / an</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Dépenses de train de vie</Text>
+                <Text style={styles.value}>{eur(current.flows.firstYear.livingExpenses)} / an</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Mensualités des prêts (année 1)</Text>
+                <Text style={styles.value}>{eur(current.flows.firstYear.loanPayments)} / an</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Impôt sur le revenu et prélèvements sociaux (année 1)</Text>
+                <Text style={styles.value}>
+                  {eur(current.flows.firstYear.incomeTax + current.flows.firstYear.socialContributions)} / an
+                </Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Épargne annuelle résultante (année 1)</Text>
+                <Text style={styles.value}>{signedEur(current.flows.firstYear.balance)}</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.row}>
+              <Text style={styles.label}>Épargne mensuelle</Text>
+              <Text style={styles.value}>{eur(monthlySavingsAmount)} / mois</Text>
+            </View>
+          )}
           <View style={styles.row}>
             <Text style={styles.label}>Inflation retenue</Text>
             <Text style={styles.value}>{pct(inflationPct, 1)} par an</Text>
@@ -340,6 +375,17 @@ export function WealthGoalComparisonPdf({
             fin d&apos;année dans la poche financière, au prorata de l&apos;allocation de chaque
             côté. La dette s&apos;amortit selon les prêts saisis.
           </Text>
+          {current.flows && (
+            <Text style={[styles.text, { marginTop: 6 }]}>
+              L&apos;épargne est ici calculée à partir des flux : revenus France et étrangers,
+              loyers bruts, moins dépenses, mensualités des prêts jusqu&apos;à leur terme, impôt
+              sur le revenu au barème progressif avec les parts du foyer et prélèvements sociaux
+              sur les loyers (micro-foncier). Revenus, dépenses, loyers et barème sont indexés
+              sur l&apos;inflation retenue, les mensualités restent nominales, les revenus sont
+              supposés constants jusqu&apos;à l&apos;échéance. Un solde négatif est prélevé sur
+              les liquidités puis sur les autres postes financiers.
+            </Text>
+          )}
           <Text style={[styles.text, { marginTop: 6 }]}>
             Les deux allocations sont simulées sur la même graine aléatoire, donc les mêmes 2000
             séries de tirages. Les biens immobiliers, les prêts, l&apos;entreprise, les autres

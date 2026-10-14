@@ -20,6 +20,11 @@ import {
   type AnnualFeesPct,
 } from "@/lib/wealth/monteCarloAssumptions";
 import { mulberry32, hashSeed, drawStandardNormal } from "@/lib/wealth/monteCarloPrng";
+import {
+  computeCashFlowSchedule,
+  type CashFlowYear,
+  type WealthGoalFlows,
+} from "@/lib/wealth/cashFlows";
 
 /** 2000 simulated trajectories — cheap for pure JS math (≈2000 × 30 years ×
  * a handful of draws, well under 50ms) while giving stable percentiles. */
@@ -67,8 +72,18 @@ export interface AssetClassMonteCarloRow {
   sourceNote: string | null;
 }
 
+/** Flows summary when the savings come from the flows (null in manual mode). */
+export interface MonteCarloFlowsSummary {
+  /** Year 1, in today's euros. */
+  firstYear: CashFlowYear;
+  /** Share of trajectories where the financial pockets were exhausted at
+   * least once by a negative balance (liquidités driven below zero). */
+  depletedPct: number;
+}
+
 export interface MonteCarloResult {
   successPct: number;
+  flows: MonteCarloFlowsSummary | null;
   bands: {
     p10: MonteCarloYearPoint[];
     p50: MonteCarloYearPoint[];
@@ -93,7 +108,12 @@ export interface WealthGoalInputs {
   targetAmount: number;
   inflationPct: number;
   actionsIndexBreakdown: ActionsIndexBreakdown;
+  /** Used only when `flows` is null (manual mode). */
   monthlySavingsAmount: number;
+  /** Non-null = the yearly balance of the flows replaces the manual savings,
+   * loan instalments leave the financial pockets, and rents are counted as
+   * cash instead of being capitalized into each property's return. */
+  flows: WealthGoalFlows | null;
   fees: AnnualFeesPct;
 }
 
@@ -106,8 +126,11 @@ export interface WealthGoalInputs {
  */
 export function wealthGoalSeed(context: WealthGoalContext, inputs: WealthGoalInputs): number {
   const annualSavings = Math.max(inputs.monthlySavingsAmount, 0) * 12;
+  const flows = inputs.flows
+    ? `${inputs.flows.incomeFranceAnnual}|${inputs.flows.incomeForeignAnnual}|${inputs.flows.livingExpensesAnnual}|${inputs.flows.fiscalParts}`
+    : "manual";
   return hashSeed(
-    `${inputs.targetAmount}|${inputs.targetAge}|${inputs.currentAge}|${inputs.inflationPct}|${annualSavings}|${context.properties.map((p) => p.id).join(",")}|${context.immobilierValue}`
+    `${inputs.targetAmount}|${inputs.targetAge}|${inputs.currentAge}|${inputs.inflationPct}|${annualSavings}|${flows}|${context.properties.map((p) => p.id).join(",")}|${context.immobilierValue}`
   );
 }
 
@@ -124,7 +147,9 @@ function realEstatePockets(
   properties: PropertyWithLoans[],
   immobilierValue: number,
   inflationPct: number,
-  feesPct: number
+  feesPct: number,
+  /** false when the rents are counted as cash flows instead. */
+  capitalizeRents: boolean
 ): RealEstatePocket[] {
   const appreciationNominalPct = toNominalMean(IMMOBILIER_RETURN_STATS.meanPct, inflationPct) - feesPct;
 
@@ -135,7 +160,7 @@ function realEstatePockets(
   }
 
   return properties.map((property) => {
-    const grossYieldPct = computeRentalYield(property);
+    const grossYieldPct = capitalizeRents ? computeRentalYield(property) : null;
     const netYieldPct =
       grossYieldPct !== null ? grossYieldPct * (1 - RENTAL_YIELD_CHARGES_HAIRCUT_PCT / 100) : 0;
     return {
@@ -210,7 +235,13 @@ export function computeWealthGoalMonteCarlo(
   const { currentAge, targetAge, targetAmount, inflationPct, actionsIndexBreakdown } = inputs;
   const fees = { ...DEFAULT_ANNUAL_FEES_PCT, ...inputs.fees };
   const horizonYears = Math.max(targetAge - currentAge, 0);
-  const annualSavings = Math.max(inputs.monthlySavingsAmount, 0) * 12;
+  // Flows mode: the yearly balance (positive or negative) replaces the
+  // constant manual savings; the schedule is deterministic, shared by every
+  // trial and by both sides of the before/after comparison.
+  const flowSchedule = inputs.flows
+    ? computeCashFlowSchedule(inputs.flows, properties, horizonYears, inflationPct)
+    : null;
+  const annualSavings = flowSchedule ? 0 : Math.max(inputs.monthlySavingsAmount, 0) * 12;
 
   const actionsAmount = amounts.actions ?? 0;
   const { meanPct: actionsRealMean, stdPct: actionsRealStd, calibratedWeightPct } =
@@ -218,7 +249,13 @@ export function computeWealthGoalMonteCarlo(
   const actionsNominalMean = toNominalMean(actionsRealMean, inflationPct) - fees.actions;
   const actionsNominalStd = toNominalStd(actionsRealStd, inflationPct);
 
-  const pockets = realEstatePockets(properties, immobilierValue, inflationPct, fees.immobilier);
+  const pockets = realEstatePockets(
+    properties,
+    immobilierValue,
+    inflationPct,
+    fees.immobilier,
+    flowSchedule === null
+  );
   const immobilierNominalStd = toNominalStd(IMMOBILIER_RETURN_STATS.stdPct, inflationPct);
 
   const scpiNominalMean = toNominalMean(SCPI_REAL_RETURN_PCT, inflationPct) - fees.scpi;
@@ -255,19 +292,22 @@ export function computeWealthGoalMonteCarlo(
     matieresPremieres: matieresPremieresAmount,
   };
   const savingsBaseTotal = Object.values(savingsBase).reduce((s, v) => s + v, 0);
+  // Share of a positive yearly amount going to each pocket, fixed on the
+  // initial allocation (the same weights every year, same as before flows).
   const savingsShare = (bucketAmount: number, isLiquidites: boolean) =>
-    savingsBaseTotal > 0 ? annualSavings * (bucketAmount / savingsBaseTotal) : isLiquidites ? annualSavings : 0;
-  const savingsActions = savingsShare(savingsBase.actions, false);
-  const savingsObligations = savingsShare(savingsBase.obligations, false);
-  const savingsScpi = savingsShare(savingsBase.scpi, false);
-  const savingsLiquidites = savingsShare(savingsBase.liquidites, true);
-  const savingsPe = savingsShare(savingsBase.pe, false);
-  const savingsMatieresPremieres = savingsShare(savingsBase.matieresPremieres, false);
+    savingsBaseTotal > 0 ? bucketAmount / savingsBaseTotal : isLiquidites ? 1 : 0;
+  const shareActions = savingsShare(savingsBase.actions, false);
+  const shareObligations = savingsShare(savingsBase.obligations, false);
+  const shareScpi = savingsShare(savingsBase.scpi, false);
+  const shareLiquidites = savingsShare(savingsBase.liquidites, true);
+  const sharePe = savingsShare(savingsBase.pe, false);
+  const shareMatieresPremieres = savingsShare(savingsBase.matieresPremieres, false);
 
   const random = mulberry32(seed);
 
   // trials[trial][year] = net worth
   const trials: number[][] = [];
+  let depletedTrials = 0;
 
   for (let trial = 0; trial < TRIAL_COUNT; trial++) {
     let actionsValue = actionsAmount;
@@ -277,6 +317,7 @@ export function computeWealthGoalMonteCarlo(
     let liquiditesValue = liquiditesAmount;
     let peValue = peAmount;
     let matieresPremieresValue = matieresPremieresAmount;
+    let depleted = false;
 
     const trialSeries: number[] = [];
 
@@ -308,12 +349,45 @@ export function computeWealthGoalMonteCarlo(
         peValue *= 1 + peNominalRate / 100;
         matieresPremieresValue *= 1 + matieresPremieresNominalRate / 100;
 
-        actionsValue += savingsActions;
-        obligationsValue += savingsObligations;
-        scpiValue += savingsScpi;
-        liquiditesValue += savingsLiquidites;
-        peValue += savingsPe;
-        matieresPremieresValue += savingsMatieresPremieres;
+        const balance = flowSchedule ? flowSchedule[year - 1].balance : annualSavings;
+        if (balance >= 0) {
+          actionsValue += balance * shareActions;
+          obligationsValue += balance * shareObligations;
+          scpiValue += balance * shareScpi;
+          liquiditesValue += balance * shareLiquidites;
+          peValue += balance * sharePe;
+          matieresPremieresValue += balance * shareMatieresPremieres;
+        } else {
+          // A deficit is drawn from the liquidités first, then pro rata from
+          // the other financial pockets by their current value. Once every
+          // pocket is empty the rest accumulates as negative liquidités (an
+          // overdraft at 0 %), and the trajectory is counted as depleted.
+          let deficit = -balance;
+          const fromLiquidites = Math.min(Math.max(liquiditesValue, 0), deficit);
+          liquiditesValue -= fromLiquidites;
+          deficit -= fromLiquidites;
+          if (deficit > 0) {
+            const othersTotal =
+              actionsValue + obligationsValue + scpiValue + peValue + matieresPremieresValue;
+            if (othersTotal > 0) {
+              const drawn = Math.min(othersTotal, deficit);
+              const ratio = drawn / othersTotal;
+              actionsValue -= actionsValue * ratio;
+              obligationsValue -= obligationsValue * ratio;
+              scpiValue -= scpiValue * ratio;
+              peValue -= peValue * ratio;
+              matieresPremieresValue -= matieresPremieresValue * ratio;
+              deficit -= drawn;
+            }
+          }
+          if (deficit > 0) {
+            liquiditesValue -= deficit;
+            if (!depleted) {
+              depleted = true;
+              depletedTrials++;
+            }
+          }
+        }
       }
 
       const totalDebt = properties.reduce(
@@ -458,6 +532,10 @@ export function computeWealthGoalMonteCarlo(
 
   return {
     successPct,
+    flows:
+      flowSchedule && flowSchedule.length > 0
+        ? { firstYear: flowSchedule[0], depletedPct: (depletedTrials / TRIAL_COUNT) * 100 }
+        : null,
     bands: {
       p10: percentileBand(0.1),
       p50: percentileBand(0.5),

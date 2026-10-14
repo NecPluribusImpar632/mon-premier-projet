@@ -51,6 +51,16 @@ model Client {
   feesScpiPct                   Float?
   feesPrivateEquityPct          Float?
   feesImmobilierPct             Float?
+  /** Flux annuels pour l'objectif patrimonial (lot 5) : revenus nets perçus
+   * imposables en France, revenus nets de source étrangère déjà imposés,
+   * dépenses de train de vie. null = non renseigné. */
+  incomeFranceAnnual            Float?
+  incomeForeignAnnual           Float?
+  livingExpensesAnnual          Float?
+  /** true = l'épargne annuelle est calculée à partir des flux (revenus,
+   * loyers, dépenses, mensualités, impôt) ; false = saisie manuelle de
+   * monthlySavingsAmount, comportement historique. */
+  savingsFromFlows              Boolean             @default(false)
   maritalStatus                 String?
   spouseName                    String?
   spouseImmobilierAmount        Float?

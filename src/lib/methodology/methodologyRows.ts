@@ -166,6 +166,28 @@ export const METHODOLOGY_ROWS: MethodologyRow[] = [
     confidence: { kind: "assumption" },
   },
   {
+    id: "flux-revenus",
+    group: "Flux de revenus et dépenses",
+    variant: "Revenus, loyers, dépenses, mensualités",
+    usage: "Objectif patrimonial",
+    source: "Saisie du conseiller ; loyers et prêts des biens saisis",
+    period: "Sans objet",
+    retained:
+      "Revenus, loyers et dépenses constants en euros constants jusqu'à l'échéance (indexés sur l'inflation retenue) ; mensualités nominales jusqu'au terme de chaque prêt ; solde négatif prélevé sur les liquidités puis sur les autres postes financiers",
+    confidence: { kind: "assumption" },
+  },
+  {
+    id: "flux-impot",
+    group: "Flux de revenus et dépenses",
+    variant: "Impôt sur le revenu",
+    usage: "Objectif patrimonial",
+    source: "Barème 2025 (revenus 2024), loi de finances pour 2025, art. 197 CGI ; abattement de 10 % sur les salaires ; micro-foncier et prélèvements sociaux de 17,2 % sur les loyers",
+    period: "Millésime 2025, tranches indexées sur l'inflation retenue",
+    retained:
+      "Barème progressif par tranches, parts du foyer (couple marié ou pacsé, enfants mineurs), plafonnement du quotient familial ; revenus étrangers hors barème ; pas de décote, de contribution sur les hauts revenus ni de convention fiscale",
+    confidence: { kind: "assumption" },
+  },
+  {
     id: "liquidites-matieres",
     group: "Liquidités et matières premières",
     variant: "Rendement",

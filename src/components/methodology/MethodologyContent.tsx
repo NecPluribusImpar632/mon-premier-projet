@@ -189,6 +189,32 @@ export function MethodologyContent() {
           pessimiste (10e centile).
         </p>
         <p className={P_CLASS}>
+          L&apos;épargne peut aussi être calculée à partir des flux du client plutôt que
+          saisie. Chaque année, le solde vaut : revenus nets perçus imposables en France, plus
+          revenus nets de source étrangère déjà imposés, plus loyers bruts des biens loués,
+          moins dépenses de train de vie, moins mensualités des prêts existants (capital et
+          intérêts, jusqu&apos;au terme de chaque prêt), moins impôt sur le revenu et
+          prélèvements sociaux. L&apos;impôt suit le barème progressif 2025 (revenus 2024) avec
+          les parts du foyer (deux parts pour un couple marié ou pacsé, une demi-part pour
+          chacun des deux premiers enfants mineurs, une part au-delà) et le plafonnement du
+          quotient familial ; les salaires bénéficient de l&apos;abattement de 10 % plafonné ;
+          les loyers sont imposés en micro-foncier (70 % de leur montant au barème, plus
+          17,2 % de prélèvements sociaux) ; les revenus étrangers sont exclus du barème, sans
+          gestion de convention fiscale. Un solde positif est versé dans les poches financières
+          au prorata de l&apos;allocation ; un solde négatif est prélevé sur les liquidités puis
+          sur les autres postes financiers. Les loyers comptés en flux ne sont alors plus
+          capitalisés dans le rendement du bien.
+        </p>
+        <p className={P_CLASS}>
+          Limite assumée de ce module : les revenus sont supposés constants jusqu&apos;à
+          l&apos;échéance, en euros constants. Aucune progression de carrière au-delà de
+          l&apos;inflation, aucun départ en retraite ni baisse de revenus n&apos;est modélisé ;
+          les dépenses, les loyers et les tranches du barème sont indexés sur l&apos;inflation
+          retenue, les mensualités restent nominales. Hors champ également : la fiscalité des
+          enveloppes à la sortie, l&apos;IFI dans les flux, la succession, le démembrement, la
+          décote et la contribution exceptionnelle sur les hauts revenus.
+        </p>
+        <p className={P_CLASS}>
           Les rendements des actions sont convertis en euros avant calcul : taux de change
           réel depuis 1999, taux synthétique fondé sur la parité fixe franc/euro avant. Ils
           sont ensuite déflatés par l&apos;inflation française. Les moyennes sont arithmétiques,
@@ -231,8 +257,11 @@ export function MethodologyContent() {
             change, hors conversion historique.
           </li>
           <li>
-            La fiscalité des enveloppes, les frais de gestion et un éventuel crédit lombard ne
-            sont pas modélisés.
+            La fiscalité des enveloppes et un éventuel crédit lombard ne sont pas modélisés.
+          </li>
+          <li>
+            Dans les flux, les revenus sont supposés constants jusqu&apos;à l&apos;échéance,
+            en euros constants : ni progression de carrière, ni départ en retraite.
           </li>
         </ul>
       </section>

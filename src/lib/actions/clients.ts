@@ -166,6 +166,37 @@ export async function updateWealthGoal(
   revalidatePath(`/clients/${clientId}`);
 }
 
+export interface ClientFlowsData {
+  incomeFranceAnnual: number;
+  incomeForeignAnnual: number;
+  livingExpensesAnnual: number;
+  savingsFromFlows: boolean;
+}
+
+/**
+ * The flows of the wealth goal (lot 5). Switching back to the manual savings
+ * is done by the caller through updateWealthGoal with the computed monthly
+ * figure, then this action with savingsFromFlows = false.
+ */
+export async function updateClientFlows(clientId: string, data: ClientFlowsData) {
+  const amounts = [data.incomeFranceAnnual, data.incomeForeignAnnual, data.livingExpensesAnnual];
+  if (amounts.some((value) => !Number.isFinite(value) || value < 0)) {
+    throw new Error("Chaque flux annuel doit être un nombre positif.");
+  }
+
+  await assertClientAccess(clientId);
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      incomeFranceAnnual: data.incomeFranceAnnual,
+      incomeForeignAnnual: data.incomeForeignAnnual,
+      livingExpensesAnnual: data.livingExpensesAnnual,
+      savingsFromFlows: data.savingsFromFlows,
+    },
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
 export async function updateWealthGoalFees(clientId: string, fees: AnnualFeesPct) {
   validateFees(fees);
 

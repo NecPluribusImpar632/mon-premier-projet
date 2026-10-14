@@ -10,6 +10,7 @@ import { DEFAULT_ANNUAL_FEES_PCT } from "@/lib/wealth/monteCarloAssumptions";
 import { computeWealthGoalComparison } from "@/lib/wealth/wealthGoalComparison";
 import { proposalDataFromRow } from "@/lib/wealth/wealthGoalProposal";
 import { WealthGoalComparisonPdf } from "@/lib/pdf/WealthGoalComparisonPdf";
+import { engineFlowsFromClient } from "@/lib/wealth/clientFlows";
 
 /** The before/after comparison, recomputed server-side from what is
  * persisted (goal, horizon, inflation, savings, fees, proposal), so the
@@ -29,6 +30,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/clients/[id]/go
   const targetAge = client.wealthGoalAge ?? client.age + 20;
   const inflationPct = client.wealthGoalInflationPct ?? 2;
   const monthlySavingsAmount = client.monthlySavingsAmount ?? 0;
+  const flows = engineFlowsFromClient(client);
 
   const comparison = computeWealthGoalComparison(
     {
@@ -43,6 +45,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/clients/[id]/go
       inflationPct,
       actionsIndexBreakdown: actionsIndexBreakdownFromClient(client.actionsIndexAllocations),
       monthlySavingsAmount,
+      flows,
       fees: {
         actions: client.feesActionsPct ?? DEFAULT_ANNUAL_FEES_PCT.actions,
         obligations: client.feesObligationsPct ?? DEFAULT_ANNUAL_FEES_PCT.obligations,
