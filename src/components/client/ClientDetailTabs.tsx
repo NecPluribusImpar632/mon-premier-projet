@@ -24,6 +24,7 @@ import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { ScenarioSimulator } from "@/components/scenarios/ScenarioSimulator";
 import { MethodologyContent } from "@/components/methodology/MethodologyContent";
 import type { AnnualFeesPct } from "@/lib/wealth/monteCarloAssumptions";
+import type { WealthGoalProposalData } from "@/lib/wealth/wealthGoalProposal";
 import { LinkPendingSpinner } from "@/components/ui/LinkPendingSpinner";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { PRIMARY_BUTTON_CLASS } from "@/components/ui/buttonStyles";
@@ -64,6 +65,7 @@ interface ClientDetailTabsProps {
   initialWealthGoalAmount: number | null;
   initialWealthGoalAge: number | null;
   initialWealthGoalInflationPct: number | null;
+  initialWealthGoalProposal: WealthGoalProposalData | null;
 }
 
 export function ClientDetailTabs({
@@ -96,6 +98,7 @@ export function ClientDetailTabs({
   initialWealthGoalAmount,
   initialWealthGoalAge,
   initialWealthGoalInflationPct,
+  initialWealthGoalProposal,
 }: ClientDetailTabsProps) {
   const [activeTab, setActiveTab] = useState<ClientTab>(initialTab);
 
@@ -241,6 +244,7 @@ export function ClientDetailTabs({
                 initialWealthGoalInflationPct={initialWealthGoalInflationPct}
                 initialMonthlySavingsAmount={initialMonthlySavingsAmount}
                 initialWealthGoalFees={initialWealthGoalFees}
+                initialProposal={initialWealthGoalProposal}
               />
             </div>
           )}

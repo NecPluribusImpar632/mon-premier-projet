@@ -18,6 +18,15 @@ import { isMaritalStatus } from "@/lib/client/maritalStatus";
 import { clientScope, requireUser } from "@/lib/auth/currentUser";
 import type { AnnualFeesPct } from "@/lib/wealth/monteCarloAssumptions";
 import { assertClientAccess } from "@/lib/auth/clientAccess";
+import { amountsFromClient } from "@/lib/allocation/mapping";
+import {
+  PROPOSAL_CATEGORY_IDS,
+  PROPOSAL_TOTAL_TOLERANCE,
+  actionsIndexBreakdownToJson,
+  proposalTotal,
+  type WealthGoalProposalData,
+} from "@/lib/wealth/wealthGoalProposal";
+import { actionsIndexBreakdownTotal } from "@/lib/allocation/actionsIndexBreakdown";
 
 // Every read is scoped to the signed-in user (an admin sees everything, an
 // advisor only their own clients), and every write starts with
@@ -47,6 +56,7 @@ export async function getClient(id: string) {
       },
       wrapperAllocations: true,
       actionsIndexAllocations: true,
+      wealthGoalProposal: true,
     },
   });
 }
@@ -157,10 +167,7 @@ export async function updateWealthGoal(
 }
 
 export async function updateWealthGoalFees(clientId: string, fees: AnnualFeesPct) {
-  const values = Object.values(fees);
-  if (values.some((value) => !Number.isFinite(value) || value < 0 || value > 10)) {
-    throw new Error("Chaque taux de frais doit être compris entre 0 et 10 %.");
-  }
+  validateFees(fees);
 
   await assertClientAccess(clientId);
   await prisma.client.update({
@@ -173,6 +180,76 @@ export async function updateWealthGoalFees(clientId: string, fees: AnnualFeesPct
       feesImmobilierPct: fees.immobilier,
     },
   });
+  revalidatePath(`/clients/${clientId}`);
+}
+
+function validateFees(fees: AnnualFeesPct) {
+  const values = Object.values(fees);
+  if (values.some((value) => !Number.isFinite(value) || value < 0 || value > 10)) {
+    throw new Error("Chaque taux de frais doit être compris entre 0 et 10 %.");
+  }
+}
+
+/**
+ * One proposed allocation per client (upsert). The "same total" constraint
+ * is checked against the client's financial wealth as stored right now, not
+ * against a figure sent by the browser: the proposal reallocates the six
+ * financial postes, it never creates money. Outil professionnel and Autres
+ * are part of the financial total but stay fixed, so the proposal must
+ * match the six-poste share of that total.
+ */
+export async function saveWealthGoalProposal(clientId: string, data: WealthGoalProposalData) {
+  for (const id of PROPOSAL_CATEGORY_IDS) {
+    const value = data.amounts[id];
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error("Chaque montant proposé doit être un nombre positif.");
+    }
+  }
+  if (actionsIndexBreakdownTotal(data.actionsIndexBreakdown) !== 100) {
+    throw new Error("La répartition par indice de la proposition doit faire 100 %.");
+  }
+  validateFees(data.fees);
+
+  await assertClientAccess(clientId);
+  const client = await prisma.client.findUnique({ where: { id: clientId } });
+  if (!client) throw new Error("Client introuvable.");
+
+  const currentAmounts = amountsFromClient(client);
+  const reallocatableTotal = PROPOSAL_CATEGORY_IDS.reduce(
+    (sum, id) => sum + (currentAmounts[id] ?? 0),
+    0
+  );
+  if (Math.abs(proposalTotal(data.amounts) - reallocatableTotal) > PROPOSAL_TOTAL_TOLERANCE) {
+    throw new Error(
+      "Le total de la proposition doit être égal à la poche financière actuelle : on réalloue, on ne crée pas d'argent."
+    );
+  }
+
+  const row = {
+    actionsAmount: data.amounts.actions,
+    obligationsAmount: data.amounts.obligations,
+    scpiAmount: data.amounts.scpi,
+    liquiditesAmount: data.amounts.liquidites,
+    privateEquityAmount: data.amounts["private-equity"],
+    matieresPremieresAmount: data.amounts["matieres-premieres"],
+    actionsIndexBreakdown: actionsIndexBreakdownToJson(data.actionsIndexBreakdown),
+    feesActionsPct: data.fees.actions,
+    feesObligationsPct: data.fees.obligations,
+    feesScpiPct: data.fees.scpi,
+    feesPrivateEquityPct: data.fees.privateEquity,
+    feesImmobilierPct: data.fees.immobilier,
+  };
+  await prisma.wealthGoalProposal.upsert({
+    where: { clientId },
+    update: row,
+    create: { clientId, ...row },
+  });
+  revalidatePath(`/clients/${clientId}`);
+}
+
+export async function deleteWealthGoalProposal(clientId: string) {
+  await assertClientAccess(clientId);
+  await prisma.wealthGoalProposal.deleteMany({ where: { clientId } });
   revalidatePath(`/clients/${clientId}`);
 }
 

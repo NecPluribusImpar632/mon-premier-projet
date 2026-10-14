@@ -1,21 +1,39 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateWealthGoal, updateWealthGoalFees } from "@/lib/actions/clients";
+import { FileDown } from "lucide-react";
+import {
+  deleteWealthGoalProposal,
+  saveWealthGoalProposal,
+  updateWealthGoal,
+  updateWealthGoalFees,
+} from "@/lib/actions/clients";
 import {
   computeWealthGoalMonteCarlo,
   type AssetClassMonteCarloRow,
+  type MonteCarloResult,
   type MonteCarloRowStatus,
   type WealthGoalContext,
+  type WealthGoalInputs,
 } from "@/lib/wealth/monteCarloProjection";
 import {
-  ANNUAL_FEES_LABELS,
-  DEFAULT_ANNUAL_FEES_PCT,
-  type AnnualFeesPct,
-} from "@/lib/wealth/monteCarloAssumptions";
+  computeWealthGoalComparison,
+  deflate,
+  type WealthGoalComparison,
+} from "@/lib/wealth/wealthGoalComparison";
+import {
+  CURRENT_SERIES_LABEL,
+  PROPOSAL_SERIES_LABEL,
+  PROPOSAL_CATEGORY_IDS,
+  proposalFromCurrent,
+  type WealthGoalProposalData,
+} from "@/lib/wealth/wealthGoalProposal";
+import { DEFAULT_ANNUAL_FEES_PCT, type AnnualFeesPct } from "@/lib/wealth/monteCarloAssumptions";
 import type { ActionsIndexBreakdown } from "@/lib/allocation/actionsIndexBreakdown";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { WealthGoalFanChart } from "@/components/wealth/WealthGoalFanChart";
+import { WealthGoalProposalEditor } from "@/components/wealth/WealthGoalProposalEditor";
+import { AnnualFeesFields, feesAreDefault } from "@/components/wealth/AnnualFeesFields";
 import { ShockSlider } from "@/components/scenarios/ShockSlider";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { NUMERIC_FIELD_CLASS } from "@/components/ui/fieldStyles";
@@ -35,6 +53,7 @@ interface WealthGoalSectionProps {
   initialMonthlySavingsAmount: number | null;
   /** null per poste = application default. */
   initialWealthGoalFees: Record<keyof AnnualFeesPct, number | null>;
+  initialProposal: WealthGoalProposalData | null;
 }
 
 type SaveStatus = "saved" | "saving" | "error";
@@ -58,8 +77,6 @@ const ROW_STATUS_CLASS: Record<MonteCarloRowStatus, string> = {
   pointMass: "text-ink",
   frozen: "text-slate",
 };
-
-const FEE_KEYS = Object.keys(ANNUAL_FEES_LABELS) as (keyof AnnualFeesPct)[];
 
 interface GoalInputs {
   amount: number;
@@ -86,6 +103,23 @@ function feesWithDefaults(
   };
 }
 
+function returnCell(row: AssetClassMonteCarloRow): string {
+  if (row.meanPct === null) return "non projeté";
+  if (row.stdPct > 0) return `${formatPercent(row.meanPct, 2)} ± ${formatPercent(row.stdPct, 1)}`;
+  return formatPercent(row.meanPct, 2);
+}
+
+function signedCurrency(value: number): string {
+  if (Math.round(value) === 0) return formatCurrency(0);
+  return `${value > 0 ? "+" : ""}${formatCurrency(value)}`;
+}
+
+function signedPoints(value: number): string {
+  const rounded = Math.round(value);
+  if (rounded === 0) return "0 pt";
+  return `${rounded > 0 ? "+" : ""}${rounded} pt${Math.abs(rounded) > 1 ? "s" : ""}`;
+}
+
 /**
  * The single projection module of the "Objectif patrimonial" tab. It used to
  * sit above a separate "objectif retraite" section with its own straight-line
@@ -93,6 +127,9 @@ function feesWithDefaults(
  * screen (frozen vs. calibrated real estate, one flat rate vs. per-asset
  * distributions), so the retirement one was folded in here: the retirement
  * age is just an échéance, and the monthly savings feed the Monte Carlo.
+ *
+ * With a saved proposal, the module becomes a before/after comparison: both
+ * simulations share the same seed (see wealthGoalComparison.ts).
  */
 export function WealthGoalSection({
   clientId,
@@ -106,6 +143,7 @@ export function WealthGoalSection({
   initialWealthGoalInflationPct,
   initialMonthlySavingsAmount,
   initialWealthGoalFees,
+  initialProposal,
 }: WealthGoalSectionProps) {
   const [inputs, setInputs] = useState<GoalInputs>({
     amount: initialWealthGoalAmount ?? 0,
@@ -121,6 +159,12 @@ export function WealthGoalSection({
   const [showFees, setShowFees] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [isPending, startTransition] = useTransition();
+
+  // The saved proposal, and the draft being edited (null = editor closed).
+  const [proposal, setProposal] = useState<WealthGoalProposalData | null>(initialProposal);
+  const [draft, setDraft] = useState<WealthGoalProposalData | null>(null);
+  const [proposalError, setProposalError] = useState<string | null>(null);
+  const [isProposalPending, startProposalTransition] = useTransition();
 
   function run(action: () => Promise<void>) {
     setStatus("saving");
@@ -154,8 +198,47 @@ export function WealthGoalSection({
     save(next);
   }
 
+  function startFromCurrent(): WealthGoalProposalData {
+    return proposalFromCurrent(amounts, actionsIndexBreakdown, fees);
+  }
+
+  function openEditor() {
+    setProposalError(null);
+    setDraft(proposal ?? startFromCurrent());
+  }
+
+  function saveProposal() {
+    if (!draft) return;
+    const next = draft;
+    setProposalError(null);
+    startProposalTransition(async () => {
+      try {
+        await saveWealthGoalProposal(clientId, next);
+        setProposal(next);
+        setDraft(null);
+      } catch (error) {
+        setProposalError(
+          error instanceof Error ? error.message : "Erreur lors de l'enregistrement."
+        );
+      }
+    });
+  }
+
+  function removeProposal() {
+    setProposalError(null);
+    startProposalTransition(async () => {
+      try {
+        await deleteWealthGoalProposal(clientId);
+        setProposal(null);
+        setDraft(null);
+      } catch (error) {
+        setProposalError(error instanceof Error ? error.message : "Erreur lors de la suppression.");
+      }
+    });
+  }
+
   const context: WealthGoalContext = { amounts, properties, immobilierValue };
-  const result = computeWealthGoalMonteCarlo(context, {
+  const engineInputs: WealthGoalInputs = {
     currentAge,
     targetAge: inputs.age,
     targetAmount: inputs.amount,
@@ -163,13 +246,28 @@ export function WealthGoalSection({
     actionsIndexBreakdown,
     monthlySavingsAmount: inputs.monthlySavings,
     fees,
-  });
+  };
+  const comparison: WealthGoalComparison | null = proposal
+    ? computeWealthGoalComparison(context, engineInputs, proposal)
+    : null;
+  const result: MonteCarloResult = comparison
+    ? comparison.current
+    : computeWealthGoalMonteCarlo(context, engineInputs);
   const successRounded = Math.round(result.successPct);
   const medianFinalNominal = result.bands.p50[result.bands.p50.length - 1]?.netWorth ?? 0;
-  const medianFinalReal =
-    medianFinalNominal / Math.pow(1 + inputs.inflationPct / 100, result.horizonYears);
+  const medianFinalReal = deflate(medianFinalNominal, inputs.inflationPct, result.horizonYears);
   const horizonYears = Math.max(inputs.age - currentAge, 0);
-  const feesAreDefault = FEE_KEYS.every((key) => fees[key] === DEFAULT_ANNUAL_FEES_PCT[key]);
+  const reallocatableTotal = PROPOSAL_CATEGORY_IDS.reduce((sum, id) => sum + (amounts[id] ?? 0), 0);
+
+  const proposedMedianNominal = comparison
+    ? (comparison.proposed.bands.p50[comparison.proposed.bands.p50.length - 1]?.netWorth ?? 0)
+    : 0;
+  const proposedMedianReal = comparison
+    ? deflate(proposedMedianNominal, inputs.inflationPct, comparison.proposed.horizonYears)
+    : 0;
+  const proposedRowsById = comparison
+    ? new Map(comparison.proposed.breakdown.map((row) => [row.categoryId, row]))
+    : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -241,50 +339,141 @@ export function WealthGoalSection({
           className="w-fit text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
         >
           {showFees ? "Masquer les frais annuels" : "Frais annuels par poste"}
-          {!showFees && !feesAreDefault && " (modifiés)"}
+          {!showFees && !feesAreDefault(fees) && " (modifiés)"}
         </button>
-        {showFees && (
-          <div className="flex flex-wrap gap-4 rounded-md border border-line bg-paper p-3">
-            {FEE_KEYS.map((key) => (
-              <label key={key} className="flex flex-col gap-1.5 text-xs text-ink">
-                {ANNUAL_FEES_LABELS[key]}
-                <span className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    value={fees[key]}
-                    onChange={(e) =>
-                      setFees((prev) => ({ ...prev, [key]: Number(e.target.value) }))
-                    }
-                    onBlur={() => saveFees(fees)}
-                    className={`w-20 ${NUMERIC_FIELD_CLASS}`}
-                  />
-                  <span className="text-slate">% / an</span>
-                </span>
-              </label>
-            ))}
-            {!feesAreDefault && (
-              <button
-                type="button"
-                onClick={() => {
-                  setFees({ ...DEFAULT_ANNUAL_FEES_PCT });
-                  saveFees({ ...DEFAULT_ANNUAL_FEES_PCT });
-                }}
-                className="self-end pb-2 text-xs text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
-              >
-                Rétablir les défauts
-              </button>
-            )}
-          </div>
-        )}
+        {showFees && <AnnualFeesFields fees={fees} onChange={setFees} onCommit={saveFees} />}
       </div>
 
       {result.horizonYears === 0 ? (
         <p className="border-t border-line pt-3 text-sm text-slate">
           L&apos;échéance choisie est déjà atteinte ou dépassée.
         </p>
+      ) : comparison ? (
+        <>
+          {comparison.current.targetAmount > 0 ? (
+            <div>
+              <p className="text-xs text-slate">
+                Sur 2000 trajectoires simulées, les mêmes tirages pour les deux allocations
+                {inputs.monthlySavings > 0 &&
+                  `, avec ${formatCurrency(inputs.monthlySavings)} d'épargne par mois`}
+              </p>
+              <div className="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate">{CURRENT_SERIES_LABEL}</p>
+                  <p className="font-serif text-5xl font-semibold tabular-nums text-ink">
+                    {Math.round(comparison.current.successPct)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate">
+                    {PROPOSAL_SERIES_LABEL}{" "}
+                    <span className="font-mono normal-case text-emerald-strong">
+                      {signedPoints(comparison.successGapPts)}
+                    </span>
+                  </p>
+                  <p className="font-serif text-5xl font-semibold tabular-nums text-emerald-strong">
+                    {Math.round(comparison.proposed.successPct)}%
+                  </p>
+                </div>
+              </div>
+              <p className="mt-1 text-sm text-slate">
+                des scénarios testés atteignent ou dépassent l&apos;objectif de{" "}
+                {formatCurrency(comparison.current.targetAmount)} dans {comparison.current.horizonYears} ans.
+              </p>
+            </div>
+          ) : (
+            <p className="rounded-md border border-line bg-paper px-4 py-3 text-sm text-slate">
+              Saisis un objectif de patrimoine net pour comparer les deux probabilités de
+              l&apos;atteindre. Les trajectoires simulées ci-dessous restent valables sans
+              objectif.
+            </p>
+          )}
+
+          <WealthGoalFanChart bands={comparison.current.bands} comparisonBands={comparison.proposed.bands} />
+
+          <div className="border-t border-line pt-3 text-sm">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-xs text-slate">
+                  <th className="pb-1 font-normal">Patrimoine net médian dans {comparison.current.horizonYears} ans</th>
+                  <th className="pb-1 text-right font-normal">{CURRENT_SERIES_LABEL}</th>
+                  <th className="pb-1 text-right font-normal">{PROPOSAL_SERIES_LABEL}</th>
+                  <th className="pb-1 text-right font-normal">Écart</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono tabular-nums text-ink">
+                <tr className="border-t border-line/50">
+                  <td className="py-1 font-sans">En euros courants</td>
+                  <td className="py-1 text-right">{formatCurrency(medianFinalNominal)}</td>
+                  <td className="py-1 text-right">{formatCurrency(proposedMedianNominal)}</td>
+                  <td className="py-1 text-right text-emerald-strong">{signedCurrency(comparison.medianGapNominal)}</td>
+                </tr>
+                <tr className="border-t border-line/50">
+                  <td className="py-1 font-sans">En euros constants</td>
+                  <td className="py-1 text-right text-slate">{formatCurrency(medianFinalReal)}</td>
+                  <td className="py-1 text-right text-slate">{formatCurrency(proposedMedianReal)}</td>
+                  <td className="py-1 text-right text-emerald-strong">{signedCurrency(comparison.medianGapReal)}</td>
+                </tr>
+                {inputs.monthlySavings > 0 && (
+                  <tr className="border-t border-line/50">
+                    <td className="py-1 font-sans">Épargne versée sur la période</td>
+                    <td className="py-1 text-right text-slate" colSpan={3}>
+                      {formatCurrency(inputs.monthlySavings * 12 * comparison.current.horizonYears)}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border-t border-line pt-3">
+            <p className="mb-2 text-sm text-ink">Détail par poste</p>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-slate">
+                  <th className="pb-1 font-normal">Poste</th>
+                  <th className="pb-1 text-right font-normal">{CURRENT_SERIES_LABEL}</th>
+                  <th className="pb-1 text-right font-normal">{PROPOSAL_SERIES_LABEL}</th>
+                  <th className="pb-1 text-right font-normal">Écart</th>
+                  <th className="pb-1 text-right font-normal">Rendement réel</th>
+                  <th className="pb-1 text-right font-normal">Frais / an</th>
+                  <th className="pb-1 text-right font-normal">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono tabular-nums text-ink">
+                {comparison.current.breakdown.map((row) => {
+                  const proposedRow = proposedRowsById?.get(row.categoryId) ?? row;
+                  const gap = proposedRow.amount - row.amount;
+                  const sameReturn = returnCell(row) === returnCell(proposedRow);
+                  const sameFees = row.feesPct === proposedRow.feesPct;
+                  return (
+                    <tr key={row.categoryId} className="border-t border-line/50">
+                      <td className="py-1 font-sans">{row.label}</td>
+                      <td className="py-1 text-right">{formatCurrency(row.amount)}</td>
+                      <td className="py-1 text-right">{formatCurrency(proposedRow.amount)}</td>
+                      <td className={`py-1 text-right ${Math.round(gap) === 0 ? "text-slate" : "text-ink"}`}>
+                        {signedCurrency(gap)}
+                      </td>
+                      <td className="py-1 text-right text-slate">
+                        {sameReturn ? returnCell(row) : `${returnCell(row)} → ${returnCell(proposedRow)}`}
+                      </td>
+                      <td className="py-1 text-right text-slate">
+                        {row.feesPct === null
+                          ? ""
+                          : sameFees
+                            ? formatPercent(row.feesPct, 1)
+                            : `${formatPercent(row.feesPct, 1)} → ${formatPercent(proposedRow.feesPct ?? 0, 1)}`}
+                      </td>
+                      <td className={`py-1 text-right font-sans text-[11px] ${ROW_STATUS_CLASS[row.status]}`}>
+                        {ROW_STATUS_LABEL[row.status]}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : (
         <>
           {result.targetAmount > 0 ? (
@@ -351,13 +540,7 @@ export function WealthGoalSection({
                   <tr key={row.categoryId} className="border-t border-line/50">
                     <td className="py-1 font-sans">{row.label}</td>
                     <td className="py-1 text-right">{formatCurrency(row.amount)}</td>
-                    <td className="py-1 text-right text-slate">
-                      {row.meanPct === null
-                        ? "non projeté"
-                        : row.stdPct > 0
-                          ? `${formatPercent(row.meanPct, 2)} ± ${formatPercent(row.stdPct, 1)}`
-                          : formatPercent(row.meanPct, 2)}
-                    </td>
+                    <td className="py-1 text-right text-slate">{returnCell(row)}</td>
                     <td className="py-1 text-right text-slate">
                       {row.feesPct === null ? "" : formatPercent(row.feesPct, 1)}
                     </td>
@@ -372,6 +555,68 @@ export function WealthGoalSection({
         </>
       )}
 
+      <div className="flex flex-col gap-3 border-t border-line pt-3">
+        {draft ? (
+          <WealthGoalProposalEditor
+            draft={draft}
+            onDraftChange={setDraft}
+            reallocatableTotal={reallocatableTotal}
+            currentAmounts={amounts}
+            onStartFromCurrent={() => setDraft(startFromCurrent())}
+            onSave={saveProposal}
+            onCancel={() => {
+              setDraft(null);
+              setProposalError(null);
+            }}
+            isSaving={isProposalPending}
+            errorMessage={proposalError}
+          />
+        ) : proposal ? (
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <span className="text-ink">Allocation proposée enregistrée.</span>
+            <button
+              type="button"
+              onClick={openEditor}
+              className="text-slate underline decoration-dotted underline-offset-2 hover:text-ink"
+            >
+              Modifier la proposition
+            </button>
+            <button
+              type="button"
+              onClick={removeProposal}
+              disabled={isProposalPending}
+              className="text-slate underline decoration-dotted underline-offset-2 hover:text-bronze disabled:opacity-50"
+            >
+              Supprimer la proposition
+            </button>
+            <a
+              href={`/clients/${clientId}/goal/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-xs font-medium text-slate transition-colors hover:border-emerald hover:text-emerald"
+            >
+              <FileDown className="h-3 w-3" />
+              Exporter la comparaison en PDF
+            </a>
+            {proposalError && <span className="text-xs text-bronze">{proposalError}</span>}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <button
+              type="button"
+              onClick={openEditor}
+              className="rounded-md border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-emerald hover:text-emerald"
+            >
+              Proposer une allocation
+            </button>
+            <span className="text-xs text-slate">
+              Comparer la probabilité actuelle avec celle d&apos;une réallocation de la poche
+              financière, sur les mêmes tirages.
+            </span>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center gap-1.5 border-t border-line pt-3 text-xs text-slate">
         <span>Méthodologie</span>
         <InfoTooltip>
@@ -385,6 +630,15 @@ export function WealthGoalSection({
             l&apos;objectif — même convention que le montant saisi, pas déflatée.
           </p>
           <p className="mb-2">
+            <strong>Comparaison avant / après</strong> : la situation actuelle et la
+            proposition sont simulées sur les mêmes tirages aléatoires (même graine).
+            L&apos;immobilier, les prêts, l&apos;entreprise, les autres actifs,
+            l&apos;épargne et l&apos;inflation sont identiques des deux côtés ; seule la
+            poche financière, sa répartition par indice et ses frais changent. Le total
+            proposé doit être égal à la poche financière actuelle. Aucun frais de
+            transaction ni fiscalité d&apos;arbitrage n&apos;est modélisé.
+          </p>
+          <p className="mb-2">
             <strong>Frais annuels</strong> : soustraits du rendement nominal de chaque
             poste chaque année (gestion, dépôt, frais de fonds). Défauts : actions
             1,5 %, obligations 1 %, Private Equity 2 %, SCPI et immobilier 0 % (le
@@ -395,7 +649,7 @@ export function WealthGoalSection({
             <strong>Épargne mensuelle</strong> : versée en fin de chaque année simulée
             (12 mois d&apos;un coup, sans rendement l&apos;année du versement, hypothèse
             prudente) dans les poches financières, au prorata de l&apos;allocation
-            actuelle — jamais dans l&apos;immobilier ni dans les poches non projetées.
+            de chaque côté — jamais dans l&apos;immobilier ni dans les poches non projetées.
           </p>
           <p className="mb-2">
             <strong>Simplification assumée sur les Actions</strong> : quand plusieurs

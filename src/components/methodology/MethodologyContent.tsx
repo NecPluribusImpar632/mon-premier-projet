@@ -1,4 +1,5 @@
 import { reliabilityTierForR2 } from "@/lib/scenarios/statisticalReliability";
+import { USAGE_FRAME_TEXT, USAGE_FRAME_TITLE } from "@/lib/methodology/usageFrame";
 import {
   methodologyRowsByGroup,
   type MethodologyConfidence,
@@ -51,17 +52,8 @@ export function MethodologyContent() {
   return (
     <div className="flex w-full flex-col gap-12">
       <section className="rounded-md border border-line bg-paper px-5 py-4">
-        <h2 className="text-sm font-medium text-ink">Cadre d&apos;usage</h2>
-        <p className={`mt-2 ${P_CLASS}`}>
-          Cet outil est un instrument de simulation et d&apos;aide à la décision destiné aux
-          conseillers en gestion de patrimoine. Il ne constitue pas, par lui-même, un conseil
-          en investissement ni une recommandation personnalisée au sens réglementaire. Les
-          résultats reposent sur les hypothèses et les données historiques décrites sur cette
-          page. Ils ne garantissent aucune performance future et ne dispensent pas d&apos;une
-          analyse individualisée de la situation du client. La formulation de toute
-          recommandation, et la responsabilité qui l&apos;accompagne, reste celle du
-          conseiller.
-        </p>
+        <h2 className="text-sm font-medium text-ink">{USAGE_FRAME_TITLE}</h2>
+        <p className={`mt-2 ${P_CLASS}`}>{USAGE_FRAME_TEXT}</p>
       </section>
 
       <section className="flex flex-col gap-4">
@@ -202,6 +194,19 @@ export function MethodologyContent() {
           sont ensuite déflatés par l&apos;inflation française. Les moyennes sont arithmétiques,
           le format requis pour un tirage annuel. Le CAC 40 est mesuré hors dividendes, faute
           de série publique complète avec dividendes ; son rendement est donc sous-estimé.
+        </p>
+        <p className={P_CLASS}>
+          La comparaison avant / après simule deux fois le même client : la situation
+          actuelle et l&apos;allocation proposée par le conseiller. Les deux simulations
+          partagent la même graine aléatoire, donc les mêmes 2000 séries de tirages. Les
+          biens immobiliers, les prêts, l&apos;entreprise, les autres actifs, l&apos;épargne
+          mensuelle, l&apos;inflation et l&apos;objectif sont identiques des deux côtés.
+          Seules la répartition de la poche financière entre actions, obligations, SCPI,
+          liquidités, Private Equity et matières premières, la répartition par indice et
+          les frais par poste changent. Le total proposé est contraint d&apos;être égal à la
+          poche financière actuelle. L&apos;écart mesuré vient donc de l&apos;allocation et
+          non du hasard. Aucun frais de transaction ni fiscalité d&apos;arbitrage
+          n&apos;est modélisé.
         </p>
       </section>
 

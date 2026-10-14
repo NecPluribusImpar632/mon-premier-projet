@@ -97,6 +97,20 @@ export interface WealthGoalInputs {
   fees: AnnualFeesPct;
 }
 
+/**
+ * The PRNG seed depends only on what the current situation and the proposal
+ * share (goal, horizon, inflation, savings, real estate), never on the
+ * financial allocation, the index breakdown or the fees. The before/after
+ * comparison then runs both simulations on the very same random draws, so
+ * the gap between them comes from the allocation, not from sampling noise.
+ */
+export function wealthGoalSeed(context: WealthGoalContext, inputs: WealthGoalInputs): number {
+  const annualSavings = Math.max(inputs.monthlySavingsAmount, 0) * 12;
+  return hashSeed(
+    `${inputs.targetAmount}|${inputs.targetAge}|${inputs.currentAge}|${inputs.inflationPct}|${annualSavings}|${context.properties.map((p) => p.id).join(",")}|${context.immobilierValue}`
+  );
+}
+
 interface RealEstatePocket {
   currentValue: number;
   /** Appréciation nationale + (si loué) rendement locatif net propre au bien,
@@ -189,7 +203,8 @@ function actionsSourceNote(breakdown: ActionsIndexBreakdown, calibratedWeightPct
  */
 export function computeWealthGoalMonteCarlo(
   context: WealthGoalContext,
-  inputs: WealthGoalInputs
+  inputs: WealthGoalInputs,
+  seed: number = wealthGoalSeed(context, inputs)
 ): MonteCarloResult {
   const { amounts, properties, immobilierValue } = context;
   const { currentAge, targetAge, targetAmount, inflationPct, actionsIndexBreakdown } = inputs;
@@ -249,11 +264,7 @@ export function computeWealthGoalMonteCarlo(
   const savingsPe = savingsShare(savingsBase.pe, false);
   const savingsMatieresPremieres = savingsShare(savingsBase.matieresPremieres, false);
 
-  const random = mulberry32(
-    hashSeed(
-      `${targetAmount}|${targetAge}|${currentAge}|${inflationPct}|${annualSavings}|${JSON.stringify(fees)}|${actionsAmount}|${JSON.stringify(actionsIndexBreakdown)}|${properties.map((p) => p.id).join(",")}|${immobilierValue}`
-    )
-  );
+  const random = mulberry32(seed);
 
   // trials[trial][year] = net worth
   const trials: number[][] = [];
@@ -271,25 +282,26 @@ export function computeWealthGoalMonteCarlo(
 
     for (let year = 0; year <= horizonYears; year++) {
       if (year > 0) {
+        // The three draws are consumed every year whether or not the poste
+        // holds anything: two simulations sharing a seed (current situation
+        // vs. proposal) must walk the same random sequence even when one of
+        // them has no SCPI, or no actions, and the other does.
         const zActions = drawStandardNormal(random);
+        const zImmobilier = drawStandardNormal(random);
+        const zScpi = drawStandardNormal(random);
+
         actionsValue *= 1 + (actionsNominalMean + zActions * actionsNominalStd) / 100;
 
-        if (pocketValues.length > 0) {
-          // One shared shock per year for every property — pockets[i].nominalMeanPct
-          // is already nominal (computed once via realEstatePockets), only the
-          // std is random, and it's the same national std for every pocket.
-          const zImmobilier = drawStandardNormal(random);
-          pocketValues = pocketValues.map((value, i) => {
-            const pocketReturn =
-              (pockets[i].nominalMeanPct + zImmobilier * immobilierNominalStd) / 100;
-            return value * (1 + pocketReturn);
-          });
-        }
+        // One shared shock per year for every property — pockets[i].nominalMeanPct
+        // is already nominal (computed once via realEstatePockets), only the
+        // std is random, and it's the same national std for every pocket.
+        pocketValues = pocketValues.map((value, i) => {
+          const pocketReturn =
+            (pockets[i].nominalMeanPct + zImmobilier * immobilierNominalStd) / 100;
+          return value * (1 + pocketReturn);
+        });
 
-        if (scpiValue > 0) {
-          const zScpi = drawStandardNormal(random);
-          scpiValue *= 1 + (scpiNominalMean + zScpi * scpiNominalStd) / 100;
-        }
+        scpiValue *= 1 + (scpiNominalMean + zScpi * scpiNominalStd) / 100;
 
         obligationsValue *= 1 + obligationsNominalRate / 100;
         liquiditesValue *= 1 + liquiditesNominalRate / 100;

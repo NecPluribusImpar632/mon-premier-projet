@@ -12,6 +12,7 @@ import {
 import { buildClientScenarioContext } from "@/lib/scenarios/clientContext";
 import { ClientDetailTabs } from "@/components/client/ClientDetailTabs";
 import { isClientTab } from "@/lib/client/clientTabs";
+import { proposalDataFromRow } from "@/lib/wealth/wealthGoalProposal";
 
 interface ClientDetailPageProps {
   params: Promise<{ id: string }>;
@@ -74,6 +75,9 @@ export default async function ClientDetailPage({
       initialWealthGoalAmount={client.wealthGoalAmount}
       initialWealthGoalAge={client.wealthGoalAge}
       initialWealthGoalInflationPct={client.wealthGoalInflationPct}
+      initialWealthGoalProposal={
+        client.wealthGoalProposal ? proposalDataFromRow(client.wealthGoalProposal) : null
+      }
     />
   );
 }

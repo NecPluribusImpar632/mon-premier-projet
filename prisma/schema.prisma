@@ -68,6 +68,7 @@ model Client {
   savedScenarios                SavedScenario[]
   wrapperAllocations            WrapperAllocation[]
   actionsIndexAllocations       ActionsIndexAllocation[]
+  wealthGoalProposal            WealthGoalProposal?
 
   @@index([ownerId])
 }
@@ -159,4 +160,29 @@ model SavedScenario {
   updatedAt                DateTime @updatedAt
   clientId                 String
   client                   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+/// Allocation proposée par le conseiller pour la comparaison avant / après de
+/// l'objectif patrimonial : une seule par client, mêmes six postes financiers
+/// que l'allocation actuelle (l'immobilier, les prêts, l'entreprise et Autres
+/// ne bougent pas). Le total doit égaler la poche financière actuelle.
+model WealthGoalProposal {
+  id                      String   @id @default(cuid())
+  clientId                String   @unique
+  client                  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  actionsAmount           Float    @default(0)
+  obligationsAmount       Float    @default(0)
+  scpiAmount              Float    @default(0)
+  liquiditesAmount        Float    @default(0)
+  privateEquityAmount     Float    @default(0)
+  matieresPremieresAmount Float    @default(0)
+  /// Répartition par indice actions, { [ReferenceIndex]: pourcentage }, total 100.
+  actionsIndexBreakdown   Json
+  feesActionsPct          Float
+  feesObligationsPct      Float
+  feesScpiPct             Float
+  feesPrivateEquityPct    Float
+  feesImmobilierPct       Float
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
