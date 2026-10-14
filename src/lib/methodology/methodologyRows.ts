@@ -116,6 +116,17 @@ export const METHODOLOGY_ROWS: MethodologyRow[] = [
     confidence: { kind: "distribution", years: "51 ans" },
   },
   {
+    id: "immobilier-quote-part",
+    group: "Immobilier",
+    variant: "Quote-part et mode de détention",
+    usage: "Stress test et objectif",
+    source: "Saisie du conseiller sur chaque bien",
+    period: "Sans objet",
+    retained:
+      "Valeur, loyers et dette comptés à la quote-part détenue (un prêt marqué « porté à 100 % » reste entier) ; le mode de détention est informatif, la SCI à l'IS met en évidence son régime dans le comparateur fiscal ; démembrement compté à la quote-part de la pleine propriété, sans décote ni valorisation de l'usufruit",
+    confidence: { kind: "assumption" },
+  },
+  {
     id: "or-argent",
     group: "Or et argent",
     variant: "Sensibilité à l'inflation",

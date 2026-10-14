@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import { createProperty } from "@/lib/actions/properties";
 import { PropertyForm } from "@/components/property/PropertyForm";
+import { isCoupleForIncomeTax } from "@/lib/client/maritalStatus";
 
 interface NewPropertyPageProps {
   params: Promise<{ id: string }>;
@@ -25,7 +26,11 @@ export default async function NewPropertyPage({ params }: NewPropertyPageProps) 
         </h1>
         <p className="mt-1 text-sm text-slate">Pour {client.name}</p>
       </div>
-      <PropertyForm action={createPropertyForClient} submitLabel="Créer" />
+      <PropertyForm
+        action={createPropertyForClient}
+        submitLabel="Créer"
+        isCoupleHousehold={isCoupleForIncomeTax(client.maritalStatus)}
+      />
     </div>
   );
 }

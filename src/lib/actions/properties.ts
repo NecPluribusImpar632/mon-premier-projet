@@ -9,6 +9,7 @@ import { isAmortizationType } from "@/lib/property/loanTypes";
 import { getCommunesForDepartment } from "@/lib/property/communesZonage";
 import { PARIS_DEPARTMENT_CODE } from "@/lib/property/departments";
 import { assertClientAccess } from "@/lib/auth/clientAccess";
+import { isHoldingMode, isValidOwnershipShare } from "@/lib/property/ownership";
 
 function parseRequiredNonNegativeNumber(value: unknown): number {
   const sanitized = String(value ?? "").replace(/[^\d.]/g, "");
@@ -23,6 +24,17 @@ function parsePropertyFormData(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const currentValue = parseRequiredNonNegativeNumber(formData.get("currentValue"));
   const isPrimaryResidence = formData.get("isPrimaryResidence") != null;
+
+  const ownershipSharePct = Number(
+    String(formData.get("ownershipSharePct") ?? "").trim().replace(",", ".")
+  );
+  if (!isValidOwnershipShare(ownershipSharePct)) {
+    throw new Error("La quote-part détenue doit être comprise entre 0,01 et 100 %.");
+  }
+  const holdingMode = String(formData.get("holdingMode") ?? "direct");
+  if (!isHoldingMode(holdingMode)) {
+    throw new Error("Mode de détention invalide.");
+  }
 
   const monthlyRentRaw = String(formData.get("monthlyRent") ?? "").trim();
   const monthlyRent =
@@ -79,6 +91,8 @@ function parsePropertyFormData(formData: FormData) {
     name,
     currentValue,
     isPrimaryResidence,
+    ownershipSharePct,
+    holdingMode,
     monthlyRent,
     acquisitionPrice,
     acquisitionDate,
@@ -103,6 +117,7 @@ function parseLoansFormData(formData: FormData) {
     const rateType = String(get("rateType") ?? "fixed");
     const amortizationType = String(get("amortizationType") ?? "amortissable");
     const termYearsRaw = Number(get("termYears"));
+    const borneFullyByClient = get("borneFullyByClient") != null;
 
     if (!isRateType(rateType)) {
       throw new Error("Le type de taux d'un prêt doit être fixe ou variable.");
@@ -127,6 +142,7 @@ function parseLoansFormData(formData: FormData) {
       rateType,
       amortizationType,
       residualAmount,
+      borneFullyByClient,
       termYears: termYearsRaw,
     };
   });

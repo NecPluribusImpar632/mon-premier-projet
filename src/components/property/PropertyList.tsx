@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
-import { Building2, Calculator, Coins, Key, Landmark, MapPin, TrendingUp } from "lucide-react";
+import { Building2, Calculator, Coins, Key, Landmark, MapPin, PieChart, Scale, TrendingUp } from "lucide-react";
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
 import { AMORTIZATION_TYPE_LABELS, type AmortizationType } from "@/lib/property/loanTypes";
 import { DEPARTMENT_LABEL, arrondissementLabel } from "@/lib/property/departments";
@@ -9,6 +9,15 @@ import {
   type PropertyWithLoans,
 } from "@/lib/property/loanCalculations";
 import { computeRentalYield } from "@/lib/property/rentalYield";
+import {
+  DISMEMBERMENT_NOTE,
+  holdingModeLabel,
+  isDismemberment,
+  isPartialOwnership,
+  ownedLoanAmount,
+  ownedMonthlyRent,
+  ownedValue,
+} from "@/lib/property/ownership";
 import { roundPercent } from "@/lib/format/percent";
 import { DeletePropertyButton } from "@/components/property/DeletePropertyButton";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -40,6 +49,9 @@ export function PropertyList({ clientId, properties }: PropertyListProps) {
     <div className="flex flex-col border-t border-line">
       {properties.map((property) => {
         const rentalYield = computeRentalYield(property);
+        const partial = isPartialOwnership(property);
+        const shareLabel = `${roundPercent(property.ownershipSharePct, 2)} %`;
+        const ownedRent = ownedMonthlyRent(property);
 
         return (
           <article key={property.id} className="border-b border-line py-5">
@@ -88,18 +100,35 @@ export function PropertyList({ clientId, properties }: PropertyListProps) {
               />
               <PropertyLine
                 icon={Coins}
-                label="Valeur actuelle"
+                label={partial ? "Valeur totale du bien" : "Valeur actuelle"}
                 value={currencyFormatter.format(property.currentValue)}
+              />
+              {partial && (
+                <PropertyLine
+                  icon={PieChart}
+                  label={`Quote-part détenue (${shareLabel})`}
+                  value={currencyFormatter.format(ownedValue(property))}
+                />
+              )}
+              <PropertyLine
+                icon={Scale}
+                label="Mode de détention"
+                value={holdingModeLabel(property.holdingMode)}
+                hint={isDismemberment(property.holdingMode) ? DISMEMBERMENT_NOTE : undefined}
+                warn={isDismemberment(property.holdingMode)}
               />
               <PropertyLine
                 icon={Key}
-                label="Loyer mensuel"
+                label={partial ? "Loyer mensuel (quote-part)" : "Loyer mensuel"}
                 value={
-                  property.monthlyRent !== null
-                    ? `${currencyFormatter.format(property.monthlyRent)}/mois`
-                    : "Non loué"
+                  ownedRent !== null ? `${currencyFormatter.format(ownedRent)}/mois` : "Non loué"
                 }
-                muted={property.monthlyRent === null}
+                hint={
+                  partial && property.monthlyRent !== null
+                    ? `${currencyFormatter.format(property.monthlyRent)} au total`
+                    : undefined
+                }
+                muted={ownedRent === null}
               />
               <PropertyLine
                 icon={TrendingUp}
@@ -112,6 +141,7 @@ export function PropertyList({ clientId, properties }: PropertyListProps) {
                 <LoanLine
                   key={loan.id}
                   loan={loan}
+                  ownedAmount={ownedLoanAmount(loan, property)}
                   last={index === property.loans.length - 1}
                 />
               ))}
@@ -129,6 +159,8 @@ interface PropertyLineProps {
   value: string;
   hint?: string;
   muted?: boolean;
+  /** Bronze hint, for a caveat rather than a detail. */
+  warn?: boolean;
   last?: boolean;
 }
 
@@ -138,6 +170,7 @@ function PropertyLine({
   value,
   hint,
   muted,
+  warn,
   last,
 }: PropertyLineProps) {
   return (
@@ -156,7 +189,11 @@ function PropertyLine({
         }`}
       >
         {value}
-        {hint && <span className="ml-1.5 font-sans text-xs text-slate">({hint})</span>}
+        {hint && (
+          <span className={`ml-1.5 font-sans text-xs ${warn ? "text-bronze" : "text-slate"}`}>
+            ({hint})
+          </span>
+        )}
       </dd>
     </div>
   );
@@ -164,10 +201,12 @@ function PropertyLine({
 
 interface LoanLineProps {
   loan: PropertyWithLoans["loans"][number];
+  /** The client's share of the remaining capital (see ownership.ts). */
+  ownedAmount: number;
   last?: boolean;
 }
 
-function LoanLine({ loan, last }: LoanLineProps) {
+function LoanLine({ loan, ownedAmount, last }: LoanLineProps) {
   const schedule = computeAmortizationSchedule(loan);
 
   return (
@@ -209,7 +248,15 @@ function LoanLine({ loan, last }: LoanLineProps) {
         </InfoTooltip>
       </dt>
       <dd className="font-mono text-sm tabular-nums text-ink">
-        {currencyFormatter.format(loan.remainingAmount)}
+        {currencyFormatter.format(ownedAmount)}
+        {Math.round(ownedAmount) !== Math.round(loan.remainingAmount) && (
+          <span className="ml-1.5 font-sans text-xs text-slate">
+            ({currencyFormatter.format(loan.remainingAmount)} au total)
+          </span>
+        )}
+        {loan.borneFullyByClient && (
+          <span className="ml-1.5 font-sans text-xs text-slate">(porté à 100 %)</span>
+        )}
       </dd>
     </div>
   );

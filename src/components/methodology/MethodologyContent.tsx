@@ -103,6 +103,28 @@ export function MethodologyContent() {
       </section>
 
       <section className={SECTION_CLASS}>
+        <h2 className={H2_CLASS}>Quote-part et mode de détention des biens</h2>
+        <p className={P_CLASS}>
+          Chaque bien porte la quote-part détenue par le client, 100 % par défaut. Toute la
+          chaîne de calcul s&apos;y ramène : valeur dans le bilan et la liste des clients,
+          loyers, rendement, IFI (quote-part de la valeur et de la dette déductible), stress
+          test, objectif patrimonial et flux. La dette suit la même quote-part, sauf pour un
+          prêt marqué « porté à 100 % par le client », compté en entier. La part du conjoint
+          dans un bien détenu en commun se saisit dans « Immobilier du conjoint » de la
+          situation familiale, pour que l&apos;IFI du foyer reste complet.
+        </p>
+        <p className={P_CLASS}>
+          Le mode de détention (détention directe, indivision, SCI à l&apos;IR, SCI à
+          l&apos;IS, nue-propriété, usufruit) est informatif : il est affiché sur la fiche
+          du bien, la vue d&apos;ensemble et le PDF, et la SCI à l&apos;IS met en évidence son
+          régime dans le comparateur fiscal. Il ne change aucun calcul. Les deux cas de
+          démembrement sont comptés à la quote-part de la pleine propriété, sans décote de
+          nue-propriété ni valorisation de l&apos;usufruit, avec la mention « évaluation à
+          adapter, non modélisée ».
+        </p>
+      </section>
+
+      <section className={SECTION_CLASS}>
         <h2 className={H2_CLASS}>Principe de calibration</h2>
         <p className={P_CLASS}>
           Chaque classe d&apos;actif est calée sur le marché qui détermine son prix.
@@ -262,6 +284,11 @@ export function MethodologyContent() {
           <li>
             Dans les flux, les revenus sont supposés constants jusqu&apos;à l&apos;échéance,
             en euros constants : ni progression de carrière, ni départ en retraite.
+          </li>
+          <li>
+            Le démembrement n&apos;est pas modélisé : nue-propriété et usufruit sont comptés
+            à la quote-part de la pleine propriété, sans décote ni valorisation de
+            l&apos;usufruit.
           </li>
         </ul>
       </section>

@@ -1,9 +1,13 @@
 import type { Loan, Property } from "@/generated/prisma/client";
+import { ownedLoanAmount } from "@/lib/property/ownership";
 
 export type PropertyWithLoans = Property & { loans: Loan[] };
 
+/** The client's share of the property's debt (see ownership.ts): a loan
+ * follows the property's quote-part unless it is marked as borne by the
+ * client alone. */
 export function totalRemainingDebt(property: PropertyWithLoans): number {
-  return property.loans.reduce((sum, loan) => sum + loan.remainingAmount, 0);
+  return property.loans.reduce((sum, loan) => sum + ownedLoanAmount(loan, property), 0);
 }
 
 export interface AmortizationYear {

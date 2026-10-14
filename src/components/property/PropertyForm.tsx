@@ -1,5 +1,6 @@
 import { LocationFields } from "@/components/property/LocationFields";
 import { LoanFields } from "@/components/property/LoanFields";
+import { OwnershipFields } from "@/components/property/OwnershipFields";
 import { FormattedNumberInput } from "@/components/ui/FormattedNumberInput";
 import { NUMERIC_FIELD_CLASS, FIELD_CLASS } from "@/components/ui/fieldStyles";
 import { SubmitButton } from "@/components/ui/SubmitButton";
@@ -9,11 +10,18 @@ interface PropertyFormProps {
   action: (formData: FormData) => void | Promise<void>;
   defaultValues?: PropertyWithLoans;
   submitLabel: string;
+  /** Marié ou pacsé : the share hint points to the spouse's IFI field. */
+  isCoupleHousehold: boolean;
 }
 
 // Shared by the create and edit pages so both stay in sync — only the bound
 // action, pre-filled values, and submit label differ between the two.
-export function PropertyForm({ action, defaultValues, submitLabel }: PropertyFormProps) {
+export function PropertyForm({
+  action,
+  defaultValues,
+  submitLabel,
+  isCoupleHousehold,
+}: PropertyFormProps) {
   return (
     <form action={action} className="flex flex-col gap-5">
       <label className="flex flex-col gap-1.5 text-sm text-slate">
@@ -41,6 +49,11 @@ export function PropertyForm({ action, defaultValues, submitLabel }: PropertyFor
           className={NUMERIC_FIELD_CLASS}
         />
       </label>
+      <OwnershipFields
+        defaultSharePct={defaultValues?.ownershipSharePct ?? 100}
+        defaultHoldingMode={defaultValues?.holdingMode ?? "direct"}
+        isCoupleHousehold={isCoupleHousehold}
+      />
       <label className="flex items-center gap-2 text-sm text-slate">
         <input
           name="isPrimaryResidence"

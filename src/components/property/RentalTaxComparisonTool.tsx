@@ -20,6 +20,9 @@ interface RentalTaxComparisonToolProps {
   acquisitionPrice: number;
   acquisitionDate: Date;
   currentValue: number;
+  /** The regime the property's holding mode already implies (SCI à l'IS),
+   * highlighted as the current one; null when the mode says nothing. */
+  currentRegimeId: RegimeResult["regimeId"] | null;
 }
 
 type NumericField = Exclude<keyof RegimeResult, "regimeId" | "label">;
@@ -30,6 +33,7 @@ export function RentalTaxComparisonTool({
   acquisitionPrice,
   acquisitionDate,
   currentValue,
+  currentRegimeId,
 }: RentalTaxComparisonToolProps) {
   const [annualDeductibleCharges, setAnnualDeductibleCharges] = useState(0);
   const [tmiPct, setTmiPct] = useState<TmiBracket>(30);
@@ -109,30 +113,43 @@ export function RentalTaxComparisonTool({
             <tr className="border-b border-line text-left">
               <th className="p-4 font-normal text-slate"></th>
               {results.map((result) => (
-                <th key={result.regimeId} className="p-4 font-medium text-ink">
+                <th
+                  key={result.regimeId}
+                  className={`p-4 font-medium text-ink ${
+                    result.regimeId === currentRegimeId ? "bg-emerald/10" : ""
+                  }`}
+                >
                   {result.label}
+                  {result.regimeId === currentRegimeId && (
+                    <span className="mt-1 block text-[11px] font-normal text-emerald-strong">
+                      Régime actuel (mode de détention du bien)
+                    </span>
+                  )}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className="font-mono tabular-nums text-ink">
-            <ResultRow label="Résultat imposable annuel" results={results} field="taxableResult" />
-            <ResultRow label="Impôt sur le revenu (ou IS)" results={results} field="incomeTax" />
+            <ResultRow label="Résultat imposable annuel" results={results} field="taxableResult" highlightId={currentRegimeId} />
+            <ResultRow label="Impôt sur le revenu (ou IS)" results={results} field="incomeTax" highlightId={currentRegimeId} />
             <ResultRow
               label="Prélèvements sociaux"
               results={results}
               field="socialContributions"
+              highlightId={currentRegimeId}
             />
             <ResultRow
               label="Revenu net après impôt (annuel)"
               results={results}
               field="netIncomeAfterTax"
               bold
+              highlightId={currentRegimeId}
             />
             <ResultRow
               label="Déficit non imputable / reportable"
               results={results}
               field="nonImputableOrCarriedForward"
+              highlightId={currentRegimeId}
             />
             <tr>
               <td colSpan={results.length + 1} className="border-t border-line p-0"></td>
@@ -253,9 +270,10 @@ interface ResultRowProps {
   field: NumericField;
   bold?: boolean;
   last?: boolean;
+  highlightId?: RegimeResult["regimeId"] | null;
 }
 
-function ResultRow({ label, results, field, bold, last }: ResultRowProps) {
+function ResultRow({ label, results, field, bold, last, highlightId }: ResultRowProps) {
   return (
     <tr className={last ? "" : "border-b border-line/70"}>
       <td className={`p-4 font-sans ${bold ? "font-medium text-ink" : "text-slate"}`}>
@@ -268,7 +286,7 @@ function ResultRow({ label, results, field, bold, last }: ResultRowProps) {
             key={result.regimeId}
             className={`p-4 ${bold ? "font-semibold" : ""} ${
               rawValue < 0 ? "text-bronze" : ""
-            }`}
+            } ${result.regimeId === highlightId ? "bg-emerald/10" : ""}`}
           >
             {formatCurrency(rawValue)}
           </td>

@@ -11,6 +11,14 @@ import {
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { RATE_TYPE_LABELS, type RateType } from "@/lib/property/rateType";
 import { computeRentalYield } from "@/lib/property/rentalYield";
+import {
+  DISMEMBERMENT_NOTE,
+  holdingModeLabel,
+  isDismemberment,
+  isPartialOwnership,
+  ownedLoanAmount,
+  ownedValue,
+} from "@/lib/property/ownership";
 import { computeClientNetWorth } from "@/lib/wealth/netWorth";
 
 type ClientWithDetails = NonNullable<Awaited<ReturnType<typeof getClient>>>;
@@ -177,7 +185,12 @@ export function ClientProfilePdf({ client }: { client: ClientWithDetails }) {
               const debt = totalRemainingDebt(property);
               const metaParts = [
                 location,
-                currencyFormatter.format(property.currentValue),
+                isPartialOwnership(property)
+                  ? `${currencyFormatter.format(property.currentValue)} au total, quote-part ${property.ownershipSharePct} % : ${currencyFormatter.format(ownedValue(property))}`
+                  : currencyFormatter.format(property.currentValue),
+                isDismemberment(property.holdingMode)
+                  ? `${holdingModeLabel(property.holdingMode)} (${DISMEMBERMENT_NOTE.toLowerCase()})`
+                  : holdingModeLabel(property.holdingMode),
                 yieldPct !== null
                   ? `${percentFormatter.format(yieldPct)} % de rendement locatif`
                   : null,
@@ -196,7 +209,8 @@ export function ClientProfilePdf({ client }: { client: ClientWithDetails }) {
                         {loan.rate} %
                       </Text>
                       <Text style={styles.value}>
-                        {currencyFormatter.format(loan.remainingAmount)}
+                        {currencyFormatter.format(ownedLoanAmount(loan, property))}
+                        {loan.borneFullyByClient ? " (porté à 100 %)" : ""}
                       </Text>
                     </View>
                   ))}

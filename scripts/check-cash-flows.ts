@@ -14,6 +14,12 @@ import { projectLoanAnnualPayment, projectLoanBalance } from "@/lib/property/loa
 import { computeCashFlowSchedule } from "@/lib/wealth/cashFlows";
 import { computeWealthGoalMonteCarlo } from "@/lib/wealth/monteCarloProjection";
 import type { Loan, Property } from "@/generated/prisma/client";
+import { totalRemainingDebt } from "@/lib/property/loanCalculations";
+import { computeNetWorth } from "@/lib/wealth/netWorth";
+import { computeIfi } from "@/lib/fiscal/ifi";
+import { computeRealEstateShockImpact, computeRateHikeImpact } from "@/lib/scenarios/calculations";
+import { resolveRealEstateSensitivity } from "@/lib/scenarios/realEstateSensitivity";
+import { effectiveImmobilierAmount } from "@/lib/allocation/mapping";
 
 let failures = 0;
 function check(label: string, ok: boolean, detail = "") {
@@ -46,7 +52,7 @@ check("indexation barème", near(computeIncomeTax(45_000, 1, INCOME_TAX_SCALE_20
 // ---- Loans
 const baseLoan: Loan = {
   id: "l1", label: null, originalAmount: 200_000, remainingAmount: 200_000, rate: 3, rateType: "fixed",
-  amortizationType: "amortissable", residualAmount: null, termYears: 20, startDate: null,
+  amortizationType: "amortissable", residualAmount: null, borneFullyByClient: false, termYears: 20, startDate: null,
   createdAt: new Date(), updatedAt: new Date(), propertyId: "p1",
 };
 const M = (200_000 * (0.03 / 12)) / (1 - Math.pow(1 + 0.03 / 12, -240));
@@ -76,6 +82,7 @@ check("dernière année au prorata", near(p3, p1 / 2, 1) && projectLoanAnnualPay
 // ---- Schedule
 const property: Property & { loans: Loan[] } = {
   id: "p1", name: "Bien", currentValue: 300_000, isPrimaryResidence: false, monthlyRent: 1_000,
+  ownershipSharePct: 100, holdingMode: "direct",
   acquisitionPrice: null, acquisitionDate: null, department: null, arrondissement: null, communeCode: null,
   createdAt: new Date(), updatedAt: new Date(), clientId: "c1", loans: [baseLoan],
 };
@@ -123,6 +130,39 @@ check("déficit : patrimoine médian final négatif", d.bands.p50[20].netWorth <
 const mild = { incomeFranceAnnual: 0, incomeForeignAnnual: 0, livingExpensesAnnual: 5_000, fiscalParts: 1 };
 const m = computeWealthGoalMonteCarlo(noProp, { ...base, inflationPct: 0, monthlySavingsAmount: 0, flows: mild }, 7);
 check("déficit léger : rien d'épuisé, patrimoine < sans flux", m.flows!.depletedPct === 0 && m.bands.p50[20].netWorth < computeWealthGoalMonteCarlo(noProp, { ...base, inflationPct: 0, monthlySavingsAmount: 0, flows: null }, 7).bands.p50[20].netWorth);
+
+// ---- Quote-part et mode de détention (ownership.ts)
+const sharedLoan: Loan = { ...baseLoan, id: "l2", remainingAmount: 100_000, borneFullyByClient: true };
+const half: Property & { loans: Loan[] } = {
+  ...property,
+  id: "p2",
+  currentValue: 400_000,
+  monthlyRent: 2_000,
+  acquisitionPrice: 300_000,
+  ownershipSharePct: 50,
+  holdingMode: "indivision",
+  loans: [baseLoan, sharedLoan],
+};
+check("dette : 50 % du prêt partagé + 100 % du prêt porté", near(totalRemainingDebt(half), 100_000 + 100_000, 0.01));
+check("immobilier effectif à la quote-part", near(effectiveImmobilierAmount(999, [half]), 200_000, 0.01));
+const nw = computeNetWorth(0, effectiveImmobilierAmount(0, [half]), [half]);
+check("patrimoine net = 200k - 200k", near(nw.netWealth, 0, 0.01));
+const ifi = computeIfi([half, { ...half, id: "p3", isPrimaryResidence: true, loans: [] }], 0, 0);
+// base : 200 000 + (200 000 - 30 %) = 340 000 ; dette 200 000
+check("IFI : base et dette à la quote-part", near(ifi.grossBase, 340_000, 0.01) && near(ifi.rawDebt, 200_000, 0.01) && near(ifi.primaryResidenceAbatementAmount, 60_000, 0.01));
+const sens = resolveRealEstateSensitivity(null);
+const shock = computeRealEstateShockImpact([{ ...half, sensitivity: sens, communeName: null }], 0, -10);
+check("stress test : choc sur la valeur détenue", near(shock.perProperty[0].currentValue, 200_000, 0.01) && near(shock.perProperty[0].newValue, 180_000, 0.01) && near(shock.perProperty[0].remainingLoanAmount, 200_000, 0.01));
+const hike = computeRateHikeImpact([{ ...half, loans: [{ ...sharedLoan, rateType: "variable", borneFullyByClient: false }] }], 1);
+check("hausse des taux : dette variable et loyer à la quote-part", near(hike.perProperty[0].variableDebt, 50_000, 0.01) && near(hike.perProperty[0].newMonthlyCashflow ?? 0, 1_000 - 500 / 12, 0.01));
+const halfSchedule = computeCashFlowSchedule({ ...flows, incomeFranceAnnual: 0 }, [half], 2, 0);
+const fullPayment = projectLoanAnnualPayment(baseLoan, 1);
+const sharedPayment = projectLoanAnnualPayment(sharedLoan, 1);
+check("flux : loyers et mensualités à la quote-part", near(halfSchedule[0].grossRents, 12_000, 0.01) && near(halfSchedule[0].loanPayments, fullPayment * 0.5 + sharedPayment, 0.01));
+const mcHalf = computeWealthGoalMonteCarlo({ amounts: {}, properties: [half], immobilierValue: 200_000 }, { ...base, monthlySavingsAmount: 0, flows: null }, 1);
+check("Monte Carlo : patrimoine net initial à la quote-part", near(mcHalf.bands.p50[0].netWorth, 0, 0.01), `${mcHalf.bands.p50[0].netWorth}`);
+const mcFull = computeWealthGoalMonteCarlo({ amounts: {}, properties: [{ ...half, ownershipSharePct: 100 }], immobilierValue: 400_000 }, { ...base, monthlySavingsAmount: 0, flows: null }, 1);
+check("Monte Carlo : 100 % donne 400k - 300k", near(mcFull.bands.p50[0].netWorth, 100_000, 0.01), `${mcFull.bands.p50[0].netWorth}`);
 
 console.log(failures === 0 ? "\nTOUT OK" : `\n${failures} ÉCHEC(S)`);
 process.exit(failures === 0 ? 0 : 1);

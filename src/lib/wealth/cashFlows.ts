@@ -2,6 +2,7 @@ import {
   projectLoanAnnualPayment,
   type PropertyWithLoans,
 } from "@/lib/property/loanCalculations";
+import { loanShare, ownedMonthlyRent } from "@/lib/property/ownership";
 import {
   INCOME_TAX_SCALE_2025,
   MICRO_FONCIER_ABATEMENT_PCT,
@@ -50,7 +51,7 @@ export function flowsAreEmpty(flows: WealthGoalFlows): boolean {
 }
 
 export function annualGrossRents(properties: PropertyWithLoans[]): number {
-  return properties.reduce((sum, property) => sum + (property.monthlyRent ?? 0) * 12, 0);
+  return properties.reduce((sum, property) => sum + (ownedMonthlyRent(property) ?? 0) * 12, 0);
 }
 
 /**
@@ -82,7 +83,12 @@ export function computeCashFlowSchedule(
     const livingExpenses = Math.max(flows.livingExpensesAnnual, 0) * index;
     const loanPayments = properties.reduce(
       (sum, property) =>
-        sum + property.loans.reduce((loanSum, loan) => loanSum + projectLoanAnnualPayment(loan, year), 0),
+        sum +
+        property.loans.reduce(
+          (loanSum, loan) =>
+            loanSum + projectLoanAnnualPayment(loan, year) * loanShare(loan, property),
+          0
+        ),
       0
     );
 

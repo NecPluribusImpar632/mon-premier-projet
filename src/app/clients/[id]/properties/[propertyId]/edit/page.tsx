@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getClient } from "@/lib/actions/clients";
 import { getProperty, updateProperty } from "@/lib/actions/properties";
 import { PropertyForm } from "@/components/property/PropertyForm";
+import { isCoupleForIncomeTax } from "@/lib/client/maritalStatus";
 
 interface EditPropertyPageProps {
   params: Promise<{ id: string; propertyId: string }>;
@@ -35,6 +36,7 @@ export default async function EditPropertyPage({ params }: EditPropertyPageProps
         action={updatePropertyForClient}
         defaultValues={property}
         submitLabel="Enregistrer"
+        isCoupleHousehold={isCoupleForIncomeTax(client.maritalStatus)}
       />
     </div>
   );

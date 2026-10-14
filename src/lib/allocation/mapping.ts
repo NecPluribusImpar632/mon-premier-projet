@@ -4,6 +4,7 @@ import type {
   Property,
   WrapperAllocation,
 } from "@/generated/prisma/client";
+import { ownedValue } from "@/lib/property/ownership";
 import type { AllocationEntry } from "@/types/allocation";
 import { ASSET_CATEGORIES, FINANCIAL_CATEGORY_IDS } from "./categories";
 import {
@@ -79,7 +80,7 @@ export function effectiveImmobilierAmount(
   properties: Property[]
 ): number {
   if (properties.length === 0) return manualAmount;
-  return properties.reduce((sum, p) => sum + p.currentValue, 0);
+  return properties.reduce((sum, p) => sum + ownedValue(p), 0);
 }
 
 /** Immobilier's share of the total patrimoine (financial + real estate), in %. */

@@ -1,4 +1,5 @@
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
+import { ownedValue } from "@/lib/property/ownership";
 
 // Seuil d'imposition (art. 964 CGI) — en-deçà, l'IFI n'est pas dû, quel que soit le
 // barème par tranches appliqué au-delà.
@@ -90,13 +91,16 @@ export function computeIfi(
 
   if (hasDetailedProperties) {
     realEstateBase = 0;
+    // Quote-part du client sur la valeur et sur la dette (règle du prêt dans
+    // ownership.ts) ; la part du conjoint se déclare dans `spouse`.
     for (const property of properties) {
+      const value = ownedValue(property);
       if (property.isPrimaryResidence) {
-        const abatement = property.currentValue * (PRIMARY_RESIDENCE_ABATEMENT_PCT / 100);
+        const abatement = value * (PRIMARY_RESIDENCE_ABATEMENT_PCT / 100);
         primaryResidenceAbatementAmount += abatement;
-        realEstateBase += property.currentValue - abatement;
+        realEstateBase += value - abatement;
       } else {
-        realEstateBase += property.currentValue;
+        realEstateBase += value;
       }
     }
     rawDebt = properties.reduce((sum, property) => sum + totalRemainingDebt(property), 0);

@@ -89,6 +89,13 @@ model Property {
   currentValue       Float
   isPrimaryResidence Boolean   @default(false)
   monthlyRent        Float?
+  /** Quote-part détenue par le client, en %. Toute la chaîne de calcul
+   * (valeur, loyers, dette sauf prêt porté à 100 %, IFI, stress test,
+   * Monte Carlo, flux) s'applique à cette quote-part. */
+  ownershipSharePct  Float     @default(100)
+  /** "direct" | "indivision" | "sci_ir" | "sci_is" | "nue_propriete" |
+   * "usufruit", validé côté app (src/lib/property/ownership.ts). */
+  holdingMode        String    @default("direct")
   acquisitionPrice   Float?
   acquisitionDate    DateTime?
   department         String?
@@ -110,6 +117,9 @@ model Loan {
   rateType         String    @default("fixed")
   amortizationType String    @default("amortissable")
   residualAmount   Float?
+  /** true = le client porte 100 % du prêt même si le bien est détenu en
+   * quote-part ; false = la dette suit la quote-part du bien. */
+  borneFullyByClient Boolean  @default(false)
   termYears        Int
   startDate        DateTime?
   createdAt        DateTime  @default(now())

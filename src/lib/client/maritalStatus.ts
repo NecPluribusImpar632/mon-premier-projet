@@ -30,3 +30,9 @@ export function isMaritalStatus(value: string): value is MaritalStatus {
 export function impliesJointIfiHousehold(status: MaritalStatus): boolean {
   return status === "marie" || status === "pacse" || status === "concubinage";
 }
+
+/** Marié ou pacsé : un seul foyer pour l'IR, et le conjoint déclaré dans la
+ * situation familiale. Le concubinage forme deux foyers distincts. */
+export function isCoupleForIncomeTax(status: string | null): boolean {
+  return status === "marie" || status === "pacse";
+}

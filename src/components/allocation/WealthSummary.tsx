@@ -1,6 +1,13 @@
 import { AlertTriangle } from "lucide-react";
 import type { PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { computeNetWorth } from "@/lib/wealth/netWorth";
+import {
+  DISMEMBERMENT_NOTE,
+  holdingModeLabel,
+  isDismemberment,
+  isPartialOwnership,
+  ownedValue,
+} from "@/lib/property/ownership";
 
 interface WealthSummaryProps {
   financialWealthTotal: number;
@@ -93,6 +100,27 @@ export function WealthSummary({
           </p>
         </div>
       </div>
+
+      {properties.length > 0 && (
+        <ul className="mt-4 flex flex-col gap-1 text-xs text-slate">
+          {properties.map((property) => (
+            <li key={property.id} className="flex flex-wrap items-baseline justify-between gap-x-4">
+              <span>
+                <span className="text-ink">{property.name}</span>
+                {" · "}
+                {holdingModeLabel(property.holdingMode)}
+                {isPartialOwnership(property) && ` · quote-part ${property.ownershipSharePct} %`}
+                {isDismemberment(property.holdingMode) && (
+                  <span className="text-bronze"> · {DISMEMBERMENT_NOTE}</span>
+                )}
+              </span>
+              <span className="font-mono tabular-nums">
+                {currencyFormatter.format(ownedValue(property))}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {showConcentrationWarning && (
         <div className="mt-4 flex items-start gap-2.5 rounded-md border border-bronze bg-bronze-tint p-3 text-sm text-bronze">

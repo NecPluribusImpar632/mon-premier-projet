@@ -1,4 +1,4 @@
-import { isMaritalStatus } from "@/lib/client/maritalStatus";
+import { isCoupleForIncomeTax } from "@/lib/client/maritalStatus";
 
 /**
  * Impôt sur le revenu simplifié pour les flux de l'objectif patrimonial :
@@ -62,11 +62,7 @@ export function fiscalPartsFromFoyer(
   maritalStatus: string | null,
   minorChildrenCount: number | null
 ): number {
-  const isCouple =
-    maritalStatus !== null &&
-    isMaritalStatus(maritalStatus) &&
-    (maritalStatus === "marie" || maritalStatus === "pacse");
-  const base = isCouple ? 2 : 1;
+  const base = isCoupleForIncomeTax(maritalStatus) ? 2 : 1;
   const children = Math.max(minorChildrenCount ?? 0, 0);
   const childrenParts = Math.min(children, 2) * 0.5 + Math.max(children - 2, 0);
   return base + childrenParts;

@@ -9,6 +9,7 @@ import {
 import type { PropertyWithSensitivity } from "@/lib/scenarios/resolvePropertySensitivity";
 import type { ScenarioParams } from "@/lib/scenarios/scenarioParams";
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
+import { ownedLoanAmount, ownedMonthlyRent, ownedValue } from "@/lib/property/ownership";
 
 export interface StockShockResult {
   /** Estimated move of the Actions bucket itself, in %. */
@@ -77,15 +78,16 @@ export function computeRealEstateShockImpact(
     const sensitivity = property.sensitivity;
     const shockPct =
       overrideShockPct === null ? sensitivity.coefficient * oatRateChangePts : overrideShockPct;
-    const newValue = property.currentValue * (1 + shockPct / 100);
+    const currentValue = ownedValue(property);
+    const newValue = currentValue * (1 + shockPct / 100);
     const remainingLoanAmount = totalRemainingDebt(property);
     const newEquity = newValue - remainingLoanAmount;
     return {
       propertyId: property.id,
       propertyName: property.name,
-      currentValue: property.currentValue,
+      currentValue,
       newValue,
-      deltaValue: newValue - property.currentValue,
+      deltaValue: newValue - currentValue,
       remainingLoanAmount,
       newEquity,
       isUnderwater: newEquity < 0,
@@ -94,7 +96,7 @@ export function computeRealEstateShockImpact(
     };
   });
 
-  const totalCurrentValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
+  const totalCurrentValue = perProperty.reduce((sum, p) => sum + p.currentValue, 0);
   const totalNewValue = perProperty.reduce((sum, p) => sum + p.newValue, 0);
 
   return {
@@ -133,17 +135,15 @@ export function computeRateHikeImpact(
   const perProperty = properties.map((property) => {
     const fixedDebt = property.loans
       .filter((loan) => loan.rateType === "fixed")
-      .reduce((sum, loan) => sum + loan.remainingAmount, 0);
+      .reduce((sum, loan) => sum + ownedLoanAmount(loan, property), 0);
     const variableDebt = property.loans
       .filter((loan) => loan.rateType === "variable")
-      .reduce((sum, loan) => sum + loan.remainingAmount, 0);
+      .reduce((sum, loan) => sum + ownedLoanAmount(loan, property), 0);
 
     const extraAnnualCost = variableDebt * (hikePts / 100);
     const extraMonthlyCost = extraAnnualCost / 12;
-    const newMonthlyCashflow =
-      property.monthlyRent !== null
-        ? property.monthlyRent - extraMonthlyCost
-        : null;
+    const monthlyRent = ownedMonthlyRent(property);
+    const newMonthlyCashflow = monthlyRent !== null ? monthlyRent - extraMonthlyCost : null;
 
     return {
       propertyId: property.id,
@@ -197,9 +197,9 @@ export function computeInflationImpact(
     const realDebtAfterYears = remainingLoanAmount / discount;
     const advantagedAmount = property.loans
       .filter((loan) => loan.rateType === "fixed")
-      .reduce((sum, loan) => sum + loan.remainingAmount, 0);
-    const projectedMonthlyRent =
-      property.monthlyRent !== null ? property.monthlyRent * discount : null;
+      .reduce((sum, loan) => sum + ownedLoanAmount(loan, property), 0);
+    const monthlyRent = ownedMonthlyRent(property);
+    const projectedMonthlyRent = monthlyRent !== null ? monthlyRent * discount : null;
 
     return {
       propertyId: property.id,
@@ -227,7 +227,7 @@ export function computeVacancyImpact(
   property: Property,
   months: number
 ): VacancyResult {
-  const monthlyRent = property.monthlyRent ?? 0;
+  const monthlyRent = ownedMonthlyRent(property) ?? 0;
   return {
     propertyId: property.id,
     propertyName: property.name,
@@ -483,7 +483,7 @@ export function computeFullScenarioImpact(
     peIlliquidityDiscountPct,
   } = params;
 
-  const totalPropertyValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
+  const totalPropertyValue = properties.reduce((sum, p) => sum + ownedValue(p), 0);
   const totalDebt = properties.reduce((sum, p) => sum + totalRemainingDebt(p), 0);
   const immobilierBaseline = properties.length === 0 ? immobilierValue : 0;
   const totalBefore = financialWealthTotal + totalPropertyValue - totalDebt + immobilierBaseline;
@@ -660,7 +660,7 @@ export function computeFullScenarioImpact(
   }
   const hasRentedProperty = properties.some((property) => property.monthlyRent !== null);
   if (hasRentedProperty) {
-    const annualRent = (vacancyProperty?.monthlyRent ?? 0) * 12;
+    const annualRent = (vacancyProperty ? ownedMonthlyRent(vacancyProperty) ?? 0 : 0) * 12;
     posts.push({
       id: "vacancy",
       label: "Vacance locative",

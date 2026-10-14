@@ -176,6 +176,20 @@ export function LoanFields({ defaultLoans = [] }: LoanFieldsProps) {
                 ))}
               </select>
             </label>
+            <label className="col-span-2 flex items-start gap-2 text-xs text-slate">
+              <input
+                name={`loan.${row.key}.borneFullyByClient`}
+                type="checkbox"
+                defaultChecked={row.loan?.borneFullyByClient ?? false}
+                className="mt-0.5 h-4 w-4 rounded border-line text-emerald focus:outline-none focus:ring-2 focus:ring-emerald/15"
+              />
+              <span>
+                Prêt porté à 100 % par le client
+                <span className="block text-slate/70">
+                  Sinon la dette suit la quote-part détenue du bien.
+                </span>
+              </span>
+            </label>
             {row.amortizationType === "partiel" && (
               <label className="col-span-2 flex flex-col gap-1.5 text-xs text-slate">
                 Capital résiduel à l&apos;échéance (€)

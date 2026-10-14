@@ -1,5 +1,6 @@
 import { totalRemainingDebt, type PropertyWithLoans } from "@/lib/property/loanCalculations";
 import { formatCurrency } from "@/lib/format/currency";
+import { isPartialOwnership, ownedValue } from "@/lib/property/ownership";
 
 interface PropertyOverviewProps {
   properties: PropertyWithLoans[];
@@ -8,15 +9,18 @@ interface PropertyOverviewProps {
 export function PropertyOverview({ properties }: PropertyOverviewProps) {
   if (properties.length === 0) return null;
 
-  const totalValue = properties.reduce((sum, p) => sum + p.currentValue, 0);
+  // Quote-part du client sur chaque bien (voir ownership.ts).
+  const totalValue = properties.reduce((sum, p) => sum + ownedValue(p), 0);
   const totalDebt = properties.reduce((sum, p) => sum + totalRemainingDebt(p), 0);
   const netEquity = totalValue - totalDebt;
   const ltvRatio = totalValue > 0 ? (totalDebt / totalValue) * 100 : 0;
+  const hasPartial = properties.some(isPartialOwnership);
+  const shareSuffix = hasPartial ? " (quote-part)" : "";
 
   const stats = [
-    { label: "Valeur totale", value: formatCurrency(totalValue) },
-    { label: "Dette totale", value: formatCurrency(totalDebt) },
-    { label: "Équité nette totale", value: formatCurrency(netEquity) },
+    { label: `Valeur${shareSuffix}`, value: formatCurrency(totalValue) },
+    { label: `Dette${shareSuffix}`, value: formatCurrency(totalDebt) },
+    { label: "Équité nette", value: formatCurrency(netEquity) },
     {
       label: "Ratio d'endettement",
       value: `${ltvRatio.toFixed(0)}%`,

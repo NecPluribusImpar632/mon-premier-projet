@@ -1,4 +1,5 @@
 import { projectLoanBalance, type PropertyWithLoans } from "@/lib/property/loanCalculations";
+import { loanShare, ownedValue } from "@/lib/property/ownership";
 import { computeRentalYield } from "@/lib/property/rentalYield";
 import { REFERENCE_INDICES, REFERENCE_INDEX_LABELS } from "@/lib/allocation/referenceIndices";
 import {
@@ -164,7 +165,7 @@ function realEstatePockets(
     const netYieldPct =
       grossYieldPct !== null ? grossYieldPct * (1 - RENTAL_YIELD_CHARGES_HAIRCUT_PCT / 100) : 0;
     return {
-      currentValue: property.currentValue,
+      currentValue: ownedValue(property),
       nominalMeanPct: appreciationNominalPct + netYieldPct,
     };
   });
@@ -393,7 +394,10 @@ export function computeWealthGoalMonteCarlo(
       const totalDebt = properties.reduce(
         (sum, property) =>
           sum +
-          property.loans.reduce((loanSum, loan) => loanSum + projectLoanBalance(loan, year), 0),
+          property.loans.reduce(
+            (loanSum, loan) => loanSum + projectLoanBalance(loan, year) * loanShare(loan, property),
+            0
+          ),
         0
       );
 
